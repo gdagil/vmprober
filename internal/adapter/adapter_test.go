@@ -191,3 +191,4 @@ func TestNewVictoriaMetricsAdapter_NoEndpoints(t *testing.T) {
 	}
 }
 
+

@@ -32,7 +32,7 @@ clean:
 # Run the application
 run: build
 	@echo "Running ${BINARY_NAME}..."
-	@./bin/${BINARY_NAME}
+	@./bin/${BINARY_NAME} -config ./configs/config.yaml.example
 
 # Format code
 fmt:
@@ -74,5 +74,6 @@ help:
 	@echo "  docker-run     - Build and run Docker container"
 	@echo "  deps           - Install dependencies"
 	@echo "  help           - Show this help message"
+
 
 

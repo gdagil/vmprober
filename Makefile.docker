@@ -1,0 +1,114 @@
+.PHONY: docker-build docker-build-alpine docker-build-scratch docker-push docker-build-all help
+
+# Variables
+VERSION?=$(shell git describe --tags --always --dirty 2>/dev/null || echo "dev")
+BUILD_TIME=$(shell date -u +"%Y-%m-%dT%H:%M:%SZ")
+GIT_COMMIT=$(shell git rev-parse --short HEAD 2>/dev/null || echo "unknown")
+IMAGE_NAME?=vmprober
+REGISTRY?=
+PLATFORMS?=linux/amd64,linux/arm64
+
+# Image tags
+ALPINE_TAG=$(if $(REGISTRY),$(REGISTRY)/$(IMAGE_NAME):$(VERSION)-alpine,$(IMAGE_NAME):$(VERSION)-alpine)
+SCRATCH_TAG=$(if $(REGISTRY),$(REGISTRY)/$(IMAGE_NAME):$(VERSION)-scratch,$(IMAGE_NAME):$(VERSION)-scratch)
+LATEST_ALPINE_TAG=$(if $(REGISTRY),$(REGISTRY)/$(IMAGE_NAME):latest-alpine,$(IMAGE_NAME):latest-alpine)
+LATEST_SCRATCH_TAG=$(if $(REGISTRY),$(REGISTRY)/$(IMAGE_NAME):latest-scratch,$(IMAGE_NAME):latest-scratch)
+
+# Build arguments
+BUILD_ARGS=--build-arg VERSION=$(VERSION) --build-arg BUILD_TIME=$(BUILD_TIME) --build-arg GIT_COMMIT=$(GIT_COMMIT)
+
+# Help target
+help:
+	@echo "Docker Build Targets:"
+	@echo "  docker-build          - Build Alpine image for current platform"
+	@echo "  docker-build-alpine   - Build Alpine image for multiple platforms"
+	@echo "  docker-build-scratch - Build Scratch image for multiple platforms"
+	@echo "  docker-build-all     - Build all variants (Alpine + Scratch)"
+	@echo "  docker-push          - Push all images to registry"
+	@echo ""
+	@echo "Variables:"
+	@echo "  VERSION=$(VERSION)"
+	@echo "  IMAGE_NAME=$(IMAGE_NAME)"
+	@echo "  REGISTRY=$(REGISTRY)"
+	@echo "  PLATFORMS=$(PLATFORMS)"
+	@echo ""
+	@echo "Examples:"
+	@echo "  make docker-build-alpine VERSION=1.0.0"
+	@echo "  make docker-build-scratch REGISTRY=myregistry.io"
+	@echo "  make docker-build-all PLATFORMS=linux/amd64,linux/arm64"
+
+# Build Alpine image for current platform
+docker-build:
+	@echo "Building Alpine image for current platform..."
+	docker build $(BUILD_ARGS) -t $(ALPINE_TAG) -f Dockerfile .
+
+# Build Alpine image for multiple platforms
+docker-build-alpine:
+	@echo "Building Alpine image for platforms: $(PLATFORMS)"
+	@if ! docker buildx ls | grep -q multiarch; then \
+		echo "Creating buildx builder..."; \
+		docker buildx create --name multiarch --use --bootstrap || true; \
+	fi
+	docker buildx use multiarch
+	docker buildx build \
+		--platform $(PLATFORMS) \
+		$(BUILD_ARGS) \
+		-t $(ALPINE_TAG) \
+		-t $(LATEST_ALPINE_TAG) \
+		-f Dockerfile \
+		--load \
+		.
+
+# Build Scratch image for multiple platforms
+docker-build-scratch:
+	@echo "Building Scratch image for platforms: $(PLATFORMS)"
+	@if ! docker buildx ls | grep -q multiarch; then \
+		echo "Creating buildx builder..."; \
+		docker buildx create --name multiarch --use --bootstrap || true; \
+	fi
+	docker buildx use multiarch
+	docker buildx build \
+		--platform $(PLATFORMS) \
+		$(BUILD_ARGS) \
+		-t $(SCRATCH_TAG) \
+		-t $(LATEST_SCRATCH_TAG) \
+		-f Dockerfile.scratch \
+		--load \
+		.
+
+# Build all variants
+docker-build-all: docker-build-alpine docker-build-scratch
+	@echo "All images built successfully!"
+
+# Push all images to registry
+docker-push:
+	@if [ -z "$(REGISTRY)" ]; then \
+		echo "Error: REGISTRY must be set for push"; \
+		exit 1; \
+	fi
+	@echo "Pushing images to $(REGISTRY)..."
+	@if ! docker buildx ls | grep -q multiarch; then \
+		echo "Creating buildx builder..."; \
+		docker buildx create --name multiarch --use --bootstrap || true; \
+	fi
+	docker buildx use multiarch
+	@echo "Pushing Alpine image..."
+	docker buildx build \
+		--platform $(PLATFORMS) \
+		$(BUILD_ARGS) \
+		-t $(ALPINE_TAG) \
+		-t $(LATEST_ALPINE_TAG) \
+		-f Dockerfile \
+		--push \
+		.
+	@echo "Pushing Scratch image..."
+	docker buildx build \
+		--platform $(PLATFORMS) \
+		$(BUILD_ARGS) \
+		-t $(SCRATCH_TAG) \
+		-t $(LATEST_SCRATCH_TAG) \
+		-f Dockerfile.scratch \
+		--push \
+		.
+	@echo "All images pushed successfully!"
+

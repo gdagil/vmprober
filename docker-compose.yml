@@ -13,8 +13,6 @@ services:
       - "--vmselectAddr=:8401"
     ports:
       - "8482:8482"
-    networks:
-      - vmprober-network
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8482/health"]
@@ -32,8 +30,6 @@ services:
       - "--httpListenAddr=:8480"
     ports:
       - "8480:8480"
-    networks:
-      - vmprober-network
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8480/health"]
@@ -51,8 +47,6 @@ services:
       - "--httpListenAddr=:8481"
     ports:
       - "8481:8481"
-    networks:
-      - vmprober-network
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8481/health"]
@@ -60,29 +54,27 @@ services:
       timeout: 5s
       retries: 3
 
-  vmprober:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    container_name: vmprober
-    depends_on:
-      - vminsert
-    volumes:
-      - ./config.docker.yaml:/etc/vmprober/config.yaml:ro
-      - ./data/vmprober/wal:/var/lib/vmprober/wal
-    ports:
-      - "8429:8429"
-    networks:
-      - vmprober-network
-    restart: unless-stopped
-    command:
-      - "./vmprober"
-      - "--config=/etc/vmprober/config.yaml"
-    healthcheck:
-      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8429/health"]
-      interval: 30s
-      timeout: 5s
-      retries: 3
+  # vmprober:
+  #   build:
+  #     context: .
+  #     dockerfile: Dockerfile
+  #   container_name: vmprober
+  #   depends_on:
+  #     - vminsert
+  #   volumes:
+  #     - ./config.docker.yaml:/etc/vmprober/config.yaml:ro
+  #     - ./data/vmprober/wal:/var/lib/vmprober/wal
+  #   ports:
+  #     - "8429:8429"
+  #   restart: unless-stopped
+  #   command:
+  #     - "./vmprober"
+  #     - "--config=/etc/vmprober/config.yaml"
+  #   healthcheck:
+  #     test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8429/health"]
+  #     interval: 30s
+  #     timeout: 5s
+  #     retries: 3
 
   grafana:
     image: grafana/grafana:latest
@@ -94,8 +86,6 @@ services:
       - ./grafana/provisioning:/etc/grafana/provisioning
     ports:
       - "3000:3000"
-    networks:
-      - vmprober-network
     environment:
       - GF_SECURITY_ADMIN_USER=admin
       - GF_SECURITY_ADMIN_PASSWORD=admin
@@ -108,13 +98,3 @@ services:
       interval: 30s
       timeout: 10s
       retries: 3
-
-networks:
-  vmprober-network:
-    driver: bridge
-
-volumes:
-  vmstorage-data:
-  vmprober-wal:
-  grafana-data:
-

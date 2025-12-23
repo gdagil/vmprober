@@ -265,3 +265,4 @@ func (s *WALSegment) IsCompressed() bool {
 	return s.compressed
 }
 
+

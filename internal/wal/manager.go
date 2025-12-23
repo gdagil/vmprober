@@ -63,6 +63,10 @@ type DefaultWALManager struct {
 	logger        *logrus.Logger
 	stats         *WALStats
 	compressor    Compressor
+	ctx           context.Context
+	cancel        context.CancelFunc
+	wg            sync.WaitGroup
+	closed        bool
 }
 
 // NewWALManager создает новый WAL менеджер
@@ -81,6 +85,7 @@ func NewWALManager(cfg *config.WALConfig, logger *logrus.Logger) (WALManager, er
 		return nil, fmt.Errorf("failed to create WAL directory: %w", err)
 	}
 
+	ctx, cancel := context.WithCancel(context.Background())
 	manager := &DefaultWALManager{
 		config:     cfg,
 		dir:        dir,
@@ -88,21 +93,26 @@ func NewWALManager(cfg *config.WALConfig, logger *logrus.Logger) (WALManager, er
 		logger:     logger,
 		stats:      &WALStats{},
 		compressor: NewCompressor(cfg.Compression),
+		ctx:        ctx,
+		cancel:     cancel,
 	}
 
 	// Восстановление существующих сегментов
-	if err := manager.recoverSegments(context.Background()); err != nil {
+	if err := manager.recoverSegments(ctx); err != nil {
+		cancel()
 		return nil, fmt.Errorf("failed to recover segments: %w", err)
 	}
 
 	// Создание активного сегмента
-	if err := manager.createActiveSegment(context.Background()); err != nil {
+	if err := manager.createActiveSegment(ctx); err != nil {
+		cancel()
 		return nil, fmt.Errorf("failed to create active segment: %w", err)
 	}
 
 	// Запуск фоновых задач
-	go manager.rotationLoop(context.Background())
-	go manager.compactionLoop(context.Background())
+	manager.wg.Add(2)
+	go manager.rotationLoop()
+	go manager.compactionLoop()
 
 	return manager, nil
 }
@@ -130,7 +140,7 @@ func (w *DefaultWALManager) Write(ctx context.Context, record *types.Record) err
 	// Проверка необходимости ротации
 	if w.shouldRotate() {
 		go func() {
-			if err := w.Rotate(context.Background()); err != nil {
+			if err := w.Rotate(w.ctx); err != nil {
 				w.logger.WithError(err).Error("Failed to rotate segment")
 			}
 		}()
@@ -217,6 +227,36 @@ func (w *DefaultWALManager) Rotate(ctx context.Context) error {
 
 // Close закрывает WAL менеджер
 func (w *DefaultWALManager) Close(ctx context.Context) error {
+	w.mu.Lock()
+	if w.closed {
+		w.mu.Unlock()
+		return nil
+	}
+	w.closed = true
+	w.mu.Unlock()
+
+	// Остановка фоновых горутин
+	if w.cancel != nil {
+		w.cancel()
+	}
+
+	// Ожидание завершения фоновых горутин
+	done := make(chan struct{})
+	go func() {
+		w.wg.Wait()
+		close(done)
+	}()
+
+	select {
+	case <-done:
+		// Горутины завершились
+	case <-ctx.Done():
+		// Контекст отменен, но продолжаем закрытие
+	case <-time.After(5 * time.Second):
+		// Таймаут ожидания
+		w.logger.Warn("Timeout waiting for background goroutines to finish")
+	}
+
 	w.mu.Lock()
 	defer w.mu.Unlock()
 
@@ -328,17 +368,18 @@ func (w *DefaultWALManager) recoverSegments(ctx context.Context) error {
 }
 
 // rotationLoop цикл ротации сегментов
-func (w *DefaultWALManager) rotationLoop(ctx context.Context) {
+func (w *DefaultWALManager) rotationLoop() {
+	defer w.wg.Done()
 	ticker := time.NewTicker(1 * time.Minute)
 	defer ticker.Stop()
 
 	for {
 		select {
-		case <-ctx.Done():
+		case <-w.ctx.Done():
 			return
 		case <-ticker.C:
 			if w.shouldRotate() {
-				if err := w.Rotate(ctx); err != nil {
+				if err := w.Rotate(w.ctx); err != nil {
 					w.logger.WithError(err).Error("Failed to rotate segment in loop")
 				}
 			}
@@ -347,16 +388,17 @@ func (w *DefaultWALManager) rotationLoop(ctx context.Context) {
 }
 
 // compactionLoop цикл компрессии старых сегментов
-func (w *DefaultWALManager) compactionLoop(ctx context.Context) {
+func (w *DefaultWALManager) compactionLoop() {
+	defer w.wg.Done()
 	ticker := time.NewTicker(5 * time.Minute)
 	defer ticker.Stop()
 
 	for {
 		select {
-		case <-ctx.Done():
+		case <-w.ctx.Done():
 			return
 		case <-ticker.C:
-			w.compactOldSegments(ctx)
+			w.compactOldSegments(w.ctx)
 		}
 	}
 }

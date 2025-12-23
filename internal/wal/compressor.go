@@ -58,3 +58,4 @@ func (g *GzipCompressor) Decompress(data []byte) ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
+

@@ -106,3 +106,4 @@ Centralized configuration with validation and hot reload.
 - [Component Architecture](components.md) - How components are designed
 - [Data Flow](data-flow.md) - How data moves through the system
 
+

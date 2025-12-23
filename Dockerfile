@@ -1,15 +1,16 @@
 # Build stage
-FROM golang:1.21-alpine AS builder
+FROM --platform=$BUILDPLATFORM golang:1.25-alpine AS builder
+
+ARG TARGETOS
+ARG TARGETARCH
+ARG VERSION=dev
+ARG BUILD_TIME
+ARG GIT_COMMIT
 
 WORKDIR /app
 
 # Install build dependencies
 RUN apk add --no-cache git make
-
-# Build arguments
-ARG VERSION=dev
-ARG BUILD_TIME
-ARG GIT_COMMIT
 
 # Copy go mod files
 COPY go.mod go.sum ./
@@ -18,15 +19,18 @@ RUN go mod download
 # Copy source code
 COPY . .
 
-# Build the application
-RUN CGO_ENABLED=0 GOOS=linux go build \
+# Build the application for target platform
+RUN CGO_ENABLED=0 GOOS=${TARGETOS} GOARCH=${TARGETARCH} go build \
     -ldflags="-w -s -X main.Version=${VERSION} -X main.BuildTime=${BUILD_TIME} -X main.GitCommit=${GIT_COMMIT}" \
     -o vmprober ./cmd/vmprober
 
-# Runtime stage
+# Runtime stage - Alpine
 FROM alpine:latest
 
-RUN apk --no-cache add ca-certificates tzdata
+ARG TARGETOS
+ARG TARGETARCH
+
+RUN apk --no-cache add ca-certificates tzdata wget
 
 WORKDIR /root/
 

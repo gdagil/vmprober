@@ -211,3 +211,4 @@ func (n *DefaultNormalizer) generateSeriesID(result *types.ProbeResult) string {
 	return hex.EncodeToString(hash[:])[:16]
 }
 
+

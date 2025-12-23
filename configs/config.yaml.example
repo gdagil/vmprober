@@ -17,7 +17,7 @@ pull:
 push:
   enabled: false
   endpoints:
-    - url: "http://victoria-metrics:8428/api/v1/import/prometheus"
+    - url: "http://localhost:8480/api/v1/import/prometheus"
       headers: {}
       auth:
         type: "none"
@@ -117,7 +117,7 @@ wal:
   dir: "/var/lib/vmprober/wal"
   max_size: "1GB"
   max_age: 168h
-  retention: 30d
+  retention: 720h
   compression: "gzip"
   sync_interval: 1s
   buffer_size: "64KB"
@@ -152,7 +152,7 @@ tls:
 # Наблюдаемость
 observability:
   pprof:
-    enabled: true
+    enabled: false
     port: 6060
     host: "127.0.0.1"
   opencensus:
@@ -160,7 +160,7 @@ observability:
     sampling_rate: 0.1
     exporters: []
   prometheus:
-    enabled: true
+    enabled: false
     namespace: "vmprober"
     subsystem: "process"
   health_check:

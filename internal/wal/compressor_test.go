@@ -81,3 +81,4 @@ func TestNewCompressor_EmptyType(t *testing.T) {
 	}
 }
 
+
