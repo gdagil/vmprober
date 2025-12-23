@@ -1,0 +1,170 @@
+# VMProber Configuration Example
+
+# HTTP сервер
+listen:
+  port: 8429
+  host: "0.0.0.0"
+  tls:
+    enabled: false
+
+# Pull режим (Prometheus scrape)
+pull:
+  enabled: true
+  path: "/metrics"
+  timeout: 10s
+
+# Push режим (VictoriaMetrics)
+push:
+  enabled: false
+  endpoints:
+    - url: "http://victoria-metrics:8428/api/v1/import/prometheus"
+      headers: {}
+      auth:
+        type: "none"
+  retry:
+    max_attempts: 5
+    backoff: "exponential"
+    initial_delay: 1s
+    max_delay: 60s
+    multiplier: 2.0
+  dedup:
+    enabled: true
+    window: 5m
+    keys: ["job", "instance", "probe", "target", "proto"]
+  batch:
+    size: 1000
+    timeout: 30s
+  remote_write:
+    enabled: false
+
+# Планировщик задач
+scheduler:
+  concurrent: 100
+  rps_limit: 1000
+  per_host_cap: 10
+  jitter: 0.1
+  timeouts:
+    tcp: 5s
+    udp: 3s
+    icmp: 2s
+  queue_size: 10000
+  worker_timeout: 30s
+
+# Управление целями
+targets:
+  static:
+    - host: "google.com"
+      port: 80
+      proto: "tcp"
+      interval: 30s
+      timeout: 5s
+      labels:
+        region: "us-east"
+    - host: "8.8.8.8"
+      port: 53
+      proto: "udp"
+      interval: 60s
+      timeout: 3s
+      labels:
+        service: "dns"
+  files: []
+  urls: []
+  commands: []
+  reload_interval: 1m
+  hot_reload: true
+
+# Настройки проб по умолчанию
+probes:
+  defaults:
+    count: 3
+    interval: 30s
+    timeout: 5s
+    payload_size: 64
+  tcp:
+    connect_timeout: 5s
+    tls:
+      enabled: false
+    keep_alive:
+      enabled: true
+      period: 30s
+  udp:
+    payload_type: "random"
+    payload_size: 64
+    response_timeout: 2s
+    max_packet_size: 1024
+  icmp:
+    library: "systicmp"
+    sequence_start: 1
+    ttl: 64
+
+# Настройки метрик
+metrics:
+  namespace: "vmprober"
+  include_labels:
+    - "job"
+    - "instance"
+    - "probe"
+    - "target"
+    - "proto"
+  custom_labels: {}
+  buckets: [0.001, 0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1.0, 2.5, 5.0, 10.0]
+  enable_process_metrics: true
+  enable_go_metrics: true
+  enable_job_metrics: true
+
+# Write-Ahead Log
+wal:
+  dir: "/var/lib/vmprober/wal"
+  max_size: "1GB"
+  max_age: 168h
+  retention: 30d
+  compression: "gzip"
+  sync_interval: 1s
+  buffer_size: "64KB"
+  segment_size: "64MB"
+  index_cache_size: 1000
+
+# Логирование
+logging:
+  level: "info"
+  format: "json"
+  output: "stdout"
+  file:
+    path: "/var/log/vmprober.log"
+    max_size: "100MB"
+    max_backups: 10
+    max_age: 30
+    compress: true
+  structured: true
+  include_source: true
+
+# TLS настройки
+tls:
+  client_certs:
+    enabled: false
+  server_certs:
+    enabled: false
+  insecure_skip_verify: false
+  min_version: "1.2"
+  max_version: "1.3"
+  cipher_suites: []
+
+# Наблюдаемость
+observability:
+  pprof:
+    enabled: true
+    port: 6060
+    host: "127.0.0.1"
+  opencensus:
+    enabled: false
+    sampling_rate: 0.1
+    exporters: []
+  prometheus:
+    enabled: true
+    namespace: "vmprober"
+    subsystem: "process"
+  health_check:
+    enabled: true
+    timeout: 5s
+    interval: 30s
+

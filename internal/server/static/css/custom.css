@@ -1,0 +1,475 @@
+/* VictoriaMetrics VMUI Style */
+:root {
+  --vm-primary: #3F51B5;
+  --vm-primary-dark: #303F9F;
+  --vm-primary-light: #C5CAE9;
+  --vm-accent: #FF4081;
+  --vm-text: #212121;
+  --vm-text-secondary: #757575;
+  --vm-divider: #BDBDBD;
+  --vm-background: #FAFAFA;
+  --vm-surface: #FFFFFF;
+  --vm-success: #4CAF50;
+  --vm-error: #F44336;
+  --vm-warning: #FF9800;
+  --vm-info: #2196F3;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-padding-top: 60px;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  background-color: var(--vm-background);
+  color: var(--vm-text);
+  margin: 0;
+  padding: 0;
+  padding-top: 48px !important;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+/* VMUI Header */
+.vm-header {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 48px;
+  background: var(--vm-primary);
+  display: flex;
+  align-items: center;
+  padding: 0 16px;
+  z-index: 1000;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+}
+
+.vm-header__logo {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #fff;
+  font-weight: 500;
+  font-size: 18px;
+  text-decoration: none;
+}
+
+.vm-header__logo:hover {
+  color: #fff;
+  text-decoration: none;
+}
+
+.vm-header__logo svg {
+  width: 24px;
+  height: 24px;
+  fill: #fff;
+}
+
+.vm-header__nav {
+  display: flex;
+  align-items: center;
+  margin-left: 32px;
+  gap: 4px;
+}
+
+.vm-header__link {
+  color: rgba(255,255,255,0.8);
+  text-decoration: none;
+  padding: 8px 16px;
+  border-radius: 4px;
+  font-size: 14px;
+  font-weight: 500;
+  transition: all 0.2s;
+}
+
+.vm-header__link:hover {
+  color: #fff;
+  background: rgba(255,255,255,0.1);
+  text-decoration: none;
+}
+
+.vm-header__link.active {
+  color: #fff;
+  background: rgba(255,255,255,0.2);
+}
+
+/* Main Container */
+.vm-container {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 24px 16px;
+}
+
+/* Cards */
+.vm-card {
+  background: var(--vm-surface);
+  border-radius: 4px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.24);
+  margin-bottom: 24px;
+  overflow: hidden;
+}
+
+.vm-card__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--vm-divider);
+  background: var(--vm-surface);
+}
+
+.vm-card__title {
+  font-size: 16px;
+  font-weight: 500;
+  color: var(--vm-text);
+  margin: 0;
+}
+
+.vm-card__body {
+  padding: 0;
+}
+
+/* Stats Grid */
+.vm-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.vm-stat-card {
+  background: var(--vm-surface);
+  border-radius: 4px;
+  padding: 20px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.24);
+  text-align: center;
+  transition: box-shadow 0.2s;
+}
+
+.vm-stat-card:hover {
+  box-shadow: 0 3px 6px rgba(0,0,0,0.16), 0 3px 6px rgba(0,0,0,0.23);
+}
+
+.vm-stat-card__value {
+  font-size: 32px;
+  font-weight: 500;
+  color: var(--vm-primary);
+  margin-bottom: 4px;
+}
+
+.vm-stat-card__label {
+  font-size: 12px;
+  color: var(--vm-text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* Tables */
+.vm-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.vm-table th {
+  background: #F5F5F5;
+  padding: 12px 16px;
+  text-align: left;
+  font-weight: 500;
+  font-size: 12px;
+  color: var(--vm-text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  border-bottom: 1px solid var(--vm-divider);
+}
+
+.vm-table td {
+  padding: 12px 16px;
+  border-bottom: 1px solid #EEEEEE;
+  font-size: 13px;
+  color: var(--vm-text);
+}
+
+.vm-table tbody tr:hover {
+  background: #F5F5F5;
+}
+
+.vm-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+/* Badges */
+.vm-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.vm-badge--primary {
+  background: var(--vm-primary-light);
+  color: var(--vm-primary-dark);
+}
+
+.vm-badge--success {
+  background: #E8F5E9;
+  color: #2E7D32;
+}
+
+.vm-badge--error {
+  background: #FFEBEE;
+  color: #C62828;
+}
+
+.vm-badge--warning {
+  background: #FFF3E0;
+  color: #E65100;
+}
+
+.vm-badge--info {
+  background: #E3F2FD;
+  color: #1565C0;
+}
+
+/* Status Dot */
+.vm-status-dot {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  margin-right: 8px;
+}
+
+.vm-status-dot--up {
+  background: var(--vm-success);
+  box-shadow: 0 0 0 2px rgba(76, 175, 80, 0.2);
+}
+
+.vm-status-dot--down {
+  background: var(--vm-error);
+  box-shadow: 0 0 0 2px rgba(244, 67, 54, 0.2);
+}
+
+/* Labels */
+.vm-labels {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.vm-label {
+  display: inline-block;
+  background: #ECEFF1;
+  color: #37474F;
+  padding: 2px 8px;
+  border-radius: 3px;
+  font-size: 11px;
+  font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+}
+
+/* Buttons */
+.vm-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  border: none;
+  border-radius: 4px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+  text-decoration: none;
+}
+
+.vm-button--primary {
+  background: var(--vm-primary);
+  color: #fff;
+}
+
+.vm-button--primary:hover {
+  background: var(--vm-primary-dark);
+}
+
+.vm-button--outlined {
+  background: transparent;
+  color: var(--vm-primary);
+  border: 1px solid var(--vm-primary);
+}
+
+.vm-button--outlined:hover {
+  background: rgba(63, 81, 181, 0.08);
+}
+
+.vm-button svg {
+  width: 16px;
+  height: 16px;
+  fill: currentColor;
+}
+
+/* Search Input */
+.vm-search {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #fff;
+  border: 1px solid var(--vm-divider);
+  border-radius: 4px;
+  padding: 6px 12px;
+  max-width: 300px;
+}
+
+.vm-search__icon {
+  width: 16px;
+  height: 16px;
+  fill: var(--vm-text-secondary);
+  flex-shrink: 0;
+}
+
+.vm-search__input {
+  border: none;
+  outline: none;
+  font-size: 13px;
+  width: 100%;
+  background: transparent;
+}
+
+.vm-search__input::placeholder {
+  color: var(--vm-text-secondary);
+}
+
+/* Toolbar */
+.vm-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+/* Loading State */
+.vm-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 48px;
+  color: var(--vm-text-secondary);
+}
+
+.vm-loading::before {
+  content: "";
+  width: 20px;
+  height: 20px;
+  border: 2px solid var(--vm-divider);
+  border-top-color: var(--vm-primary);
+  border-radius: 50%;
+  margin-right: 12px;
+  animation: vm-spin 0.8s linear infinite;
+}
+
+@keyframes vm-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Empty State */
+.vm-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 48px;
+  color: var(--vm-text-secondary);
+}
+
+.vm-empty__icon {
+  width: 48px;
+  height: 48px;
+  fill: var(--vm-divider);
+  margin-bottom: 16px;
+}
+
+/* Error State */
+.vm-error {
+  background: #FFEBEE;
+  color: #C62828;
+  padding: 16px 20px;
+  border-left: 4px solid var(--vm-error);
+}
+
+/* Timestamp */
+.vm-timestamp {
+  font-size: 12px;
+  color: var(--vm-text-secondary);
+  font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .vm-header__nav {
+    margin-left: 16px;
+    gap: 0;
+  }
+  
+  .vm-header__link {
+    padding: 8px 12px;
+    font-size: 13px;
+  }
+  
+  .vm-stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  
+  .vm-table {
+    font-size: 12px;
+  }
+  
+  .vm-table th,
+  .vm-table td {
+    padding: 8px 12px;
+  }
+
+  .vm-container {
+    padding: 16px 12px;
+  }
+}
+
+@media (max-width: 480px) {
+  .vm-stats-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .vm-header__link span {
+    display: none;
+  }
+}
+
+/* Legacy Bootstrap overrides for compatibility */
+.navbar {
+  display: none !important;
+}
+
+.stat-card,
+.card {
+  display: none;
+}
+
+main.px-4 {
+  padding: 0 !important;
+}
+
+/* Hide old elements */
+.card-header,
+.card-body,
+.row,
+.col {
+  all: unset;
+}
+
