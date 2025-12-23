@@ -1,0 +1,78 @@
+# Jekyll configuration for GitHub Pages
+
+title: VMProber Documentation
+description: Documentation for VMProber - Network probe monitoring tool
+baseurl: "" # the subpath of your site
+url: "" # the base hostname & protocol for your site
+
+# GitHub Pages settings
+github: [metadata]
+plugins:
+  - jekyll-relative-links
+  - jekyll-readme-index
+
+# Theme (minimal for clean look)
+theme: jekyll-theme-minimal
+
+# Navigation
+navigation:
+  - title: Getting Started
+    url: /getting-started/
+  - title: Architecture
+    url: /architecture/
+  - title: Components
+    url: /components/
+  - title: Operations
+    url: /operations/
+  - title: Development
+    url: /development/
+  - title: Reference
+    url: /reference/
+  - title: Guides
+    url: /guides/
+
+# Markdown settings
+markdown: kramdown
+kramdown:
+  input: GFM
+  hard_wrap: false
+  syntax_highlighter: rouge
+
+# Exclude files
+exclude:
+  - Gemfile
+  - Gemfile.lock
+  - node_modules
+  - vendor
+  - .git
+  - .github
+
+# Include files
+include:
+  - _pages
+
+# Collections
+collections:
+  getting-started:
+    output: true
+  architecture:
+    output: true
+  components:
+    output: true
+  operations:
+    output: true
+  development:
+    output: true
+  reference:
+    output: true
+  guides:
+    output: true
+
+# Defaults
+defaults:
+  - scope:
+      path: ""
+    values:
+      layout: default
+      permalink: /:categories/:title/
+
