@@ -35,6 +35,14 @@ func NewFactory() *Factory {
 		return NewUDPProbe(udpConfig), nil
 	}
 
+	f.creators[types.ProbeTypeICMP] = func(config interface{}) (interfaces.Probe, error) {
+		icmpConfig, ok := config.(*ICMPConfig)
+		if !ok && config != nil {
+			return nil, fmt.Errorf("invalid ICMP config type")
+		}
+		return NewICMPProbe(icmpConfig), nil
+	}
+
 	return f
 }
 

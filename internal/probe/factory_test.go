@@ -18,15 +18,19 @@ func TestNewFactory(t *testing.T) {
 		t.Error("Expected at least one supported probe type")
 	}
 	
-	// Проверяем, что TCP и UDP поддерживаются
+	// Проверяем, что TCP, UDP и ICMP поддерживаются
 	hasTCP := false
 	hasUDP := false
+	hasICMP := false
 	for _, probeType := range supportedTypes {
 		if probeType == types.ProbeTypeTCP {
 			hasTCP = true
 		}
 		if probeType == types.ProbeTypeUDP {
 			hasUDP = true
+		}
+		if probeType == types.ProbeTypeICMP {
+			hasICMP = true
 		}
 	}
 	
@@ -35,6 +39,9 @@ func TestNewFactory(t *testing.T) {
 	}
 	if !hasUDP {
 		t.Error("Expected UDP probe type to be supported")
+	}
+	if !hasICMP {
+		t.Error("Expected ICMP probe type to be supported")
 	}
 }
 
@@ -80,10 +87,29 @@ func TestFactory_CreateProbe_UDP(t *testing.T) {
 	probe.Close()
 }
 
+func TestFactory_CreateProbe_ICMP(t *testing.T) {
+	factory := NewFactory()
+	
+	probe, err := factory.CreateProbe(types.ProbeTypeICMP, nil)
+	if err != nil {
+		t.Fatalf("CreateProbe failed: %v", err)
+	}
+	if probe == nil {
+		t.Fatal("CreateProbe returned nil")
+	}
+	if probe.Type() != types.ProbeTypeICMP {
+		t.Errorf("Expected ICMP probe, got %s", probe.Type())
+	}
+	
+	probe.Close()
+}
+
 func TestFactory_CreateProbe_UnsupportedType(t *testing.T) {
 	factory := NewFactory()
 	
-	_, err := factory.CreateProbe(types.ProbeTypeICMP, nil)
+	// Используем несуществующий тип пробы
+	unsupportedType := types.ProbeType("unsupported")
+	_, err := factory.CreateProbe(unsupportedType, nil)
 	if err == nil {
 		t.Error("Expected error for unsupported probe type")
 	}
@@ -130,8 +156,8 @@ func TestFactory_GetSupportedTypes(t *testing.T) {
 	factory := NewFactory()
 	
 	supportedTypes := factory.GetSupportedTypes()
-	if len(supportedTypes) < 2 {
-		t.Errorf("Expected at least 2 supported types, got %d", len(supportedTypes))
+	if len(supportedTypes) < 3 {
+		t.Errorf("Expected at least 3 supported types, got %d", len(supportedTypes))
 	}
 	
 	// Проверяем уникальность типов
