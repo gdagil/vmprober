@@ -6,6 +6,11 @@ WORKDIR /app
 # Install build dependencies
 RUN apk add --no-cache git make
 
+# Build arguments
+ARG VERSION=dev
+ARG BUILD_TIME
+ARG GIT_COMMIT
+
 # Copy go mod files
 COPY go.mod go.sum ./
 RUN go mod download
@@ -14,7 +19,9 @@ RUN go mod download
 COPY . .
 
 # Build the application
-RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-w -s" -o vmprober ./cmd/vmprober
+RUN CGO_ENABLED=0 GOOS=linux go build \
+    -ldflags="-w -s -X main.Version=${VERSION} -X main.BuildTime=${BUILD_TIME} -X main.GitCommit=${GIT_COMMIT}" \
+    -o vmprober ./cmd/vmprober
 
 # Runtime stage
 FROM alpine:latest
