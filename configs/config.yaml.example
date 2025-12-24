@@ -15,9 +15,9 @@ pull:
 
 # Push режим (VictoriaMetrics)
 push:
-  enabled: false
+  enabled: true
   endpoints:
-    - url: "http://localhost:8480/api/v1/import/prometheus"
+    - url: "http://localhost:8480/insert/0/prometheus/api/v1/import"
       headers: {}
       auth:
         type: "none"
@@ -56,14 +56,21 @@ targets:
     - host: "google.com"
       port: 80
       proto: "tcp"
-      interval: 30s
+      interval: 5s
+      timeout: 5s
+      labels:
+        region: "us-east"
+    - host: "google.com"
+      port: 443
+      proto: "tcp"
+      interval: 10s
       timeout: 5s
       labels:
         region: "us-east"
     - host: "8.8.8.8"
       port: 53
-      proto: "udp"
-      interval: 60s
+      protocols: ["tcp"]
+      interval: 20s
       timeout: 3s
       labels:
         service: "dns"
@@ -106,7 +113,8 @@ metrics:
     - "probe"
     - "target"
     - "proto"
-  custom_labels: {}
+  custom_labels:
+    job: "blackbox/vmprober"
   buckets: [0.001, 0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1.0, 2.5, 5.0, 10.0]
   enable_process_metrics: true
   enable_go_metrics: true
@@ -114,7 +122,7 @@ metrics:
 
 # Write-Ahead Log
 wal:
-  dir: "/var/lib/vmprober/wal"
+  dir: "./data/vmprober/wal"
   max_size: "1GB"
   max_age: 168h
   retention: 720h
@@ -126,8 +134,8 @@ wal:
 
 # Логирование
 logging:
-  level: "info"
-  format: "json"
+  level: "debug"
+  format: "text"
   output: "stdout"
   file:
     path: "/var/log/vmprober.log"

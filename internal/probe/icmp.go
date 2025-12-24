@@ -89,6 +89,9 @@ func (p *ICMPProbe) Execute(ctx context.Context, target types.Target) (*types.Pr
 		}
 	}
 
+	// Сохраняем hostname для метрик (до DNS резолвинга)
+	result.TargetHost = target.Host
+
 	// Разрешение DNS если нужно
 	if isHostname(target.Host) {
 		resolvedIPs, lookupTime, err := p.resolveDNS(ctx, target.Host, target.NetworkFamily)

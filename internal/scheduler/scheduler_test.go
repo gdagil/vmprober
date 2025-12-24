@@ -6,11 +6,14 @@ import (
 	"testing"
 	"time"
 
+	"github.com/sirupsen/logrus"
 	"github.com/vmprober/vmprober/internal/types"
 )
 
 func TestNewScheduler(t *testing.T) {
-	scheduler := NewScheduler()
+	logger := logrus.New()
+	logger.SetLevel(logrus.ErrorLevel) // Отключаем логи в тестах
+	scheduler := NewScheduler(logger)
 	if scheduler == nil {
 		t.Fatal("NewScheduler returned nil")
 	}
@@ -22,7 +25,9 @@ func TestNewScheduler(t *testing.T) {
 }
 
 func TestScheduler_Schedule(t *testing.T) {
-	scheduler := NewScheduler()
+	logger := logrus.New()
+	logger.SetLevel(logrus.ErrorLevel)
+	scheduler := NewScheduler(logger)
 	
 	job := &types.Job{
 		ID:       "test-job-1",
@@ -54,7 +59,9 @@ func TestScheduler_Schedule(t *testing.T) {
 }
 
 func TestScheduler_Schedule_MultipleJobs(t *testing.T) {
-	scheduler := NewScheduler()
+	logger := logrus.New()
+	logger.SetLevel(logrus.ErrorLevel)
+	scheduler := NewScheduler(logger)
 	
 	ctx := context.Background()
 	for i := 0; i < 5; i++ {
@@ -87,7 +94,7 @@ func TestScheduler_Schedule_MultipleJobs(t *testing.T) {
 }
 
 func TestScheduler_StartStop(t *testing.T) {
-	scheduler := NewScheduler()
+	logger := logrus.New(); logger.SetLevel(logrus.ErrorLevel); scheduler := NewScheduler(logger)
 	
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 	defer cancel()
@@ -110,7 +117,7 @@ func TestScheduler_StartStop(t *testing.T) {
 }
 
 func TestScheduler_GetJobChan(t *testing.T) {
-	scheduler := NewScheduler()
+	logger := logrus.New(); logger.SetLevel(logrus.ErrorLevel); scheduler := NewScheduler(logger)
 	
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
@@ -153,7 +160,7 @@ func TestScheduler_GetJobChan(t *testing.T) {
 }
 
 func TestScheduler_ProcessJobs_Priority(t *testing.T) {
-	scheduler := NewScheduler()
+	logger := logrus.New(); logger.SetLevel(logrus.ErrorLevel); scheduler := NewScheduler(logger)
 	
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
@@ -218,7 +225,7 @@ func TestScheduler_ProcessJobs_Priority(t *testing.T) {
 }
 
 func TestScheduler_GetStats(t *testing.T) {
-	scheduler := NewScheduler()
+	logger := logrus.New(); logger.SetLevel(logrus.ErrorLevel); scheduler := NewScheduler(logger)
 	
 	stats := scheduler.GetStats()
 	if stats.TotalJobs != 0 {

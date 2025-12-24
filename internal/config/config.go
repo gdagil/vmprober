@@ -97,6 +97,13 @@ func (m *Manager) Get() *Config {
 	return m.config
 }
 
+// SetLogger обновляет логгер менеджера
+func (m *Manager) SetLogger(logger *logrus.Logger) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.logger = logger
+}
+
 // Watch подписывается на изменения конфигурации
 func (m *Manager) Watch(ctx context.Context) (<-chan types.ConfigUpdate, error) {
 	m.mu.Lock()

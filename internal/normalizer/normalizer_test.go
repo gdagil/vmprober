@@ -64,11 +64,24 @@ func TestNormalizer_Normalize(t *testing.T) {
 	}
 
 	// Проверяем наличие основных метрик
-	if _, ok := event.Metrics["rtt_seconds"]; !ok {
-		t.Error("rtt_seconds metric not found")
+	if _, ok := event.Metrics["vmprober_probe_rtt_seconds"]; !ok {
+		t.Error("vmprober_probe_rtt_seconds metric not found")
 	}
-	if _, ok := event.Metrics["success"]; !ok {
-		t.Error("success metric not found")
+	if _, ok := event.Metrics["vmprober_probe_result"]; !ok {
+		t.Error("vmprober_probe_result metric not found")
+	}
+	if _, ok := event.Metrics["vmprober_probe_duration_seconds"]; !ok {
+		t.Error("vmprober_probe_duration_seconds metric not found")
+	}
+	if _, ok := event.Metrics["vmprober_probe_attempts_total"]; !ok {
+		t.Error("vmprober_probe_attempts_total metric not found")
+	}
+	
+	// Проверяем наличие лейбла status
+	if status, ok := event.Labels["status"]; !ok {
+		t.Error("status label not found")
+	} else if status != "success" && status != "failed" {
+		t.Errorf("Invalid status label value: %s", status)
 	}
 }
 

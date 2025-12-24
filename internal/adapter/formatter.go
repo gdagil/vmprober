@@ -1,8 +1,10 @@
 package adapter
 
 import (
+	"encoding/json"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/vmprober/vmprober/internal/types"
 )
@@ -94,6 +96,56 @@ func escapeLabel(s string) string {
 	s = strings.ReplaceAll(s, `"`, `\"`)
 	s = strings.ReplaceAll(s, "\n", `\n`)
 	return s
+}
+
+// JSONLineFormatter форматирует метрики в VictoriaMetrics JSON line format
+type JSONLineFormatter struct{}
+
+// NewJSONLineFormatter создает новый JSON line formatter
+func NewJSONLineFormatter() Formatter {
+	return &JSONLineFormatter{}
+}
+
+// Format форматирует метрики в VictoriaMetrics JSON line format
+// Формат: {"metric":{"__name__":"metric_name","label1":"value1"},"values":[1.0],"timestamps":[1549891472010]}
+func (f *JSONLineFormatter) Format(metrics []types.Metric) ([]byte, error) {
+	var builder strings.Builder
+	
+	for _, metric := range metrics {
+		// Формирование меток для JSON формата
+		metricLabels := make(map[string]string)
+		metricLabels["__name__"] = metric.Name
+		for k, v := range metric.Labels {
+			metricLabels[k] = v
+		}
+		
+		// Преобразование timestamp в миллисекунды
+		var timestamp int64
+		if metric.Timestamp.IsZero() {
+			// Если timestamp не установлен, используем текущее время
+			timestamp = time.Now().UnixMilli()
+		} else {
+			timestamp = metric.Timestamp.UnixMilli()
+		}
+		
+		// Формирование JSON объекта
+		jsonObj := map[string]interface{}{
+			"metric":    metricLabels,
+			"values":    []float64{metric.Value},
+			"timestamps": []int64{timestamp},
+		}
+		
+		// Сериализация в JSON
+		jsonBytes, err := json.Marshal(jsonObj)
+		if err != nil {
+			return nil, fmt.Errorf("failed to marshal metric to JSON: %w", err)
+		}
+		
+		builder.Write(jsonBytes)
+		builder.WriteString("\n")
+	}
+	
+	return []byte(builder.String()), nil
 }
 
 

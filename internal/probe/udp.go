@@ -49,6 +49,10 @@ func (p *UDPProbe) Execute(ctx context.Context, target types.Target) (*types.Pro
 	}
 	defer conn.Close()
 
+	// Сохраняем hostname для метрик
+	result.TargetHost = target.Host
+	result.TargetPort = target.Port
+
 	// Разрешение адреса
 	addr := net.JoinHostPort(target.Host, strconv.Itoa(target.Port))
 	udpAddr, err := net.ResolveUDPAddr("udp", addr)
@@ -112,7 +116,7 @@ func (p *UDPProbe) Execute(ctx context.Context, target types.Target) (*types.Pro
 	result.Success = true
 	result.RTT = time.Since(start)
 	result.TargetIP = udpAddr.IP.String()
-	result.TargetPort = udpAddr.Port
+	// TargetPort уже установлен выше
 	result.SourceIP = conn.LocalAddr().(*net.UDPAddr).IP.String()
 	result.Role = "client"
 

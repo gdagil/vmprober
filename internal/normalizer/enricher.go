@@ -1,7 +1,6 @@
 package normalizer
 
 import (
-	"fmt"
 	"runtime"
 	"time"
 
@@ -39,7 +38,5 @@ func (e *DataEnricher) Enrich(event *types.NormalizedEvent) {
 
 	// Добавление временных меток
 	event.Labels["timestamp"] = event.Timestamp.Format(time.RFC3339)
-	event.Labels["hour"] = fmt.Sprintf("%d", event.Timestamp.Hour())
-	event.Labels["day_of_week"] = event.Timestamp.Weekday().String()
 }
 

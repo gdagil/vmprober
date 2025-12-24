@@ -2,6 +2,7 @@ apiVersion: 1
 
 datasources:
   - name: VictoriaMetrics
+    uid: victoriametrics
     type: prometheus
     access: proxy
     url: http://vmselect:8481/select/0/prometheus
@@ -9,6 +10,3 @@ datasources:
     editable: true
     jsonData:
       httpMethod: POST
-
-
-

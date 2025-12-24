@@ -9,7 +9,7 @@ targets:
   static:
     - host: "example.com"
       port: 80
-      proto: "tcp"
+      protocols: ["tcp"]          # Array of protocols
       interval: 30s
       timeout: 5s
       labels:
@@ -24,7 +24,7 @@ targets:
   static:
     - host: "example.com"
       port: 443
-      proto: "tcp"
+      protocols: ["tcp"]
       interval: 30s
 
 probes:
@@ -35,14 +35,14 @@ probes:
       insecure_skip_verify: false
 ```
 
-## Monitoring DNS Server
+## Monitoring DNS Server with Multiple Protocols
 
 ```yaml
 targets:
   static:
     - host: "8.8.8.8"
       port: 53
-      proto: "udp"
+      protocols: ["udp", "tcp"]   # Probe both UDP and TCP
       interval: 60s
       timeout: 3s
       labels:
@@ -50,13 +50,15 @@ targets:
         provider: "google"
 ```
 
+This creates two separate probe jobs: one for UDP and one for TCP, allowing you to monitor both protocols for the same target.
+
 ## Monitoring with ICMP
 
 ```yaml
 targets:
   static:
     - host: "1.1.1.1"
-      proto: "icmp"
+      protocols: ["icmp"]
       interval: 30s
       timeout: 2s
       labels:
@@ -72,19 +74,19 @@ targets:
   static:
     - host: "example.com"
       port: 80
-      proto: "tcp"
+      protocols: ["tcp"]
       interval: 30s
       labels:
         port: "http"
     - host: "example.com"
       port: 443
-      proto: "tcp"
+      protocols: ["tcp"]
       interval: 30s
       labels:
         port: "https"
     - host: "example.com"
       port: 22
-      proto: "tcp"
+      protocols: ["tcp"]
       interval: 60s
       labels:
         port: "ssh"
@@ -97,13 +99,13 @@ Create `/etc/vmprober/targets.yaml`:
 ```yaml
 - host: "service1.example.com"
   port: 8429
-  proto: "tcp"
+  protocols: ["tcp"]
   interval: 30s
   labels:
     service: "api"
 - host: "service2.example.com"
   port: 9090
-  proto: "tcp"
+  protocols: ["tcp"]
   interval: 30s
   labels:
     service: "metrics"

@@ -15,13 +15,17 @@ All metrics use the `vmprober` prefix (configurable via `metrics.namespace`).
 **Description:** Total number of successful probes.
 
 **Labels:**
-- `target` (string) - Target host and port
+- `instance` (string) - Target hostname and port from configuration (e.g., "google.com:443")
+- `target_ip` (string) - IP address that was actually connected to (e.g., "142.250.109.100")
+- `port` (string) - Target port (e.g., "443")
 - `protocol` (string) - Probe protocol: "tcp", "udp", "icmp"
 
 **Example:**
 ```
-vmprober_probe_success_total{protocol="tcp",target="example.com:80"} 1234
+vmprober_probe_success_total{instance="google.com:443",target_ip="142.250.109.100",port="443",protocol="tcp"} 1234
 ```
+
+**Note:** When a hostname resolves to multiple IP addresses, you'll get separate metrics for each IP with the same `instance` label, allowing aggregation by instance or per-IP analysis.
 
 ### vmprober_probe_failure_total
 
@@ -30,12 +34,14 @@ vmprober_probe_success_total{protocol="tcp",target="example.com:80"} 1234
 **Description:** Total number of failed probes.
 
 **Labels:**
-- `target` (string) - Target host and port
+- `instance` (string) - Target hostname and port from configuration
+- `target_ip` (string) - IP address that was actually connected to
+- `port` (string) - Target port
 - `protocol` (string) - Probe protocol
 
 **Example:**
 ```
-vmprober_probe_failure_total{protocol="tcp",target="example.com:80"} 5
+vmprober_probe_failure_total{instance="google.com:443",target_ip="142.250.109.100",port="443",protocol="tcp"} 5
 ```
 
 ### vmprober_probe_rtt_seconds
@@ -45,17 +51,19 @@ vmprober_probe_failure_total{protocol="tcp",target="example.com:80"} 5
 **Description:** Probe round-trip time in seconds. Measured only for successful probes.
 
 **Labels:**
-- `target` (string) - Target host and port
+- `instance` (string) - Target hostname and port from configuration
+- `target_ip` (string) - IP address that was actually connected to
+- `port` (string) - Target port
 - `protocol` (string) - Probe protocol
 
 **Buckets:** `[0.001, 0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1.0, 2.5, 5.0, 10.0]`
 
 **Example:**
 ```
-vmprober_probe_rtt_seconds_bucket{protocol="tcp",target="example.com:80",le="0.001"} 100
-vmprober_probe_rtt_seconds_bucket{protocol="tcp",target="example.com:80",le="0.005"} 500
-vmprober_probe_rtt_seconds_sum{protocol="tcp",target="example.com:80"} 12.34
-vmprober_probe_rtt_seconds_count{protocol="tcp",target="example.com:80"} 1234
+vmprober_probe_rtt_seconds_bucket{instance="google.com:443",target_ip="142.250.109.100",port="443",protocol="tcp",le="0.001"} 100
+vmprober_probe_rtt_seconds_bucket{instance="google.com:443",target_ip="142.250.109.100",port="443",protocol="tcp",le="0.005"} 500
+vmprober_probe_rtt_seconds_sum{instance="google.com:443",target_ip="142.250.109.100",port="443",protocol="tcp"} 12.34
+vmprober_probe_rtt_seconds_count{instance="google.com:443",target_ip="142.250.109.100",port="443",protocol="tcp"} 1234
 ```
 
 ### vmprober_probe_attempts_total
@@ -65,17 +73,9 @@ vmprober_probe_rtt_seconds_count{protocol="tcp",target="example.com:80"} 1234
 **Description:** Total number of probe attempts (successful and failed).
 
 **Labels:**
-- `target` (string) - Target host and port
-- `protocol` (string) - Probe protocol
-
-### vmprober_probe_last_success_timestamp
-
-**Type:** `gauge`
-
-**Description:** Unix timestamp (in seconds) of last successful probe.
-
-**Labels:**
-- `target` (string) - Target host and port
+- `instance` (string) - Target hostname and port from configuration
+- `target_ip` (string) - IP address that was actually connected to
+- `port` (string) - Target port
 - `protocol` (string) - Probe protocol
 
 ## System Metrics

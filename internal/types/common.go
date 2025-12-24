@@ -31,8 +31,9 @@ type ProbeResult struct {
 	Attempt      int           `json:"attempt"`
 	Timestamp    time.Time     `json:"timestamp"`
 	SourceIP     string        `json:"source_ip,omitempty"`
-	TargetIP     string        `json:"target_ip,omitempty"`
-	TargetPort   int           `json:"target_port,omitempty"`
+	TargetHost   string        `json:"target_host,omitempty"`   // Hostname (например, "google.com")
+	TargetIP     string        `json:"target_ip,omitempty"`     // IP адрес (например, "142.250.109.100")
+	TargetPort   int           `json:"target_port,omitempty"`   // Порт (например, 443)
 	TLS          bool          `json:"tls,omitempty"`
 	Protocol     ProbeType     `json:"protocol"`
 	Role         string        `json:"role,omitempty"` // client/server
@@ -112,6 +113,11 @@ type Job struct {
 	Priority    int           `json:"priority"`
 	CreatedAt   time.Time     `json:"created_at"`
 	Attempt     int           `json:"attempt"`
+	// Статистика проб
+	SuccessCount int64     `json:"success_count"`
+	FailedCount  int64     `json:"failed_count"`
+	LastStatus   string    `json:"last_status"` // "up" или "down"
+	LastProbeTime time.Time `json:"last_probe_time"`
 }
 
 // NormalizedEvent нормализованное событие

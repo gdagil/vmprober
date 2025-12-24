@@ -67,7 +67,7 @@ data:
       static:
         - host: "example.com"
           port: 80
-          proto: "tcp"
+          protocols: ["tcp"]
 ```
 
 ### Deployment

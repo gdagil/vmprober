@@ -19,7 +19,7 @@ targets:
   static:
     - host: "example.com"
       port: 80
-      proto: "tcp"
+      protocols: ["tcp"]          # Array of protocols
       interval: 30s
       timeout: 5s
 
@@ -46,7 +46,7 @@ targets:
   static:
     - host: "8.8.8.8"
       port: 53
-      proto: "udp"
+      protocols: ["udp"]          # Array of protocols
       interval: 60s
 
 probes:
@@ -54,6 +54,19 @@ probes:
     payload_type: "random"  # random, echo, custom
     payload_size: 64
     response_timeout: 2s
+```
+
+**Multiple Protocols Example:**
+```yaml
+targets:
+  static:
+    - host: "8.8.8.8"
+      port: 53
+      protocols: ["udp", "tcp"]   # Probe both UDP and TCP
+      interval: 60s
+      timeout: 3s
+      labels:
+        service: "dns"
 ```
 
 ### ICMP Probes
@@ -70,7 +83,7 @@ Ping hosts to check network connectivity.
 targets:
   static:
     - host: "1.1.1.1"
-      proto: "icmp"
+      protocols: ["icmp"]   # Array of protocols (single item for ICMP)
       interval: 30s
 
 probes:
@@ -105,6 +118,24 @@ Each probe returns a `ProbeResult` containing:
 - Timestamp
 - Source and target IPs
 - Protocol-specific data
+
+## Multiple Protocols per Target
+
+You can specify multiple protocols for a single target. VMProber will create separate probe jobs for each protocol:
+
+```yaml
+targets:
+  static:
+    - host: "8.8.8.8"
+      port: 53
+      protocols: ["udp", "tcp"]   # Creates 2 separate jobs
+      interval: 60s
+      timeout: 3s
+      labels:
+        service: "dns"
+```
+
+This is useful when you want to monitor the same service using different protocols, such as checking both UDP and TCP connectivity for DNS servers.
 
 ## Probe Factory
 

@@ -182,14 +182,7 @@ func TestCollector_Record_DifferentTargets(t *testing.T) {
 	}
 }
 
-func TestCollector_GetRegistry(t *testing.T) {
-	collector := NewCollector("test_registry", false)
-	
-	registry := collector.GetRegistry()
-	if registry == nil {
-		t.Error("GetRegistry returned nil")
-	}
-}
+// GetRegistry test removed - VictoriaMetrics doesn't use registry pattern
 
 func TestCollector_Record_RTT(t *testing.T) {
 	collector := NewCollector("test_rtt", false)

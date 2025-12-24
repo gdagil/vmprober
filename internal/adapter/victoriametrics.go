@@ -82,16 +82,27 @@ func NewVictoriaMetricsAdapter(cfg *config.PushConfig, logger *logrus.Logger) (V
 
 	ctx, cancel := context.WithCancel(context.Background())
 
+	// Настройка HTTP клиента с таймаутами
+	transport := &http.Transport{
+		MaxIdleConns:        100,
+		MaxIdleConnsPerHost: 10,
+		IdleConnTimeout:     90 * time.Second,
+	}
+	client := &http.Client{
+		Timeout:   30 * time.Second,
+		Transport: transport,
+	}
+
 	adapter := &DefaultVictoriaMetricsAdapter{
 		config:     cfg,
 		endpoints:  make([]*Endpoint, 0),
-		client:     &http.Client{Timeout: 30 * time.Second},
+		client:     client,
 		batchQueue: make(chan []types.Metric, cfg.Batch.Size),
 		logger:     logger,
 		stats:      &AdapterStats{},
 		ctx:        ctx,
 		cancel:     cancel,
-		formatter:  NewPrometheusFormatter(),
+		formatter:  NewJSONLineFormatter(), // Используем JSON line format для vminsert
 		retryEngine: NewRetryEngine(&cfg.Retry, logger),
 	}
 
@@ -128,6 +139,12 @@ func (a *DefaultVictoriaMetricsAdapter) Stop(ctx context.Context) error {
 
 // Push отправляет метрики
 func (a *DefaultVictoriaMetricsAdapter) Push(ctx context.Context, metrics []types.Metric) error {
+	// Используем таймаут для избежания бесконечной блокировки
+	pushTimeout := 5 * time.Second
+	if a.config.Batch.Timeout < pushTimeout {
+		pushTimeout = a.config.Batch.Timeout
+	}
+	
 	select {
 	case a.batchQueue <- metrics:
 		a.mu.Lock()
@@ -138,6 +155,10 @@ func (a *DefaultVictoriaMetricsAdapter) Push(ctx context.Context, metrics []type
 		return ctx.Err()
 	case <-a.ctx.Done():
 		return fmt.Errorf("adapter is stopped")
+	case <-time.After(pushTimeout):
+		// Очередь заполнена, пытаемся отправить напрямую
+		a.logger.WithField("queue_size", len(a.batchQueue)).Warn("Batch queue is full, sending metrics directly")
+		return a.sendBatch(ctx, metrics)
 	}
 }
 
@@ -174,6 +195,13 @@ func (a *DefaultVictoriaMetricsAdapter) GetStats() *AdapterStats {
 // batchWorker воркер для обработки батчей
 func (a *DefaultVictoriaMetricsAdapter) batchWorker(ctx context.Context) {
 	defer a.wg.Done()
+	
+	// Обработка паник для предотвращения падения воркера
+	defer func() {
+		if r := recover(); r != nil {
+			a.logger.WithField("panic", r).Error("Panic in batchWorker, recovering")
+		}
+	}()
 
 	batch := make([]types.Metric, 0, a.config.Batch.Size)
 	ticker := time.NewTicker(a.config.Batch.Timeout)
@@ -197,11 +225,21 @@ func (a *DefaultVictoriaMetricsAdapter) batchWorker(ctx context.Context) {
 				}
 			}
 			return
-		case metrics := <-a.batchQueue:
+		case metrics, ok := <-a.batchQueue:
+			if !ok {
+				// Канал закрыт, отправляем оставшиеся метрики
+				if len(batch) > 0 {
+					if err := a.sendBatch(ctx, batch); err != nil {
+						a.logger.WithError(err).Error("Failed to send final batch after channel close")
+					}
+				}
+				return
+			}
 			batch = append(batch, metrics...)
 			if len(batch) >= a.config.Batch.Size {
 				if err := a.sendBatch(ctx, batch); err != nil {
 					a.logger.WithError(err).Error("Failed to send batch")
+					// Продолжаем работу даже при ошибке, чтобы не блокировать обработку
 				}
 				batch = batch[:0]
 			}
@@ -209,6 +247,7 @@ func (a *DefaultVictoriaMetricsAdapter) batchWorker(ctx context.Context) {
 			if len(batch) > 0 {
 				if err := a.sendBatch(ctx, batch); err != nil {
 					a.logger.WithError(err).Error("Failed to send batch on timeout")
+					// Продолжаем работу даже при ошибке
 				}
 				batch = batch[:0]
 			}
@@ -232,18 +271,27 @@ func (a *DefaultVictoriaMetricsAdapter) sendBatch(ctx context.Context, metrics [
 
 	// Отправка на все endpoints
 	var lastErr error
+	successCount := 0
 	for _, endpoint := range a.endpoints {
 		if err := a.sendToEndpoint(ctx, endpoint, data); err != nil {
 			lastErr = err
-			a.logger.WithError(err).Error("Failed to send to endpoint", "endpoint", endpoint.URL)
+			a.logger.WithError(err).WithField("endpoint", endpoint.URL).Error("Failed to send metrics to endpoint")
 
 			// Retry логика
 			if a.retryEngine.ShouldRetry(err) {
-				a.retryEngine.ScheduleRetry(ctx, func() error {
+				a.retryEngine.ScheduleRetry(ctx, endpoint.URL, func() error {
 					return a.sendToEndpoint(ctx, endpoint, data)
 				})
 			}
+		} else {
+			successCount++
+			a.logger.WithField("endpoint", endpoint.URL).Debug("Successfully sent metrics to endpoint")
 		}
+	}
+	
+	// Если хотя бы один endpoint успешно получил метрики, считаем успешным
+	if successCount > 0 {
+		lastErr = nil
 	}
 
 	// Обновление статистики
@@ -268,7 +316,9 @@ func (a *DefaultVictoriaMetricsAdapter) sendToEndpoint(ctx context.Context, endp
 	}
 
 	// Установка заголовков
-	req.Header.Set("Content-Type", "text/plain")
+	// Для JSON line format используем application/json
+	// Для vminsert endpoint /insert/0/prometheus/api/v1/import поддерживает JSON line format
+	req.Header.Set("Content-Type", "application/json")
 	for k, v := range endpoint.Headers {
 		req.Header.Set(k, v)
 	}

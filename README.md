@@ -79,7 +79,6 @@ VMProber exports the following metrics:
 - `vmprober_probe_failure_total` - Number of failed probes
 - `vmprober_probe_rtt_seconds` - Response time (histogram)
 - `vmprober_probe_attempts_total` - Total number of attempts
-- `vmprober_probe_last_success_timestamp` - Timestamp of last successful probe
 
 ## Development
 

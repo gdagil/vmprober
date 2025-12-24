@@ -78,11 +78,20 @@ targets:
   static:
     - host: "example.com"
       port: 80
-      proto: "tcp"
+      protocols: ["tcp"]          # Array of protocols to probe
       interval: 30s
       timeout: 5s
       labels:
         service: "web"
+    
+    # Multiple protocols for the same target
+    - host: "8.8.8.8"
+      port: 53
+      protocols: ["udp", "tcp"]   # Probe both UDP and TCP
+      interval: 60s
+      timeout: 3s
+      labels:
+        service: "dns"
   
   # File-based targets
   files:
@@ -100,6 +109,8 @@ targets:
     - command: "/usr/bin/get-targets.sh"
       interval: 10m
 ```
+
+**Note**: The `protocols` field accepts an array of protocol names (`tcp`, `udp`, `icmp`). For each protocol specified, VMProber will create a separate probe job. This allows monitoring the same target with multiple protocols simultaneously.
 
 ### Scheduler (`scheduler`)
 

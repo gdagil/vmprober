@@ -169,13 +169,25 @@ func (n *DefaultNormalizer) standardize(result *types.ProbeResult) *types.Normal
 		event.Labels["socket_family"] = result.SocketFamily
 	}
 
-	// Установка метрик
-	event.Metrics["rtt_seconds"] = result.RTT.Seconds()
+	// Установка лейбла status
 	if result.Success {
-		event.Metrics["success"] = 1.0
+		event.Labels["status"] = "success"
 	} else {
-		event.Metrics["success"] = 0.0
+		event.Labels["status"] = "failed"
 	}
+
+	// Установка метрик с префиксом vmprober_
+	// RTT метрика - всегда отправляется, для failed будет 0
+	event.Metrics["vmprober_probe_rtt_seconds"] = result.RTT.Seconds()
+
+	// Результат пробы - 1.0 для успешных, 1.0 для неудачных (для подсчета)
+	event.Metrics["vmprober_probe_result"] = 1.0
+
+	// Длительность пробы (общее время выполнения)
+	event.Metrics["vmprober_probe_duration_seconds"] = result.RTT.Seconds()
+
+	// Счетчик попыток
+	event.Metrics["vmprober_probe_attempts_total"] = float64(result.Attempt)
 
 	// Установка тегов
 	event.Tags = append(event.Tags, string(result.Protocol))
@@ -183,6 +195,14 @@ func (n *DefaultNormalizer) standardize(result *types.ProbeResult) *types.Normal
 		event.Tags = append(event.Tags, "success")
 	} else {
 		event.Tags = append(event.Tags, "failure")
+	}
+
+	// Дополнительные метрики
+	// DNS lookup время (если доступно)
+	if result.DNSResult != nil {
+		event.Metrics["vmprober_probe_dns_lookup_seconds"] = result.DNSResult.LookupTime.Seconds()
+		// Количество разрешенных IP адресов
+		event.Metrics["vmprober_probe_dns_resolved_ips"] = float64(len(result.DNSResult.ResolvedIPs))
 	}
 
 	// Установка метаданных

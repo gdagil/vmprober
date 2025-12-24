@@ -15,7 +15,7 @@ targets:
   static:
     - host: "google.com"
       port: 80
-      proto: "tcp"
+      protocols: ["tcp"]          # Array of protocols
       interval: 30s
       timeout: 5s
       labels:
@@ -81,16 +81,16 @@ targets:
   static:
     - host: "google.com"
       port: 80
-      proto: "tcp"
+      protocols: ["tcp"]
       interval: 30s
     - host: "8.8.8.8"
       port: 53
-      proto: "udp"
+      protocols: ["udp", "tcp"]   # Probe both UDP and TCP
       interval: 60s
       labels:
         service: "dns"
     - host: "1.1.1.1"
-      proto: "icmp"
+      protocols: ["icmp"]
       interval: 30s
       labels:
         service: "ping"
@@ -120,13 +120,13 @@ targets:
   static:
     - host: "example.com"
       port: 80
-      proto: "tcp"
+      protocols: ["tcp"]
       interval: 30s
       labels:
         port: "http"
     - host: "example.com"
       port: 443
-      proto: "tcp"
+      protocols: ["tcp"]
       interval: 30s
       labels:
         port: "https"
@@ -139,7 +139,7 @@ targets:
   static:
     - host: "example.com"
       port: 443
-      proto: "tcp"
+      protocols: ["tcp"]
       interval: 30s
 
 probes:

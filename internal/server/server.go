@@ -9,9 +9,8 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"github.com/VictoriaMetrics/metrics"
 	"github.com/sirupsen/logrus"
-	"github.com/vmprober/vmprober/internal/metrics"
 	"github.com/vmprober/vmprober/internal/scheduler"
 )
 
@@ -24,7 +23,6 @@ type Server struct {
 	logger          *logrus.Logger
 	startTime       time.Time
 	scheduler       *scheduler.Scheduler
-	metricsCollector *metrics.Collector
 }
 
 // NewServer создает новый HTTP сервер
@@ -47,7 +45,7 @@ func NewServer(host string, port int, logger *logrus.Logger) *Server {
 	// Регистрация handlers
 	mux.HandleFunc("/health", server.healthHandler)
 	mux.HandleFunc("/ready", server.readyHandler)
-	mux.Handle("/metrics", promhttp.Handler())
+	mux.HandleFunc("/metrics", server.metricsHandler)
 	mux.HandleFunc("/api/v1/jobs", server.jobsHandler)
 	mux.HandleFunc("/api/v1/stats", server.statsHandler)
 	mux.HandleFunc("/api/v1/targets", server.targetsHandler)
@@ -60,11 +58,6 @@ func NewServer(host string, port int, logger *logrus.Logger) *Server {
 // SetScheduler устанавливает планировщик
 func (s *Server) SetScheduler(sched *scheduler.Scheduler) {
 	s.scheduler = sched
-}
-
-// SetMetricsCollector устанавливает коллектор метрик
-func (s *Server) SetMetricsCollector(collector *metrics.Collector) {
-	s.metricsCollector = collector
 }
 
 // Start запускает HTTP сервер
@@ -100,6 +93,11 @@ func (s *Server) readyHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	fmt.Fprintf(w, `{"ready":true}`)
+}
+
+// metricsHandler обрабатывает /metrics endpoint
+func (s *Server) metricsHandler(w http.ResponseWriter, r *http.Request) {
+	metrics.WritePrometheus(w, true)
 }
 
 // jobsHandler обрабатывает /api/v1/jobs endpoint
@@ -143,16 +141,27 @@ func (s *Server) targetsHandler(w http.ResponseWriter, r *http.Request) {
 	targets := make([]map[string]interface{}, 0, len(jobs))
 	
 	for _, job := range jobs {
+		status := "down"
+		if job.LastStatus == "up" {
+			status = "up"
+		} else if job.LastStatus == "" {
+			status = "unknown"
+		}
+		
 		targets = append(targets, map[string]interface{}{
-			"id":       job.ID,
-			"host":     job.Target.Host,
-			"port":     job.Target.Port,
-			"protocol": job.Target.Protocol,
-			"interval": job.Interval.String(),
-			"timeout":  job.Target.Timeout.String(),
-			"labels":   job.Target.Labels,
-			"enabled":  job.Target.Enabled,
-			"next_run": job.NextRun.Format(time.RFC3339),
+			"id":            job.ID,
+			"host":          job.Target.Host,
+			"port":          job.Target.Port,
+			"protocol":      job.Target.Protocol,
+			"interval":      job.Interval.String(),
+			"timeout":       job.Target.Timeout.String(),
+			"labels":        job.Target.Labels,
+			"enabled":       job.Target.Enabled,
+			"next_run":      job.NextRun.Format(time.RFC3339),
+			"status":        status,
+			"success_count": job.SuccessCount,
+			"failed_count":  job.FailedCount,
+			"last_probe_time": job.LastProbeTime.Format(time.RFC3339),
 		})
 	}
 
@@ -207,14 +216,6 @@ func getUIHTML() string {
             <div class="vm-stat-card">
                 <div class="vm-stat-card__value" id="runningJobs">-</div>
                 <div class="vm-stat-card__label">Running</div>
-            </div>
-            <div class="vm-stat-card">
-                <div class="vm-stat-card__value" id="queuedJobs">-</div>
-                <div class="vm-stat-card__label">Queued</div>
-            </div>
-            <div class="vm-stat-card">
-                <div class="vm-stat-card__value" id="completedJobs">-</div>
-                <div class="vm-stat-card__label">Completed</div>
             </div>
             <div class="vm-stat-card">
                 <div class="vm-stat-card__value" id="failedJobs">-</div>
@@ -307,8 +308,6 @@ func getUIHTML() string {
                 
                 document.getElementById('totalJobs').textContent = data.scheduler.total_jobs || 0;
                 document.getElementById('runningJobs').textContent = data.scheduler.running_jobs || 0;
-                document.getElementById('queuedJobs').textContent = data.scheduler.queued_jobs || 0;
-                document.getElementById('completedJobs').textContent = data.scheduler.completed_jobs || 0;
                 document.getElementById('failedJobs').textContent = data.scheduler.failed_jobs || 0;
                 document.getElementById('uptime').textContent = formatDuration(data.uptime || '0s');
             } catch (error) {
@@ -327,14 +326,22 @@ func getUIHTML() string {
                 }
 
                 let html = '<table class="vm-table"><thead><tr>';
-                html += '<th>ID</th><th>Target</th><th>Protocol</th><th>Interval</th><th>Next Run</th><th>Priority</th>';
+                html += '<th>ID</th><th>Target</th><th>Protocol</th><th>Status</th><th>Success/Failed</th><th>Interval</th><th>Next Run</th><th>Priority</th>';
                 html += '</tr></thead><tbody>';
 
                 jobs.forEach(job => {
+                    const status = job.last_status || 'unknown';
+                    const statusClass = status === 'up' ? 'vm-badge--success' : (status === 'down' ? 'vm-badge--error' : 'vm-badge--warning');
+                    const statusText = status === 'up' ? 'UP' : (status === 'down' ? 'DOWN' : 'UNKNOWN');
+                    const successCount = job.success_count || 0;
+                    const failedCount = job.failed_count || 0;
+                    
                     html += '<tr>';
                     html += '<td><code>' + job.id + '</code></td>';
                     html += '<td>' + job.target.host + ':' + (job.target.port || 'N/A') + '</td>';
                     html += '<td><span class="vm-badge vm-badge--info">' + (job.target.protocol || 'N/A').toUpperCase() + '</span></td>';
+                    html += '<td><span class="vm-status-dot vm-status-dot--' + status + '"></span><span class="vm-badge ' + statusClass + '">' + statusText + '</span></td>';
+                    html += '<td><span class="vm-badge vm-badge--success" style="margin-right: 5px;">✓ ' + successCount + '</span><span class="vm-badge vm-badge--error">✗ ' + failedCount + '</span></td>';
                     html += '<td>' + formatDuration(job.interval || '0s') + '</td>';
                     html += '<td class="vm-timestamp">' + formatTime(job.next_run) + '</td>';
                     html += '<td>' + (job.priority || 0) + '</td>';
@@ -359,10 +366,16 @@ func getUIHTML() string {
                 }
 
                 let html = '<table class="vm-table"><thead><tr>';
-                html += '<th>ID</th><th>Host</th><th>Port</th><th>Protocol</th><th>Interval</th><th>Timeout</th><th>Status</th><th>Labels</th>';
+                html += '<th>ID</th><th>Host</th><th>Port</th><th>Protocol</th><th>Interval</th><th>Timeout</th><th>Status</th><th>Success/Failed</th><th>Labels</th>';
                 html += '</tr></thead><tbody>';
 
                 targets.forEach(target => {
+                    const status = target.status || 'unknown';
+                    const statusClass = status === 'up' ? 'vm-badge--success' : (status === 'down' ? 'vm-badge--error' : 'vm-badge--warning');
+                    const statusText = status === 'up' ? 'UP' : (status === 'down' ? 'DOWN' : 'UNKNOWN');
+                    const successCount = target.success_count || 0;
+                    const failedCount = target.failed_count || 0;
+                    
                     html += '<tr>';
                     html += '<td><code>' + target.id + '</code></td>';
                     html += '<td>' + target.host + '</td>';
@@ -371,12 +384,9 @@ func getUIHTML() string {
                     html += '<td>' + formatDuration(target.interval) + '</td>';
                     html += '<td>' + formatDuration(target.timeout) + '</td>';
                     html += '<td>';
-                    if (target.enabled) {
-                        html += '<span class="vm-status-dot vm-status-dot--up"></span><span class="vm-badge vm-badge--success">UP</span>';
-                    } else {
-                        html += '<span class="vm-status-dot vm-status-dot--down"></span><span class="vm-badge vm-badge--error">DOWN</span>';
-                    }
+                    html += '<span class="vm-status-dot vm-status-dot--' + status + '"></span><span class="vm-badge ' + statusClass + '">' + statusText + '</span>';
                     html += '</td>';
+                    html += '<td><span class="vm-badge vm-badge--success" style="margin-right: 5px;">✓ ' + successCount + '</span><span class="vm-badge vm-badge--error">✗ ' + failedCount + '</span></td>';
                     html += '<td>';
                     if (target.labels && Object.keys(target.labels).length > 0) {
                         html += '<div class="vm-labels">';

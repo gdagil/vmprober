@@ -126,12 +126,54 @@ type TargetsConfig struct {
 
 // TargetConfig конфигурация цели
 type TargetConfig struct {
-	Host     string            `yaml:"host" json:"host"`
-	Port     int               `yaml:"port" json:"port"`
-	Protocol types.ProbeType   `yaml:"proto" json:"proto"`
-	Interval time.Duration      `yaml:"interval" json:"interval"`
-	Timeout  time.Duration      `yaml:"timeout" json:"timeout"`
+	Host      string            `yaml:"host" json:"host"`
+	Port      int               `yaml:"port" json:"port"`
+	Protocols []string          `yaml:"protocols" json:"protocols"` // Список протоколов как строки
+	Interval  time.Duration     `yaml:"interval" json:"interval"`
+	Timeout  time.Duration     `yaml:"timeout" json:"timeout"`
 	Labels   map[string]string `yaml:"labels" json:"labels"`
+}
+
+// UnmarshalYAML кастомный парсер для корректной обработки массива протоколов
+func (tc *TargetConfig) UnmarshalYAML(unmarshal func(interface{}) error) error {
+	type targetConfigAlias TargetConfig
+	aux := &struct {
+		Host      string            `yaml:"host"`
+		Port      int               `yaml:"port"`
+		Protocols []string          `yaml:"protocols"`
+		Interval  time.Duration    `yaml:"interval"`
+		Timeout   time.Duration    `yaml:"timeout"`
+		Labels    map[string]string `yaml:"labels"`
+	}{}
+
+	if err := unmarshal(aux); err != nil {
+		return err
+	}
+
+	// Копируем поля
+	tc.Host = aux.Host
+	tc.Port = aux.Port
+	tc.Interval = aux.Interval
+	tc.Timeout = aux.Timeout
+	tc.Labels = aux.Labels
+
+	// Копируем протоколы
+	tc.Protocols = aux.Protocols
+
+	return nil
+}
+
+// GetProtocols возвращает список протоколов для таргета
+func (tc *TargetConfig) GetProtocols() []types.ProbeType {
+	if len(tc.Protocols) > 0 {
+		result := make([]types.ProbeType, 0, len(tc.Protocols))
+		for _, p := range tc.Protocols {
+			result = append(result, types.ProbeType(p))
+		}
+		return result
+	}
+	// По умолчанию TCP, если протоколы не указаны
+	return []types.ProbeType{types.ProbeTypeTCP}
 }
 
 // FileConfig конфигурация файлового источника

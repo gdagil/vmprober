@@ -31,6 +31,7 @@ type retryTask struct {
 	fn       func() error
 	attempts int
 	delay    time.Duration
+	endpoint string
 }
 
 // NewRetryEngine создает новый retry engine
@@ -70,11 +71,12 @@ func (r *RetryEngine) ShouldRetry(err error) bool {
 }
 
 // ScheduleRetry планирует retry
-func (r *RetryEngine) ScheduleRetry(ctx context.Context, fn func() error) {
+func (r *RetryEngine) ScheduleRetry(ctx context.Context, endpoint string, fn func() error) {
 	task := retryTask{
 		fn:       fn,
 		attempts: 0,
 		delay:    r.config.InitialDelay,
+		endpoint: endpoint,
 	}
 
 	select {
@@ -82,10 +84,15 @@ func (r *RetryEngine) ScheduleRetry(ctx context.Context, fn func() error) {
 		r.mu.Lock()
 		r.stats.TotalRetries++
 		r.mu.Unlock()
+		r.logger.WithFields(logrus.Fields{
+			"endpoint": endpoint,
+			"attempt":  1,
+			"delay":    task.delay,
+		}).Info("Scheduled retry for failed metrics push")
 	case <-ctx.Done():
 		return
 	default:
-		r.logger.Warn("Retry queue is full, dropping retry task")
+		r.logger.WithField("endpoint", endpoint).Warn("Retry queue is full, dropping retry task")
 	}
 }
 
@@ -100,8 +107,14 @@ func (r *RetryEngine) retryWorker(ctx context.Context) {
 			time.Sleep(task.delay)
 
 			// Выполнение задачи
-			err := task.fn()
 			task.attempts++
+			r.logger.WithFields(logrus.Fields{
+				"endpoint": task.endpoint,
+				"attempt":  task.attempts,
+				"max_attempts": r.config.MaxAttempts,
+			}).Info("Retrying metrics push")
+			
+			err := task.fn()
 
 			if err != nil {
 				if task.attempts < r.config.MaxAttempts {
@@ -110,21 +123,36 @@ func (r *RetryEngine) retryWorker(ctx context.Context) {
 					// Повторное добавление в очередь
 					select {
 					case r.retryQueue <- task:
+						r.logger.WithFields(logrus.Fields{
+							"endpoint": task.endpoint,
+							"attempt":  task.attempts,
+							"next_attempt": task.attempts + 1,
+							"next_delay": task.delay,
+						}).Info("Scheduled next retry attempt")
 					default:
 						r.mu.Lock()
 						r.stats.FailedRetries++
 						r.mu.Unlock()
+						r.logger.WithField("endpoint", task.endpoint).Warn("Retry queue is full, dropping retry task")
 					}
 				} else {
 					r.mu.Lock()
 					r.stats.FailedRetries++
 					r.mu.Unlock()
-					r.logger.WithError(err).Error("Retry failed after max attempts")
+					r.logger.WithError(err).WithFields(logrus.Fields{
+						"endpoint": task.endpoint,
+						"attempt":  task.attempts,
+						"max_attempts": r.config.MaxAttempts,
+					}).Error("Retry failed after max attempts")
 				}
 			} else {
 				r.mu.Lock()
 				r.stats.SuccessfulRetries++
 				r.mu.Unlock()
+				r.logger.WithFields(logrus.Fields{
+					"endpoint": task.endpoint,
+					"attempt":  task.attempts,
+				}).Info("Retry succeeded")
 			}
 		}
 	}

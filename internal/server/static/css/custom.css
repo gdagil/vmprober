@@ -258,6 +258,11 @@ body {
   box-shadow: 0 0 0 2px rgba(244, 67, 54, 0.2);
 }
 
+.vm-status-dot--unknown {
+  background: var(--vm-warning);
+  box-shadow: 0 0 0 2px rgba(255, 152, 0, 0.2);
+}
+
 /* Labels */
 .vm-labels {
   display: flex;

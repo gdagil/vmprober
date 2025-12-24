@@ -50,6 +50,10 @@ func (p *TCPProbe) Execute(ctx context.Context, target types.Target) (*types.Pro
 		Timeout: target.Timeout,
 	}
 
+	// Сохраняем hostname для метрик
+	result.TargetHost = target.Host
+	result.TargetPort = target.Port
+
 	// Выполнение подключения
 	conn, err := dialer.DialContext(ctx, "tcp", addr)
 	if err != nil {
@@ -63,7 +67,7 @@ func (p *TCPProbe) Execute(ctx context.Context, target types.Target) (*types.Pro
 	result.Success = true
 	result.RTT = time.Since(start)
 	result.TargetIP = conn.RemoteAddr().(*net.TCPAddr).IP.String()
-	result.TargetPort = conn.RemoteAddr().(*net.TCPAddr).Port
+	// TargetPort уже установлен выше
 	result.SourceIP = conn.LocalAddr().(*net.TCPAddr).IP.String()
 	result.Role = "client"
 
