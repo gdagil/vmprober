@@ -21,7 +21,7 @@ test:
 # Run tests with coverage
 test-coverage:
 	@echo "Running tests with coverage..."
-	@go test -v -coverprofile=coverage.out ./...
+	@go test -v -coverprofile=coverage.out ./internal/...
 	@go tool cover -html=coverage.out -o coverage.html
 
 # Clean build artifacts
