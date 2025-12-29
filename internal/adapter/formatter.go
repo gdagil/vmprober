@@ -6,28 +6,28 @@ import (
 	"strings"
 	"time"
 
-	"github.com/vmprober/vmprober/internal/types"
+	"github.com/gdagil/vmprober/internal/types"
 )
 
-// Formatter интерфейс для форматирования метрик
+// Formatter interface for formatting metrics
 type Formatter interface {
 	Format(metrics []types.Metric) ([]byte, error)
 }
 
-// PrometheusFormatter форматирует метрики в Prometheus text format
+// PrometheusFormatter formats metrics in Prometheus text format
 type PrometheusFormatter struct{}
 
-// NewPrometheusFormatter создает новый Prometheus formatter
+// NewPrometheusFormatter creates a new Prometheus formatter
 func NewPrometheusFormatter() Formatter {
 	return &PrometheusFormatter{}
 }
 
-// Format форматирует метрики в Prometheus text format
+// Format formats metrics in Prometheus text format
 func (f *PrometheusFormatter) Format(metrics []types.Metric) ([]byte, error) {
 	var builder strings.Builder
 
 	for _, metric := range metrics {
-		// Формирование метки
+		// Format label
 		labels := make([]string, 0, len(metric.Labels))
 		for k, v := range metric.Labels {
 			labels = append(labels, fmt.Sprintf(`%s="%s"`, escapeLabel(k), escapeLabel(v)))
@@ -38,18 +38,18 @@ func (f *PrometheusFormatter) Format(metrics []types.Metric) ([]byte, error) {
 			labelStr = "{" + strings.Join(labels, ",") + "}"
 		}
 
-		// Формирование строки метрики
+		// Format metric string
 		switch metric.Type {
 		case types.MetricTypeCounter:
 			builder.WriteString(fmt.Sprintf("%s%s %f\n", metric.Name, labelStr, metric.Value))
 		case types.MetricTypeGauge:
 			builder.WriteString(fmt.Sprintf("%s%s %f\n", metric.Name, labelStr, metric.Value))
 		case types.MetricTypeHistogram:
-			// Запись счетчика
+			// Write counter
 			builder.WriteString(fmt.Sprintf("%s_count%s %d\n", metric.Name, labelStr, metric.Count))
-			// Запись суммы
+			// Write sum
 			builder.WriteString(fmt.Sprintf("%s_sum%s %f\n", metric.Name, labelStr, metric.Sum))
-			// Запись бакетов
+			// Write buckets
 			for i, bucket := range metric.Buckets {
 				bucketLabel := labelStr
 				if bucketLabel == "" {
@@ -59,7 +59,7 @@ func (f *PrometheusFormatter) Format(metrics []types.Metric) ([]byte, error) {
 				}
 				builder.WriteString(fmt.Sprintf("%s_bucket%s %d\n", metric.Name, bucketLabel, metric.Count))
 				if i == len(metric.Buckets)-1 {
-					// Последний бакет с +Inf
+					// Last bucket with +Inf
 					infLabel := labelStr
 					if infLabel == "" {
 						infLabel = `{le="+Inf"}`
@@ -70,11 +70,11 @@ func (f *PrometheusFormatter) Format(metrics []types.Metric) ([]byte, error) {
 				}
 			}
 		case types.MetricTypeSummary:
-			// Запись счетчика
+			// Write counter
 			builder.WriteString(fmt.Sprintf("%s_count%s %d\n", metric.Name, labelStr, metric.Count))
-			// Запись суммы
+			// Write sum
 			builder.WriteString(fmt.Sprintf("%s_sum%s %f\n", metric.Name, labelStr, metric.Sum))
-			// Запись квантилей
+			// Write quantiles
 			for quantile, value := range metric.Quantiles {
 				quantileLabel := labelStr
 				if quantileLabel == "" {
@@ -90,7 +90,7 @@ func (f *PrometheusFormatter) Format(metrics []types.Metric) ([]byte, error) {
 	return []byte(builder.String()), nil
 }
 
-// escapeLabel экранирует метки для Prometheus формата
+// escapeLabel escapes labels for Prometheus format
 func escapeLabel(s string) string {
 	s = strings.ReplaceAll(s, `\`, `\\`)
 	s = strings.ReplaceAll(s, `"`, `\"`)
@@ -98,44 +98,44 @@ func escapeLabel(s string) string {
 	return s
 }
 
-// JSONLineFormatter форматирует метрики в VictoriaMetrics JSON line format
+// JSONLineFormatter formats metrics in VictoriaMetrics JSON line format
 type JSONLineFormatter struct{}
 
-// NewJSONLineFormatter создает новый JSON line formatter
+// NewJSONLineFormatter creates a new JSON line formatter
 func NewJSONLineFormatter() Formatter {
 	return &JSONLineFormatter{}
 }
 
-// Format форматирует метрики в VictoriaMetrics JSON line format
+// Format formats metrics in VictoriaMetrics JSON line format
 // Формат: {"metric":{"__name__":"metric_name","label1":"value1"},"values":[1.0],"timestamps":[1549891472010]}
 func (f *JSONLineFormatter) Format(metrics []types.Metric) ([]byte, error) {
 	var builder strings.Builder
 	
 	for _, metric := range metrics {
-		// Формирование меток для JSON формата
+		// Format labels for JSON format
 		metricLabels := make(map[string]string)
 		metricLabels["__name__"] = metric.Name
 		for k, v := range metric.Labels {
 			metricLabels[k] = v
 		}
 		
-		// Преобразование timestamp в миллисекунды
+		// Convert timestamp to milliseconds
 		var timestamp int64
 		if metric.Timestamp.IsZero() {
-			// Если timestamp не установлен, используем текущее время
+			// If timestamp is not set, use current time
 			timestamp = time.Now().UnixMilli()
 		} else {
 			timestamp = metric.Timestamp.UnixMilli()
 		}
 		
-		// Формирование JSON объекта
+		// Format JSON object
 		jsonObj := map[string]interface{}{
 			"metric":    metricLabels,
 			"values":    []float64{metric.Value},
 			"timestamps": []int64{timestamp},
 		}
 		
-		// Сериализация в JSON
+		// Serialize to JSON
 		jsonBytes, err := json.Marshal(jsonObj)
 		if err != nil {
 			return nil, fmt.Errorf("failed to marshal metric to JSON: %w", err)

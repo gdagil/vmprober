@@ -8,25 +8,25 @@ import (
 	"time"
 
 	"github.com/sirupsen/logrus"
-	"github.com/vmprober/vmprober/internal/config"
+	"github.com/gdagil/vmprober/internal/config"
 )
 
-// ObservabilityManager управляет системой observability
+// ObservabilityManager manages the observability system
 type ObservabilityManager interface {
-	// Start запускает observability компоненты
+	// Start starts observability components
 	Start(ctx context.Context) error
 
-	// Stop останавливает observability компоненты
+	// Stop stops observability components
 	Stop(ctx context.Context) error
 
-	// GetHealth возвращает статус здоровья системы
+	// GetHealth returns system health status
 	GetHealth() *HealthStatus
 
-	// GetMetrics возвращает метрики системы
+	// GetMetrics returns system metrics
 	GetMetrics() *SystemMetrics
 }
 
-// HealthStatus статус здоровья системы
+// HealthStatus system health status
 type HealthStatus struct {
 	Status    string                 `json:"status"`
 	Timestamp time.Time              `json:"timestamp"`
@@ -34,7 +34,7 @@ type HealthStatus struct {
 	Checks    map[string]HealthCheck `json:"checks"`
 }
 
-// HealthCheck проверка здоровья компонента
+// HealthCheck component health check
 type HealthCheck struct {
 	Status    string        `json:"status"`
 	Message   string        `json:"message,omitempty"`
@@ -42,7 +42,7 @@ type HealthCheck struct {
 	Duration  time.Duration `json:"duration,omitempty"`
 }
 
-// SystemMetrics системные метрики
+// SystemMetrics system metrics
 type SystemMetrics struct {
 	Timestamp   time.Time `json:"timestamp"`
 	Uptime      time.Duration `json:"uptime"`
@@ -50,7 +50,7 @@ type SystemMetrics struct {
 	Memory      MemoryMetrics `json:"memory"`
 }
 
-// MemoryMetrics метрики памяти
+// MemoryMetrics memory metrics
 type MemoryMetrics struct {
 	Alloc      uint64 `json:"alloc"`
 	TotalAlloc uint64 `json:"total_alloc"`
@@ -59,7 +59,7 @@ type MemoryMetrics struct {
 	HeapSys    uint64 `json:"heap_sys"`
 }
 
-// DefaultObservabilityManager реализация observability менеджера
+// DefaultObservabilityManager observability manager implementation
 type DefaultObservabilityManager struct {
 	config     *config.ObservabilityConfig
 	logger     *logrus.Logger
@@ -70,7 +70,7 @@ type DefaultObservabilityManager struct {
 	metrics    *SystemMetrics
 }
 
-// NewObservabilityManager создает новый observability менеджер
+// NewObservabilityManager creates a new observability manager
 func NewObservabilityManager(cfg *config.ObservabilityConfig, logger *logrus.Logger) ObservabilityManager {
 	return &DefaultObservabilityManager{
 		config:    cfg,
@@ -87,26 +87,26 @@ func NewObservabilityManager(cfg *config.ObservabilityConfig, logger *logrus.Log
 	}
 }
 
-// Start запускает observability компоненты
+// Start starts observability components
 func (o *DefaultObservabilityManager) Start(ctx context.Context) error {
-	// Запуск pprof если включен
+	// Start pprof if enabled
 	if o.config.Pprof.Enabled {
 		if err := o.startPprof(ctx); err != nil {
 			return fmt.Errorf("failed to start pprof: %w", err)
 		}
 	}
 
-	// Запуск health check loop
+	// Start health check loop
 	go o.healthCheckLoop(ctx)
 
-	// Запуск metrics collection loop
+	// Start metrics collection loop
 	go o.metricsCollectionLoop(ctx)
 
 	o.logger.Info("Observability manager started")
 	return nil
 }
 
-// Stop останавливает observability компоненты
+// Stop stops observability components
 func (o *DefaultObservabilityManager) Stop(ctx context.Context) error {
 	if o.pprofServer != nil {
 		shutdownCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
@@ -120,7 +120,7 @@ func (o *DefaultObservabilityManager) Stop(ctx context.Context) error {
 	return nil
 }
 
-// GetHealth возвращает статус здоровья системы
+// GetHealth returns system health status
 func (o *DefaultObservabilityManager) GetHealth() *HealthStatus {
 	o.mu.RLock()
 	defer o.mu.RUnlock()
@@ -136,7 +136,7 @@ func (o *DefaultObservabilityManager) GetHealth() *HealthStatus {
 	return &health
 }
 
-// GetMetrics возвращает метрики системы
+// GetMetrics returns system metrics
 func (o *DefaultObservabilityManager) GetMetrics() *SystemMetrics {
 	o.mu.RLock()
 	defer o.mu.RUnlock()
@@ -148,13 +148,13 @@ func (o *DefaultObservabilityManager) GetMetrics() *SystemMetrics {
 	return &metrics
 }
 
-// startPprof запускает pprof сервер
+// startPprof starts pprof server
 func (o *DefaultObservabilityManager) startPprof(ctx context.Context) error {
 	addr := fmt.Sprintf("%s:%d", o.config.Pprof.Host, o.config.Pprof.Port)
 	
 	mux := http.NewServeMux()
 	mux.HandleFunc("/debug/pprof/", func(w http.ResponseWriter, r *http.Request) {
-		// В реальной реализации здесь был бы импорт net/http/pprof
+		// In a real implementation, net/http/pprof would be imported here
 		w.WriteHeader(http.StatusNotImplemented)
 		w.Write([]byte("pprof endpoint (requires net/http/pprof import)"))
 	})
@@ -174,9 +174,13 @@ func (o *DefaultObservabilityManager) startPprof(ctx context.Context) error {
 	return nil
 }
 
-// healthCheckLoop цикл проверки здоровья
+// healthCheckLoop health check loop
 func (o *DefaultObservabilityManager) healthCheckLoop(ctx context.Context) {
-	ticker := time.NewTicker(o.config.HealthCheck.Interval)
+	interval := o.config.HealthCheck.Interval
+	if interval <= 0 {
+		interval = 30 * time.Second // Default interval
+	}
+	ticker := time.NewTicker(interval)
 	defer ticker.Stop()
 
 	for {
@@ -189,7 +193,7 @@ func (o *DefaultObservabilityManager) healthCheckLoop(ctx context.Context) {
 	}
 }
 
-// metricsCollectionLoop цикл сбора метрик
+// metricsCollectionLoop metrics collection loop
 func (o *DefaultObservabilityManager) metricsCollectionLoop(ctx context.Context) {
 	ticker := time.NewTicker(10 * time.Second)
 	defer ticker.Stop()
@@ -204,31 +208,31 @@ func (o *DefaultObservabilityManager) metricsCollectionLoop(ctx context.Context)
 	}
 }
 
-// updateHealth обновляет статус здоровья
+// updateHealth updates health status
 func (o *DefaultObservabilityManager) updateHealth() {
 	o.mu.Lock()
 	defer o.mu.Unlock()
 
-	// Базовая проверка здоровья
+	// Basic health check
 	o.health.Status = "healthy"
 	o.health.Timestamp = time.Now()
 
-	// В реальной реализации здесь были бы проверки различных компонентов
+	// In a real implementation, various component checks would be here
 }
 
-// updateMetrics обновляет метрики системы
+// updateMetrics updates system metrics
 func (o *DefaultObservabilityManager) updateMetrics() {
 	o.mu.Lock()
 	defer o.mu.Unlock()
 
-	// В реальной реализации здесь был бы импорт runtime для получения метрик
+	// In a real implementation, runtime would be imported here to get metrics
 	o.metrics.Timestamp = time.Now()
 	o.metrics.Uptime = time.Since(o.startTime)
 	// o.metrics.Goroutines = runtime.NumGoroutine()
 	// var m runtime.MemStats
 	// runtime.ReadMemStats(&m)
 	// o.metrics.Memory.Alloc = m.Alloc
-	// и т.д.
+	// etc.
 }
 
 

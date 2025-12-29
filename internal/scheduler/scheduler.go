@@ -9,33 +9,33 @@ import (
 	"time"
 
 	"github.com/sirupsen/logrus"
-	"github.com/vmprober/vmprober/internal/types"
+	"github.com/gdagil/vmprober/internal/types"
 )
 
-// Scheduler управляет планированием задач
+// Scheduler manages task scheduling
 type Scheduler struct {
-	jobs      *jobHeap
-	allJobs   map[string]*types.Job // Хранилище всех джобов для UI
-	mu        sync.RWMutex
-	ctx       context.Context
-	cancel    context.CancelFunc
-	wg        sync.WaitGroup
-	jobChan   chan *types.Job
-	stats     *Stats
-	logger    *logrus.Logger
+	jobs    *jobHeap
+	allJobs map[string]*types.Job // Storage for all jobs for UI
+	mu      sync.RWMutex
+	ctx     context.Context
+	cancel  context.CancelFunc
+	wg      sync.WaitGroup
+	jobChan chan *types.Job
+	stats   *Stats
+	logger  *logrus.Logger
 }
 
-// Stats статистика планировщика
+// Stats scheduler statistics
 type Stats struct {
-	TotalJobs     int           `json:"total_jobs"`
-	RunningJobs   int           `json:"running_jobs"`
-	QueuedJobs    int           `json:"queued_jobs"`
-	CompletedJobs int64         `json:"completed_jobs"`
-	FailedJobs    int64         `json:"failed_jobs"`
-	mu            sync.RWMutex  `json:"-"` // Не сериализуем mutex
+	TotalJobs     int          `json:"total_jobs"`
+	RunningJobs   int          `json:"running_jobs"`
+	QueuedJobs    int          `json:"queued_jobs"`
+	CompletedJobs int64        `json:"completed_jobs"`
+	FailedJobs    int64        `json:"failed_jobs"`
+	mu            sync.RWMutex `json:"-"` // Do not serialize mutex
 }
 
-// NewScheduler создает новый планировщик
+// NewScheduler creates a new scheduler
 func NewScheduler(logger *logrus.Logger) *Scheduler {
 	ctx, cancel := context.WithCancel(context.Background())
 	jh := &jobHeap{}
@@ -57,26 +57,26 @@ func NewScheduler(logger *logrus.Logger) *Scheduler {
 	}
 }
 
-// Schedule добавляет задачу в планировщик
+// Schedule adds a task to the scheduler
 func (s *Scheduler) Schedule(ctx context.Context, job *types.Job) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	// Проверяем, существует ли джоб уже
+	// Check if job already exists
 	isNew := s.allJobs[job.ID] == nil
-	
+
 	s.logger.WithFields(logrus.Fields{
-		"job_id":    job.ID,
-		"target":    fmt.Sprintf("%s:%d", job.Target.Host, job.Target.Port),
-		"protocol":  job.Target.Protocol,
-		"next_run":  job.NextRun.Format(time.RFC3339),
-		"interval":  job.Interval.String(),
-		"is_new":    isNew,
+		"job_id":   job.ID,
+		"target":   fmt.Sprintf("%s:%d", job.Target.Host, job.Target.Port),
+		"protocol": job.Target.Protocol,
+		"next_run": job.NextRun.Format(time.RFC3339),
+		"interval": job.Interval.String(),
+		"is_new":   isNew,
 	}).Debug("Scheduling job")
-	
-	// Сохраняем джоб в хранилище всех джобов
+
+	// Save job to all jobs storage
 	s.allJobs[job.ID] = job
-	
+
 	heap.Push(s.jobs, job)
 	s.stats.mu.Lock()
 	if isNew {
@@ -96,7 +96,7 @@ func (s *Scheduler) Schedule(ctx context.Context, job *types.Job) error {
 	return nil
 }
 
-// Reschedule перепланирует существующую задачу без увеличения счетчика TotalJobs
+// Reschedule reschedules an existing task without incrementing TotalJobs counter
 func (s *Scheduler) Reschedule(ctx context.Context, job *types.Job) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -104,29 +104,29 @@ func (s *Scheduler) Reschedule(ctx context.Context, job *types.Job) error {
 	// Обновляем джоб в хранилище
 	if existingJob, exists := s.allJobs[job.ID]; exists {
 		s.logger.WithFields(logrus.Fields{
-			"job_id":    job.ID,
+			"job_id":   job.ID,
 			"old_next": existingJob.NextRun.Format(time.RFC3339),
 			"new_next": job.NextRun.Format(time.RFC3339),
-			"interval":  job.Interval.String(),
+			"interval": job.Interval.String(),
 		}).Debug("Rescheduling existing job")
-		
+
 		existingJob.NextRun = job.NextRun
 		existingJob.Interval = job.Interval
-		// Используем существующий джоб для heap
+		// Use existing job for heap
 		job = existingJob
 	} else {
 		s.logger.WithFields(logrus.Fields{
 			"job_id":   job.ID,
 			"next_run": job.NextRun.Format(time.RFC3339),
 		}).Debug("Rescheduling non-existent job, adding as new")
-		
-		// Если джоба нет, добавляем его как новый
+
+		// If job doesn't exist, add it as new
 		s.allJobs[job.ID] = job
 		s.stats.mu.Lock()
 		s.stats.TotalJobs++
 		s.stats.mu.Unlock()
 	}
-	
+
 	heap.Push(s.jobs, job)
 	s.stats.mu.Lock()
 	s.stats.QueuedJobs++
@@ -141,7 +141,7 @@ func (s *Scheduler) Reschedule(ctx context.Context, job *types.Job) error {
 	return nil
 }
 
-// Start запускает планировщик
+// Start starts the scheduler
 func (s *Scheduler) Start(ctx context.Context) error {
 	s.logger.Debug("Starting scheduler")
 	s.wg.Add(1)
@@ -149,7 +149,7 @@ func (s *Scheduler) Start(ctx context.Context) error {
 	return nil
 }
 
-// Stop останавливает планировщик
+// Stop stops the scheduler
 func (s *Scheduler) Stop(ctx context.Context) error {
 	s.logger.Debug("Stopping scheduler")
 	s.cancel()
@@ -158,16 +158,16 @@ func (s *Scheduler) Stop(ctx context.Context) error {
 	return nil
 }
 
-// GetJobChan возвращает канал для получения задач
+// GetJobChan returns channel for receiving tasks
 func (s *Scheduler) GetJobChan() <-chan *types.Job {
 	return s.jobChan
 }
 
-// GetStats возвращает статистику
+// GetStats returns statistics
 func (s *Scheduler) GetStats() Stats {
 	s.mu.RLock()
-	// Пересчитываем FailedJobs на основе текущего состояния джобов
-	// FailedJobs = количество джобов со статусом "down"
+	// Recalculate FailedJobs based on current job state
+	// FailedJobs = number of jobs with "down" status
 	failedJobsCount := int64(0)
 	for _, job := range s.allJobs {
 		if job.LastStatus == "down" {
@@ -175,23 +175,23 @@ func (s *Scheduler) GetStats() Stats {
 		}
 	}
 	s.mu.RUnlock()
-	
+
 	s.stats.mu.Lock()
 	s.stats.FailedJobs = failedJobsCount
 	statsCopy := *s.stats
 	s.stats.mu.Unlock()
-	
+
 	return statsCopy
 }
 
-// ExportMetrics экспортирует метрики шедулера в формат types.Metric
+// ExportMetrics exports scheduler metrics in types.Metric format
 func (s *Scheduler) ExportMetrics() []types.Metric {
 	stats := s.GetStats()
 	now := time.Now()
-	
+
 	metrics := make([]types.Metric, 0, 3)
-	
-	// Общие метрики шедулера
+
+	// General scheduler metrics
 	metrics = append(metrics, types.Metric{
 		Name:      "vmprober_scheduler_jobs_total",
 		Value:     float64(stats.TotalJobs),
@@ -199,7 +199,7 @@ func (s *Scheduler) ExportMetrics() []types.Metric {
 		Labels:    make(map[string]string),
 		Type:      types.MetricTypeGauge,
 	})
-	
+
 	metrics = append(metrics, types.Metric{
 		Name:      "vmprober_scheduler_jobs_running",
 		Value:     float64(stats.RunningJobs),
@@ -207,7 +207,7 @@ func (s *Scheduler) ExportMetrics() []types.Metric {
 		Labels:    make(map[string]string),
 		Type:      types.MetricTypeGauge,
 	})
-	
+
 	metrics = append(metrics, types.Metric{
 		Name:      "vmprober_scheduler_jobs_failed",
 		Value:     float64(stats.FailedJobs),
@@ -215,61 +215,61 @@ func (s *Scheduler) ExportMetrics() []types.Metric {
 		Labels:    make(map[string]string),
 		Type:      types.MetricTypeGauge,
 	})
-	
+
 	return metrics
 }
 
-// GetAllJobs возвращает список всех джобов, отсортированный по ID для стабильного порядка
+// GetAllJobs returns list of all jobs, sorted by ID for stable ordering
 func (s *Scheduler) GetAllJobs() []*types.Job {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
-	
+
 	jobs := make([]*types.Job, 0, len(s.allJobs))
 	for _, job := range s.allJobs {
-		// Создаем копию джоба для безопасности
+		// Create job copy for safety
 		jobCopy := *job
 		jobs = append(jobs, &jobCopy)
 	}
-	
-	// Сортируем по ID для стабильного порядка
+
+	// Sort by ID for stable ordering
 	sort.Slice(jobs, func(i, j int) bool {
 		return jobs[i].ID < jobs[j].ID
 	})
-	
+
 	return jobs
 }
 
-// MarkJobStarted отмечает начало выполнения джоба (вызывается когда джоб начинает выполняться)
+// MarkJobStarted marks job execution start (called when job starts executing)
 func (s *Scheduler) MarkJobStarted(jobID string) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	
+
 	if _, exists := s.allJobs[jobID]; exists {
 		s.stats.mu.Lock()
 		s.stats.RunningJobs++
 		runningCount := s.stats.RunningJobs
 		s.stats.mu.Unlock()
-		
+
 		s.logger.WithFields(logrus.Fields{
-			"job_id":    jobID,
-			"running":   runningCount,
+			"job_id":  jobID,
+			"running": runningCount,
 		}).Debug("Job started execution")
 	} else {
 		s.logger.WithField("job_id", jobID).Warn("MarkJobStarted called for non-existent job")
 	}
 }
 
-// MarkJobCompleted отмечает джоб как завершенный (успешная проба)
+// MarkJobCompleted marks job as completed (successful probe)
 func (s *Scheduler) MarkJobCompleted(jobID string) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	
-	// Обновляем статистику джоба
+
+	// Update job statistics
 	if job, exists := s.allJobs[jobID]; exists {
 		job.SuccessCount++
 		job.LastStatus = "up"
 		job.LastProbeTime = time.Now()
-		
+
 		s.stats.mu.Lock()
 		runningBefore := s.stats.RunningJobs
 		s.stats.RunningJobs--
@@ -280,7 +280,7 @@ func (s *Scheduler) MarkJobCompleted(jobID string) {
 		completedCount := s.stats.CompletedJobs
 		runningCount := s.stats.RunningJobs
 		s.stats.mu.Unlock()
-		
+
 		s.logger.WithFields(logrus.Fields{
 			"job_id":         jobID,
 			"success_count":  job.SuccessCount,
@@ -294,32 +294,32 @@ func (s *Scheduler) MarkJobCompleted(jobID string) {
 	}
 }
 
-// MarkJobFailed отмечает джоб как проваленный (неуспешная проба)
+// MarkJobFailed marks job as failed (unsuccessful probe)
 func (s *Scheduler) MarkJobFailed(jobID string) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	
-	// Обновляем статистику джоба
+
+	// Update job statistics
 	if job, exists := s.allJobs[jobID]; exists {
 		job.FailedCount++
 		job.LastStatus = "down"
 		job.LastProbeTime = time.Now()
-		
+
 		s.stats.mu.Lock()
 		runningBefore := s.stats.RunningJobs
 		s.stats.RunningJobs--
 		if s.stats.RunningJobs < 0 {
 			s.stats.RunningJobs = 0
 		}
-		// Не увеличиваем FailedJobs здесь - он будет пересчитан в GetStats()
-		// на основе LastStatus джобов
+		// Don't increment FailedJobs here - it will be recalculated in GetStats()
+		// based on LastStatus of jobs
 		runningCount := s.stats.RunningJobs
 		s.stats.mu.Unlock()
-		
+
 		s.logger.WithFields(logrus.Fields{
-			"job_id":        jobID,
-			"success_count": job.SuccessCount,
-			"failed_count":  job.FailedCount,
+			"job_id":         jobID,
+			"success_count":  job.SuccessCount,
+			"failed_count":   job.FailedCount,
 			"running_before": runningBefore,
 			"running_now":    runningCount,
 			"last_status":    job.LastStatus,
@@ -329,7 +329,7 @@ func (s *Scheduler) MarkJobFailed(jobID string) {
 	}
 }
 
-// run основной цикл планировщика
+// run main scheduler loop
 func (s *Scheduler) run(ctx context.Context) {
 	defer s.wg.Done()
 
@@ -351,14 +351,14 @@ func (s *Scheduler) run(ctx context.Context) {
 	}
 }
 
-// processJobs обрабатывает готовые к выполнению задачи
+// processJobs processes tasks ready for execution
 func (s *Scheduler) processJobs() {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
 	now := time.Now()
 	processedCount := 0
-	
+
 	for s.jobs.Len() > 0 {
 		job := s.jobs.Peek().(*types.Job)
 		if job.NextRun.After(now) {
@@ -373,38 +373,40 @@ func (s *Scheduler) processJobs() {
 		}
 
 		job = heap.Pop(s.jobs).(*types.Job)
-		// Обновляем джоб в хранилище перед отправкой
+		// Update job in storage before sending
 		if storedJob, exists := s.allJobs[job.ID]; exists {
 			storedJob.NextRun = job.NextRun
 		}
-		
+
 		select {
 		case s.jobChan <- job:
 			s.stats.mu.Lock()
 			s.stats.QueuedJobs--
 			queuedCount := s.stats.QueuedJobs
 			s.stats.mu.Unlock()
-			
+
 			processedCount++
 			s.logger.WithFields(logrus.Fields{
-				"job_id":      job.ID,
-				"target":     fmt.Sprintf("%s:%d", job.Target.Host, job.Target.Port),
-				"protocol":   job.Target.Protocol,
-				"queued":     queuedCount,
+				"job_id":   job.ID,
+				"target":   fmt.Sprintf("%s:%d", job.Target.Host, job.Target.Port),
+				"protocol": job.Target.Protocol,
+				"queued":   queuedCount,
 			}).Debug("Job sent to execution channel")
 		default:
-			// Канал заполнен, возвращаем задачу обратно
+			// Channel is full: return task back and exit processing,
+			// to avoid infinite loop under mutex
 			s.logger.WithFields(logrus.Fields{
-				"job_id": job.ID,
+				"job_id":       job.ID,
 				"channel_size": len(s.jobChan),
-			}).Warn("Job channel full, returning job to queue")
+				"queue_len":    s.jobs.Len(),
+			}).Warn("Job channel full, returning job to queue and stopping processing cycle")
 			heap.Push(s.jobs, job)
-			break
+			return
 		}
 	}
 }
 
-// jobHeap реализует heap.Interface для приоритетной очереди
+// jobHeap implements heap.Interface for priority queue
 type jobHeap struct {
 	jobs []*types.Job
 }
@@ -437,4 +439,3 @@ func (h *jobHeap) Peek() interface{} {
 	}
 	return h.jobs[0]
 }
-

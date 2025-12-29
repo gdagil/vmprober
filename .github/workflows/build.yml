@@ -1,4 +1,4 @@
-name: Build
+name: Build & Test
 
 on:
   push:
@@ -13,11 +13,35 @@ on:
 env:
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}
+  GO_VERSION: '1.25'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
-  test:
+  lint:
+    name: Lint
     runs-on: ubuntu-latest
-    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache: true
+
+      - name: Run golangci-lint
+        uses: golangci/golangci-lint-action@v6
+        with:
+          version: latest
+          args: --timeout=5m
+
+  test:
+    name: Test
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -27,28 +51,84 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
-          go-version: '1.25'
+          go-version: ${{ env.GO_VERSION }}
+          cache: true
 
-      - name: Get dependencies
+      - name: Run tests with coverage
         run: |
-          go mod download
-          go mod tidy
+          go test -v -race -coverprofile=coverage.out -covermode=atomic ./...
+          go tool cover -func=coverage.out
 
-      - name: Run tests
-        run: go test -v ./...
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v4
+        if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+        with:
+          files: ./coverage.out
+          fail_ci_if_error: false
+          token: ${{ secrets.CODECOV_TOKEN }}
+
+      - name: Upload coverage artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: coverage.out
+          retention-days: 7
+
+  security:
+    name: Security Scan
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache: true
+
+      - name: Run govulncheck
+        run: |
+          go install golang.org/x/vuln/cmd/govulncheck@latest
+          govulncheck ./...
+
+      - name: Run gosec
+        uses: securego/gosec@master
+        with:
+          args: '-no-fail -fmt sarif -out gosec-results.sarif ./...'
+
+      - name: Upload SARIF file
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: gosec-results.sarif
+
+  dependency-review:
+    name: Dependency Review
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Dependency Review
+        uses: actions/dependency-review-action@v4
+        with:
+          fail-on-severity: high
+          deny-licenses: GPL-3.0, AGPL-3.0
 
   build-binary:
+    name: Build ${{ matrix.goos }}/${{ matrix.goarch }}
     runs-on: ubuntu-latest
+    needs: [lint, test]
     strategy:
+      fail-fast: false
       matrix:
         goos: [linux, darwin, windows]
         goarch: [amd64, arm64]
         exclude:
-          - goos: darwin
-            goarch: amd64
           - goos: windows
             goarch: arm64
-    name: Build ${{ matrix.goos }}/${{ matrix.goarch }}
     
     steps:
       - name: Checkout code
@@ -59,50 +139,81 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
-          go-version: '1.25'
+          go-version: ${{ env.GO_VERSION }}
+          cache: true
 
-      - name: Get dependencies
+      - name: Get version info
+        id: version
         run: |
-          go mod download
-          go mod tidy
+          if [[ "$GITHUB_REF" == refs/tags/v* ]]; then
+            VERSION="${GITHUB_REF#refs/tags/}"
+          elif [[ "$GITHUB_REF" == refs/heads/main ]]; then
+            VERSION="dev-$(git rev-parse --short HEAD)"
+          else
+            VERSION="pr-${{ github.event.number }}-$(git rev-parse --short HEAD)"
+          fi
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "commit=$(git rev-parse HEAD)" >> $GITHUB_OUTPUT
+          echo "build_time=$(date -u +"%Y-%m-%dT%H:%M:%SZ")" >> $GITHUB_OUTPUT
 
-      - name: Build application
+      - name: Build binary
         env:
-          VERSION: ${{ github.ref == 'refs/heads/main' && github.sha || github.ref_name || 'dev' }}
-          BUILD_TIME: ${{ github.event.head_commit.timestamp || github.run_started_at }}
-          GIT_COMMIT: ${{ github.sha }}
           GOOS: ${{ matrix.goos }}
           GOARCH: ${{ matrix.goarch }}
+          CGO_ENABLED: 0
         run: |
           mkdir -p bin
           EXT=""
           if [ "${{ matrix.goos }}" = "windows" ]; then
             EXT=".exe"
           fi
-          CGO_ENABLED=0 GOOS=${GOOS} GOARCH=${GOARCH} go build \
-            -ldflags "-w -s -X main.Version=${VERSION} -X main.BuildTime=${BUILD_TIME} -X main.GitCommit=${GIT_COMMIT}" \
-            -o bin/vmprober-${GOOS}-${GOARCH}${EXT} ./cmd/vmprober
+          go build \
+            -trimpath \
+            -ldflags "-w -s -X main.Version=${{ steps.version.outputs.version }} -X main.BuildTime=${{ steps.version.outputs.build_time }} -X main.GitCommit=${{ steps.version.outputs.commit }}" \
+            -o bin/vmprober-${{ matrix.goos }}-${{ matrix.goarch }}${EXT} \
+            ./cmd/vmprober
+
+      - name: Compress binary (Unix)
+        if: matrix.goos != 'windows'
+        run: |
+          cd bin
+          tar -czvf vmprober-${{ matrix.goos }}-${{ matrix.goarch }}.tar.gz vmprober-${{ matrix.goos }}-${{ matrix.goarch }}
+          sha256sum vmprober-${{ matrix.goos }}-${{ matrix.goarch }}.tar.gz > vmprober-${{ matrix.goos }}-${{ matrix.goarch }}.tar.gz.sha256
+
+      - name: Compress binary (Windows)
+        if: matrix.goos == 'windows'
+        run: |
+          cd bin
+          zip vmprober-${{ matrix.goos }}-${{ matrix.goarch }}.zip vmprober-${{ matrix.goos }}-${{ matrix.goarch }}.exe
+          sha256sum vmprober-${{ matrix.goos }}-${{ matrix.goarch }}.zip > vmprober-${{ matrix.goos }}-${{ matrix.goarch }}.zip.sha256
 
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
         with:
           name: vmprober-${{ matrix.goos }}-${{ matrix.goarch }}
-          path: bin/vmprober-${{ matrix.goos }}-${{ matrix.goarch }}*
-          retention-days: 7
+          path: |
+            bin/vmprober-${{ matrix.goos }}-${{ matrix.goarch }}*
+          retention-days: 14
 
   build-docker:
+    name: Build Docker Images
     runs-on: ubuntu-latest
-    needs: test
+    needs: [lint, test]
     if: github.event_name != 'pull_request'
     permissions:
       contents: read
       packages: write
+      id-token: write
+      attestations: write
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -114,64 +225,121 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Get version info
+        id: version
+        run: |
+          if [[ "$GITHUB_REF" == refs/tags/v* ]]; then
+            VERSION="${GITHUB_REF#refs/tags/v}"
+          else
+            VERSION="$(git rev-parse --short HEAD)"
+          fi
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "commit=$(git rev-parse HEAD)" >> $GITHUB_OUTPUT
+          echo "build_time=$(date -u +"%Y-%m-%dT%H:%M:%SZ")" >> $GITHUB_OUTPUT
+
       - name: Extract metadata for Alpine
         id: meta-alpine
         uses: docker/metadata-action@v5
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          flavor: |
+            suffix=-alpine
           tags: |
-            type=ref,event=branch,suffix=-alpine
-            type=ref,event=pr,suffix=-alpine
-            type=semver,pattern={{version}},suffix=-alpine
-            type=semver,pattern={{major}}.{{minor}},suffix=-alpine
-            type=sha,prefix={{branch}}-,suffix=-alpine
-            type=sha,format=short,prefix={{branch}}-,suffix=-alpine
-            type=raw,value=latest-alpine,enable={{is_default_branch}}
-            type=raw,value=main-alpine,enable=${{ github.ref == 'refs/heads/main' }}
+            type=ref,event=branch
+            type=ref,event=pr
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=semver,pattern={{major}}
+            type=sha,format=short
+            type=raw,value=latest,enable={{is_default_branch}}
 
       - name: Extract metadata for Scratch
         id: meta-scratch
         uses: docker/metadata-action@v5
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          flavor: |
+            suffix=-scratch
           tags: |
-            type=ref,event=branch,suffix=-scratch
-            type=ref,event=pr,suffix=-scratch
-            type=semver,pattern={{version}},suffix=-scratch
-            type=semver,pattern={{major}}.{{minor}},suffix=-scratch
-            type=sha,prefix={{branch}}-,suffix=-scratch
-            type=sha,format=short,prefix={{branch}}-,suffix=-scratch
-            type=raw,value=latest-scratch,enable={{is_default_branch}}
-            type=raw,value=main-scratch,enable=${{ github.ref == 'refs/heads/main' }}
+            type=ref,event=branch
+            type=ref,event=pr
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=semver,pattern={{major}}
+            type=sha,format=short
+            type=raw,value=latest,enable={{is_default_branch}}
 
       - name: Build and push Alpine image
-        uses: docker/build-push-action@v5
+        id: build-alpine
+        uses: docker/build-push-action@v6
         with:
           context: .
           file: ./Dockerfile
           platforms: linux/amd64,linux/arm64
-          push: ${{ github.event_name != 'pull_request' }}
+          push: true
           tags: ${{ steps.meta-alpine.outputs.tags }}
           labels: ${{ steps.meta-alpine.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+          provenance: true
+          sbom: true
           build-args: |
-            VERSION=${{ github.ref == 'refs/heads/main' && github.sha || github.ref_name || 'dev' }}
-            BUILD_TIME=${{ github.event.head_commit.timestamp || github.run_started_at }}
-            GIT_COMMIT=${{ github.sha }}
+            VERSION=${{ steps.version.outputs.version }}
+            BUILD_TIME=${{ steps.version.outputs.build_time }}
+            GIT_COMMIT=${{ steps.version.outputs.commit }}
 
       - name: Build and push Scratch image
-        uses: docker/build-push-action@v5
+        id: build-scratch
+        uses: docker/build-push-action@v6
         with:
           context: .
           file: ./Dockerfile.scratch
           platforms: linux/amd64,linux/arm64
-          push: ${{ github.event_name != 'pull_request' }}
+          push: true
           tags: ${{ steps.meta-scratch.outputs.tags }}
           labels: ${{ steps.meta-scratch.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+          provenance: true
+          sbom: true
           build-args: |
-            VERSION=${{ github.ref == 'refs/heads/main' && github.sha || github.ref_name || 'dev' }}
-            BUILD_TIME=${{ github.event.head_commit.timestamp || github.run_started_at }}
-            GIT_COMMIT=${{ github.sha }}
+            VERSION=${{ steps.version.outputs.version }}
+            BUILD_TIME=${{ steps.version.outputs.build_time }}
+            GIT_COMMIT=${{ steps.version.outputs.commit }}
+
+      - name: Generate artifact attestation for Alpine
+        uses: actions/attest-build-provenance@v2
+        with:
+          subject-name: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          subject-digest: ${{ steps.build-alpine.outputs.digest }}
+          push-to-registry: true
+
+      - name: Generate artifact attestation for Scratch
+        uses: actions/attest-build-provenance@v2
+        with:
+          subject-name: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          subject-digest: ${{ steps.build-scratch.outputs.digest }}
+          push-to-registry: true
+
+      - name: Run Trivy vulnerability scanner (Alpine)
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.meta-alpine.outputs.version }}-alpine
+          format: 'sarif'
+          output: 'trivy-alpine-results.sarif'
+          severity: 'CRITICAL,HIGH'
+
+      - name: Run Trivy vulnerability scanner (Scratch)
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.meta-scratch.outputs.version }}-scratch
+          format: 'sarif'
+          output: 'trivy-scratch-results.sarif'
+          severity: 'CRITICAL,HIGH'
+
+      - name: Upload Trivy scan results
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: 'trivy-alpine-results.sarif'
+          category: 'trivy-alpine'

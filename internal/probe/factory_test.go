@@ -4,7 +4,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/vmprober/vmprober/internal/types"
+	"github.com/gdagil/vmprober/internal/types"
 )
 
 func TestNewFactory(t *testing.T) {
@@ -18,30 +18,27 @@ func TestNewFactory(t *testing.T) {
 		t.Error("Expected at least one supported probe type")
 	}
 	
-	// Проверяем, что TCP, UDP и ICMP поддерживаются
-	hasTCP := false
-	hasUDP := false
-	hasICMP := false
+	// Verify that all probe types are supported
+	expectedTypes := map[types.ProbeType]bool{
+		types.ProbeTypeTCP:   false,
+		types.ProbeTypeUDP:   false,
+		types.ProbeTypeICMP:  false,
+		types.ProbeTypeHTTP:  false,
+		types.ProbeTypeHTTPS: false,
+		types.ProbeTypeDNS:   false,
+		types.ProbeTypeGRPC:  false,
+	}
+	
 	for _, probeType := range supportedTypes {
-		if probeType == types.ProbeTypeTCP {
-			hasTCP = true
-		}
-		if probeType == types.ProbeTypeUDP {
-			hasUDP = true
-		}
-		if probeType == types.ProbeTypeICMP {
-			hasICMP = true
+		if _, exists := expectedTypes[probeType]; exists {
+			expectedTypes[probeType] = true
 		}
 	}
 	
-	if !hasTCP {
-		t.Error("Expected TCP probe type to be supported")
-	}
-	if !hasUDP {
-		t.Error("Expected UDP probe type to be supported")
-	}
-	if !hasICMP {
-		t.Error("Expected ICMP probe type to be supported")
+	for probeType, found := range expectedTypes {
+		if !found {
+			t.Errorf("Expected %s probe type to be supported", probeType)
+		}
 	}
 }
 
@@ -104,10 +101,152 @@ func TestFactory_CreateProbe_ICMP(t *testing.T) {
 	probe.Close()
 }
 
+func TestFactory_CreateProbe_HTTP(t *testing.T) {
+	factory := NewFactory()
+	
+	config := &HTTPConfig{
+		Method:             "GET",
+		ExpectedStatusCode: 200,
+	}
+	
+	probe, err := factory.CreateProbe(types.ProbeTypeHTTP, config)
+	if err != nil {
+		t.Fatalf("CreateProbe failed: %v", err)
+	}
+	if probe == nil {
+		t.Fatal("CreateProbe returned nil")
+	}
+	if probe.Type() != types.ProbeTypeHTTP {
+		t.Errorf("Expected HTTP probe, got %s", probe.Type())
+	}
+	
+	probe.Close()
+}
+
+func TestFactory_CreateProbe_HTTPS(t *testing.T) {
+	factory := NewFactory()
+	
+	config := &HTTPConfig{
+		Method: "GET",
+		TLS:    true,
+	}
+	
+	probe, err := factory.CreateProbe(types.ProbeTypeHTTPS, config)
+	if err != nil {
+		t.Fatalf("CreateProbe failed: %v", err)
+	}
+	if probe == nil {
+		t.Fatal("CreateProbe returned nil")
+	}
+	if probe.Type() != types.ProbeTypeHTTPS {
+		t.Errorf("Expected HTTPS probe, got %s", probe.Type())
+	}
+	
+	probe.Close()
+}
+
+func TestFactory_CreateProbe_HTTPS_NilConfig(t *testing.T) {
+	factory := NewFactory()
+	
+	// HTTPS with nil config should create a probe with TLS=true
+	probe, err := factory.CreateProbe(types.ProbeTypeHTTPS, nil)
+	if err != nil {
+		t.Fatalf("CreateProbe failed: %v", err)
+	}
+	if probe == nil {
+		t.Fatal("CreateProbe returned nil")
+	}
+	if probe.Type() != types.ProbeTypeHTTPS {
+		t.Errorf("Expected HTTPS probe, got %s", probe.Type())
+	}
+	
+	probe.Close()
+}
+
+func TestFactory_CreateProbe_DNS(t *testing.T) {
+	factory := NewFactory()
+	
+	config := &DNSConfig{
+		QueryType: "A",
+		Protocol:  "udp",
+	}
+	
+	probe, err := factory.CreateProbe(types.ProbeTypeDNS, config)
+	if err != nil {
+		t.Fatalf("CreateProbe failed: %v", err)
+	}
+	if probe == nil {
+		t.Fatal("CreateProbe returned nil")
+	}
+	if probe.Type() != types.ProbeTypeDNS {
+		t.Errorf("Expected DNS probe, got %s", probe.Type())
+	}
+	
+	probe.Close()
+}
+
+func TestFactory_CreateProbe_DNS_NilConfig(t *testing.T) {
+	factory := NewFactory()
+	
+	// DNS with nil config should use defaults
+	probe, err := factory.CreateProbe(types.ProbeTypeDNS, nil)
+	if err != nil {
+		t.Fatalf("CreateProbe failed: %v", err)
+	}
+	if probe == nil {
+		t.Fatal("CreateProbe returned nil")
+	}
+	if probe.Type() != types.ProbeTypeDNS {
+		t.Errorf("Expected DNS probe, got %s", probe.Type())
+	}
+	
+	probe.Close()
+}
+
+func TestFactory_CreateProbe_GRPC(t *testing.T) {
+	factory := NewFactory()
+	
+	config := &GRPCConfig{
+		Service:        "test.Service",
+		ExpectedStatus: "SERVING",
+	}
+	
+	probe, err := factory.CreateProbe(types.ProbeTypeGRPC, config)
+	if err != nil {
+		t.Fatalf("CreateProbe failed: %v", err)
+	}
+	if probe == nil {
+		t.Fatal("CreateProbe returned nil")
+	}
+	if probe.Type() != types.ProbeTypeGRPC {
+		t.Errorf("Expected GRPC probe, got %s", probe.Type())
+	}
+	
+	probe.Close()
+}
+
+func TestFactory_CreateProbe_GRPC_NilConfig(t *testing.T) {
+	factory := NewFactory()
+	
+	// gRPC with nil config should use defaults
+	probe, err := factory.CreateProbe(types.ProbeTypeGRPC, nil)
+	if err != nil {
+		t.Fatalf("CreateProbe failed: %v", err)
+	}
+	if probe == nil {
+		t.Fatal("CreateProbe returned nil")
+	}
+	if probe.Type() != types.ProbeTypeGRPC {
+		t.Errorf("Expected GRPC probe, got %s", probe.Type())
+	}
+	
+	probe.Close()
+}
+
 func TestFactory_CreateProbe_UnsupportedType(t *testing.T) {
 	factory := NewFactory()
 	
-	// Используем несуществующий тип пробы
+	// Use a non-existent probe type
 	unsupportedType := types.ProbeType("unsupported")
 	_, err := factory.CreateProbe(unsupportedType, nil)
 	if err == nil {
@@ -118,7 +257,7 @@ func TestFactory_CreateProbe_UnsupportedType(t *testing.T) {
 func TestFactory_CreateProbe_InvalidConfig(t *testing.T) {
 	factory := NewFactory()
 	
-	// Передаем неправильный тип конфигурации
+	// Pass incorrect config type
 	_, err := factory.CreateProbe(types.ProbeTypeTCP, &UDPConfig{})
 	if err == nil {
 		t.Error("Expected error for invalid config type")
@@ -133,7 +272,7 @@ func TestFactory_CreateProbe_InvalidConfig(t *testing.T) {
 func TestFactory_CreateProbe_NilConfig(t *testing.T) {
 	factory := NewFactory()
 	
-	// TCP с nil конфигурацией
+	// TCP with nil config
 	probe, err := factory.CreateProbe(types.ProbeTypeTCP, nil)
 	if err == nil {
 		t.Error("Expected error for nil TCP config")
@@ -142,7 +281,7 @@ func TestFactory_CreateProbe_NilConfig(t *testing.T) {
 		probe.Close()
 	}
 	
-	// UDP с nil конфигурацией
+	// UDP with nil config
 	probe, err = factory.CreateProbe(types.ProbeTypeUDP, nil)
 	if err == nil {
 		t.Error("Expected error for nil UDP config")
@@ -156,17 +295,42 @@ func TestFactory_GetSupportedTypes(t *testing.T) {
 	factory := NewFactory()
 	
 	supportedTypes := factory.GetSupportedTypes()
-	if len(supportedTypes) < 3 {
-		t.Errorf("Expected at least 3 supported types, got %d", len(supportedTypes))
+	// Now we have 7 types: TCP, UDP, ICMP, HTTP, HTTPS, DNS, GRPC
+	if len(supportedTypes) < 7 {
+		t.Errorf("Expected at least 7 supported types, got %d", len(supportedTypes))
 	}
 	
-	// Проверяем уникальность типов
+	// Check type uniqueness
 	typeMap := make(map[types.ProbeType]bool)
 	for _, probeType := range supportedTypes {
 		if typeMap[probeType] {
 			t.Errorf("Duplicate probe type: %s", probeType)
 		}
 		typeMap[probeType] = true
+	}
+}
+
+func TestFactory_CreateProbe_InvalidConfigTypes(t *testing.T) {
+	factory := NewFactory()
+	
+	// Pass incorrect config types for new probes
+	tests := []struct {
+		name       string
+		probeType  types.ProbeType
+		config     interface{}
+	}{
+		{"HTTP with TCP config", types.ProbeTypeHTTP, &TCPConfig{}},
+		{"DNS with HTTP config", types.ProbeTypeDNS, &HTTPConfig{}},
+		{"GRPC with DNS config", types.ProbeTypeGRPC, &DNSConfig{}},
+	}
+	
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			_, err := factory.CreateProbe(tt.probeType, tt.config)
+			if err == nil {
+				t.Errorf("Expected error for invalid config type in %s", tt.name)
+			}
+		})
 	}
 }
 

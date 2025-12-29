@@ -1,0 +1,61 @@
+apiVersion: 1
+
+# Mute timings define time intervals when alerts should be silenced.
+# Useful for maintenance windows or known downtime periods.
+
+muteTimes:
+  # ============================================
+  # Weekend Maintenance Window (Example)
+  # ============================================
+  - orgId: 1
+    name: weekend-maintenance
+    time_intervals:
+      - weekdays:
+          - saturday
+          - sunday
+        times:
+          - start_time: "02:00"
+            end_time: "06:00"
+        location: "UTC"
+
+  # ============================================
+  # Nightly Maintenance Window (Example)
+  # ============================================
+  - orgId: 1
+    name: nightly-maintenance
+    time_intervals:
+      - weekdays:
+          - monday
+          - tuesday
+          - wednesday
+          - thursday
+          - friday
+        times:
+          - start_time: "03:00"
+            end_time: "04:00"
+        location: "UTC"
+
+  # ============================================
+  # Business Hours Only (Example)
+  # Mute alerts outside business hours
+  # ============================================
+  # - orgId: 1
+  #   name: outside-business-hours
+  #   time_intervals:
+  #     - weekdays:
+  #         - monday
+  #         - tuesday
+  #         - wednesday
+  #         - thursday
+  #         - friday
+  #       times:
+  #         - start_time: "00:00"
+  #           end_time: "09:00"
+  #         - start_time: "18:00"
+  #           end_time: "24:00"
+  #       location: "Europe/Moscow"
+  #     - weekdays:
+  #         - saturday
+  #         - sunday
+  #       location: "Europe/Moscow"
+

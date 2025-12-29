@@ -1,0 +1,801 @@
+apiVersion: 1
+
+groups:
+  - orgId: 1
+    name: VMProber Alerts
+    folder: VMProber
+    interval: 1m
+    rules:
+      # ============================================
+      # Target Down Alert
+      # ============================================
+      - uid: vmprober-target-down
+        title: VMProber Target Down
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 300
+              to: 0
+            datasourceUid: victoriametrics
+            model:
+              expr: |
+                (rate(vmprober_probe_success_total[5m]) / rate(vmprober_probe_attempts_total[5m])) * 100
+              instant: false
+              intervalMs: 1000
+              maxDataPoints: 43200
+              refId: A
+          - refId: B
+            relativeTimeRange:
+              from: 300
+              to: 0
+            datasourceUid: __expr__
+            model:
+              conditions:
+                - evaluator:
+                    params: []
+                    type: gt
+                  operator:
+                    type: and
+                  query:
+                    params:
+                      - B
+                  reducer:
+                    params: []
+                    type: last
+                  type: query
+              datasource:
+                type: __expr__
+                uid: __expr__
+              expression: A
+              intervalMs: 1000
+              maxDataPoints: 43200
+              reducer: last
+              refId: B
+              type: reduce
+          - refId: C
+            relativeTimeRange:
+              from: 300
+              to: 0
+            datasourceUid: __expr__
+            model:
+              conditions:
+                - evaluator:
+                    params:
+                      - 50
+                    type: lt
+                  operator:
+                    type: and
+                  query:
+                    params:
+                      - C
+                  reducer:
+                    params: []
+                    type: last
+                  type: query
+              datasource:
+                type: __expr__
+                uid: __expr__
+              expression: B
+              intervalMs: 1000
+              maxDataPoints: 43200
+              refId: C
+              type: threshold
+        noDataState: NoData
+        execErrState: Error
+        for: 2m
+        annotations:
+          summary: "Target {{ $labels.instance }} is DOWN"
+          description: |
+            Target {{ $labels.instance }} (IP: {{ $labels.target_ip }}) has success rate below 50%.
+            Current success rate: {{ $values.B.Value | printf "%.1f" }}%
+            Protocol: {{ $labels.protocol }}
+          runbook_url: ""
+        labels:
+          severity: critical
+          team: infrastructure
+
+      # ============================================
+      # Low Success Rate Warning
+      # ============================================
+      - uid: vmprober-low-success-rate
+        title: VMProber Low Success Rate
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 300
+              to: 0
+            datasourceUid: victoriametrics
+            model:
+              expr: |
+                (rate(vmprober_probe_success_total[5m]) / rate(vmprober_probe_attempts_total[5m])) * 100
+              instant: false
+              intervalMs: 1000
+              maxDataPoints: 43200
+              refId: A
+          - refId: B
+            relativeTimeRange:
+              from: 300
+              to: 0
+            datasourceUid: __expr__
+            model:
+              conditions:
+                - evaluator:
+                    params: []
+                    type: gt
+                  operator:
+                    type: and
+                  query:
+                    params:
+                      - B
+                  reducer:
+                    params: []
+                    type: last
+                  type: query
+              datasource:
+                type: __expr__
+                uid: __expr__
+              expression: A
+              intervalMs: 1000
+              maxDataPoints: 43200
+              reducer: last
+              refId: B
+              type: reduce
+          - refId: C
+            relativeTimeRange:
+              from: 300
+              to: 0
+            datasourceUid: __expr__
+            model:
+              conditions:
+                - evaluator:
+                    params:
+                      - 50
+                      - 90
+                    type: within_range
+                  operator:
+                    type: and
+                  query:
+                    params:
+                      - C
+                  reducer:
+                    params: []
+                    type: last
+                  type: query
+              datasource:
+                type: __expr__
+                uid: __expr__
+              expression: B
+              intervalMs: 1000
+              maxDataPoints: 43200
+              refId: C
+              type: threshold
+        noDataState: NoData
+        execErrState: Error
+        for: 5m
+        annotations:
+          summary: "Target {{ $labels.instance }} has low success rate"
+          description: |
+            Target {{ $labels.instance }} (IP: {{ $labels.target_ip }}) has degraded success rate.
+            Current success rate: {{ $values.B.Value | printf "%.1f" }}%
+            Protocol: {{ $labels.protocol }}
+        labels:
+          severity: warning
+          team: infrastructure
+
+      # ============================================
+      # High Latency Alert (p99 > 500ms)
+      # ============================================
+      - uid: vmprober-high-latency
+        title: VMProber High Latency
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 300
+              to: 0
+            datasourceUid: victoriametrics
+            model:
+              expr: |
+                histogram_quantile(0.99, rate(vmprober_probe_rtt_seconds_bucket[5m]))
+              instant: false
+              intervalMs: 1000
+              maxDataPoints: 43200
+              refId: A
+          - refId: B
+            relativeTimeRange:
+              from: 300
+              to: 0
+            datasourceUid: __expr__
+            model:
+              conditions:
+                - evaluator:
+                    params: []
+                    type: gt
+                  operator:
+                    type: and
+                  query:
+                    params:
+                      - B
+                  reducer:
+                    params: []
+                    type: last
+                  type: query
+              datasource:
+                type: __expr__
+                uid: __expr__
+              expression: A
+              intervalMs: 1000
+              maxDataPoints: 43200
+              reducer: last
+              refId: B
+              type: reduce
+          - refId: C
+            relativeTimeRange:
+              from: 300
+              to: 0
+            datasourceUid: __expr__
+            model:
+              conditions:
+                - evaluator:
+                    params:
+                      - 0.5
+                    type: gt
+                  operator:
+                    type: and
+                  query:
+                    params:
+                      - C
+                  reducer:
+                    params: []
+                    type: last
+                  type: query
+              datasource:
+                type: __expr__
+                uid: __expr__
+              expression: B
+              intervalMs: 1000
+              maxDataPoints: 43200
+              refId: C
+              type: threshold
+        noDataState: NoData
+        execErrState: Error
+        for: 3m
+        annotations:
+          summary: "Target {{ $labels.instance }} has high latency"
+          description: |
+            Target {{ $labels.instance }} (IP: {{ $labels.target_ip }}) has p99 latency above 500ms.
+            Current p99 RTT: {{ $values.B.Value | printf "%.3f" }}s
+            Protocol: {{ $labels.protocol }}
+        labels:
+          severity: warning
+          team: infrastructure
+
+      # ============================================
+      # Critical Latency Alert (p99 > 1s)
+      # ============================================
+      - uid: vmprober-critical-latency
+        title: VMProber Critical Latency
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 300
+              to: 0
+            datasourceUid: victoriametrics
+            model:
+              expr: |
+                histogram_quantile(0.99, rate(vmprober_probe_rtt_seconds_bucket[5m]))
+              instant: false
+              intervalMs: 1000
+              maxDataPoints: 43200
+              refId: A
+          - refId: B
+            relativeTimeRange:
+              from: 300
+              to: 0
+            datasourceUid: __expr__
+            model:
+              conditions:
+                - evaluator:
+                    params: []
+                    type: gt
+                  operator:
+                    type: and
+                  query:
+                    params:
+                      - B
+                  reducer:
+                    params: []
+                    type: last
+                  type: query
+              datasource:
+                type: __expr__
+                uid: __expr__
+              expression: A
+              intervalMs: 1000
+              maxDataPoints: 43200
+              reducer: last
+              refId: B
+              type: reduce
+          - refId: C
+            relativeTimeRange:
+              from: 300
+              to: 0
+            datasourceUid: __expr__
+            model:
+              conditions:
+                - evaluator:
+                    params:
+                      - 1.0
+                    type: gt
+                  operator:
+                    type: and
+                  query:
+                    params:
+                      - C
+                  reducer:
+                    params: []
+                    type: last
+                  type: query
+              datasource:
+                type: __expr__
+                uid: __expr__
+              expression: B
+              intervalMs: 1000
+              maxDataPoints: 43200
+              refId: C
+              type: threshold
+        noDataState: NoData
+        execErrState: Error
+        for: 2m
+        annotations:
+          summary: "Target {{ $labels.instance }} has critical latency"
+          description: |
+            Target {{ $labels.instance }} (IP: {{ $labels.target_ip }}) has p99 latency above 1 second!
+            Current p99 RTT: {{ $values.B.Value | printf "%.3f" }}s
+            Protocol: {{ $labels.protocol }}
+        labels:
+          severity: critical
+          team: infrastructure
+
+      # ============================================
+      # Target Flapping Alert
+      # ============================================
+      - uid: vmprober-target-flapping
+        title: VMProber Target Flapping
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 900
+              to: 0
+            datasourceUid: victoriametrics
+            model:
+              expr: |
+                changes((rate(vmprober_probe_success_total[5m]) / rate(vmprober_probe_attempts_total[5m])) > bool 0.5[15m:1m])
+              instant: false
+              intervalMs: 1000
+              maxDataPoints: 43200
+              refId: A
+          - refId: B
+            relativeTimeRange:
+              from: 900
+              to: 0
+            datasourceUid: __expr__
+            model:
+              conditions:
+                - evaluator:
+                    params: []
+                    type: gt
+                  operator:
+                    type: and
+                  query:
+                    params:
+                      - B
+                  reducer:
+                    params: []
+                    type: last
+                  type: query
+              datasource:
+                type: __expr__
+                uid: __expr__
+              expression: A
+              intervalMs: 1000
+              maxDataPoints: 43200
+              reducer: last
+              refId: B
+              type: reduce
+          - refId: C
+            relativeTimeRange:
+              from: 900
+              to: 0
+            datasourceUid: __expr__
+            model:
+              conditions:
+                - evaluator:
+                    params:
+                      - 5
+                    type: gt
+                  operator:
+                    type: and
+                  query:
+                    params:
+                      - C
+                  reducer:
+                    params: []
+                    type: last
+                  type: query
+              datasource:
+                type: __expr__
+                uid: __expr__
+              expression: B
+              intervalMs: 1000
+              maxDataPoints: 43200
+              refId: C
+              type: threshold
+        noDataState: NoData
+        execErrState: Error
+        for: 5m
+        annotations:
+          summary: "Target {{ $labels.instance }} is flapping"
+          description: |
+            Target {{ $labels.instance }} (IP: {{ $labels.target_ip }}) is experiencing network instability.
+            Number of state changes in last 15 minutes: {{ $values.B.Value | printf "%.0f" }}
+            Protocol: {{ $labels.protocol }}
+            This indicates intermittent connectivity issues.
+        labels:
+          severity: warning
+          team: infrastructure
+
+      # ============================================
+      # Probe Job Failed
+      # ============================================
+      - uid: vmprober-job-failed
+        title: VMProber Job Failed
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 300
+              to: 0
+            datasourceUid: victoriametrics
+            model:
+              expr: vmprober_jobs_failed
+              instant: false
+              intervalMs: 1000
+              maxDataPoints: 43200
+              refId: A
+          - refId: B
+            relativeTimeRange:
+              from: 300
+              to: 0
+            datasourceUid: __expr__
+            model:
+              conditions:
+                - evaluator:
+                    params: []
+                    type: gt
+                  operator:
+                    type: and
+                  query:
+                    params:
+                      - B
+                  reducer:
+                    params: []
+                    type: last
+                  type: query
+              datasource:
+                type: __expr__
+                uid: __expr__
+              expression: A
+              intervalMs: 1000
+              maxDataPoints: 43200
+              reducer: last
+              refId: B
+              type: reduce
+          - refId: C
+            relativeTimeRange:
+              from: 300
+              to: 0
+            datasourceUid: __expr__
+            model:
+              conditions:
+                - evaluator:
+                    params:
+                      - 0
+                    type: gt
+                  operator:
+                    type: and
+                  query:
+                    params:
+                      - C
+                  reducer:
+                    params: []
+                    type: last
+                  type: query
+              datasource:
+                type: __expr__
+                uid: __expr__
+              expression: B
+              intervalMs: 1000
+              maxDataPoints: 43200
+              refId: C
+              type: threshold
+        noDataState: NoData
+        execErrState: Error
+        for: 1m
+        annotations:
+          summary: "VMProber has failed probe jobs"
+          description: |
+            VMProber instance {{ $labels.job }} has {{ $values.B.Value | printf "%.0f" }} failed probe jobs.
+            This may indicate configuration issues or unreachable targets.
+        labels:
+          severity: critical
+          team: infrastructure
+
+      # ============================================
+      # No Probe Data (VMProber Down)
+      # ============================================
+      - uid: vmprober-no-data
+        title: VMProber No Data
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 600
+              to: 0
+            datasourceUid: victoriametrics
+            model:
+              expr: |
+                up{job=~"vmprober.*"}
+              instant: false
+              intervalMs: 1000
+              maxDataPoints: 43200
+              refId: A
+          - refId: B
+            relativeTimeRange:
+              from: 600
+              to: 0
+            datasourceUid: __expr__
+            model:
+              conditions:
+                - evaluator:
+                    params: []
+                    type: gt
+                  operator:
+                    type: and
+                  query:
+                    params:
+                      - B
+                  reducer:
+                    params: []
+                    type: last
+                  type: query
+              datasource:
+                type: __expr__
+                uid: __expr__
+              expression: A
+              intervalMs: 1000
+              maxDataPoints: 43200
+              reducer: last
+              refId: B
+              type: reduce
+          - refId: C
+            relativeTimeRange:
+              from: 600
+              to: 0
+            datasourceUid: __expr__
+            model:
+              conditions:
+                - evaluator:
+                    params:
+                      - 1
+                    type: lt
+                  operator:
+                    type: and
+                  query:
+                    params:
+                      - C
+                  reducer:
+                    params: []
+                    type: last
+                  type: query
+              datasource:
+                type: __expr__
+                uid: __expr__
+              expression: B
+              intervalMs: 1000
+              maxDataPoints: 43200
+              refId: C
+              type: threshold
+        noDataState: Alerting
+        execErrState: Error
+        for: 3m
+        annotations:
+          summary: "VMProber instance {{ $labels.job }} is down"
+          description: |
+            VMProber instance {{ $labels.job }} ({{ $labels.instance }}) is not responding.
+            No metrics have been received for the last 3 minutes.
+        labels:
+          severity: critical
+          team: infrastructure
+
+      # ============================================
+      # High Jitter Alert
+      # ============================================
+      - uid: vmprober-high-jitter
+        title: VMProber High Jitter
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 300
+              to: 0
+            datasourceUid: victoriametrics
+            model:
+              expr: |
+                histogram_quantile(0.99, rate(vmprober_probe_rtt_seconds_bucket[5m])) - histogram_quantile(0.50, rate(vmprober_probe_rtt_seconds_bucket[5m]))
+              instant: false
+              intervalMs: 1000
+              maxDataPoints: 43200
+              refId: A
+          - refId: B
+            relativeTimeRange:
+              from: 300
+              to: 0
+            datasourceUid: __expr__
+            model:
+              conditions:
+                - evaluator:
+                    params: []
+                    type: gt
+                  operator:
+                    type: and
+                  query:
+                    params:
+                      - B
+                  reducer:
+                    params: []
+                    type: last
+                  type: query
+              datasource:
+                type: __expr__
+                uid: __expr__
+              expression: A
+              intervalMs: 1000
+              maxDataPoints: 43200
+              reducer: last
+              refId: B
+              type: reduce
+          - refId: C
+            relativeTimeRange:
+              from: 300
+              to: 0
+            datasourceUid: __expr__
+            model:
+              conditions:
+                - evaluator:
+                    params:
+                      - 0.2
+                    type: gt
+                  operator:
+                    type: and
+                  query:
+                    params:
+                      - C
+                  reducer:
+                    params: []
+                    type: last
+                  type: query
+              datasource:
+                type: __expr__
+                uid: __expr__
+              expression: B
+              intervalMs: 1000
+              maxDataPoints: 43200
+              refId: C
+              type: threshold
+        noDataState: NoData
+        execErrState: Error
+        for: 5m
+        annotations:
+          summary: "Target {{ $labels.instance }} has high jitter"
+          description: |
+            Target {{ $labels.instance }} (IP: {{ $labels.target_ip }}) is experiencing high network jitter.
+            Jitter (p99-p50): {{ $values.B.Value | printf "%.3f" }}s
+            Protocol: {{ $labels.protocol }}
+            This indicates inconsistent network performance.
+        labels:
+          severity: warning
+          team: infrastructure
+
+      # ============================================
+      # Multiple Targets Down
+      # ============================================
+      - uid: vmprober-multiple-targets-down
+        title: VMProber Multiple Targets Down
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 300
+              to: 0
+            datasourceUid: victoriametrics
+            model:
+              expr: |
+                count((rate(vmprober_probe_success_total[5m]) / rate(vmprober_probe_attempts_total[5m])) < 0.5)
+              instant: false
+              intervalMs: 1000
+              maxDataPoints: 43200
+              refId: A
+          - refId: B
+            relativeTimeRange:
+              from: 300
+              to: 0
+            datasourceUid: __expr__
+            model:
+              conditions:
+                - evaluator:
+                    params: []
+                    type: gt
+                  operator:
+                    type: and
+                  query:
+                    params:
+                      - B
+                  reducer:
+                    params: []
+                    type: last
+                  type: query
+              datasource:
+                type: __expr__
+                uid: __expr__
+              expression: A
+              intervalMs: 1000
+              maxDataPoints: 43200
+              reducer: last
+              refId: B
+              type: reduce
+          - refId: C
+            relativeTimeRange:
+              from: 300
+              to: 0
+            datasourceUid: __expr__
+            model:
+              conditions:
+                - evaluator:
+                    params:
+                      - 3
+                    type: gt
+                  operator:
+                    type: and
+                  query:
+                    params:
+                      - C
+                  reducer:
+                    params: []
+                    type: last
+                  type: query
+              datasource:
+                type: __expr__
+                uid: __expr__
+              expression: B
+              intervalMs: 1000
+              maxDataPoints: 43200
+              refId: C
+              type: threshold
+        noDataState: NoData
+        execErrState: Error
+        for: 2m
+        annotations:
+          summary: "Multiple VMProber targets are down!"
+          description: |
+            {{ $values.B.Value | printf "%.0f" }} targets are currently down (success rate < 50%).
+            This may indicate a widespread network issue.
+            Please investigate immediately!
+        labels:
+          severity: critical
+          team: infrastructure
+

@@ -7,30 +7,30 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/vmprober/vmprober/internal/types"
-	"github.com/vmprober/vmprober/pkg/interfaces"
+	"github.com/gdagil/vmprober/internal/types"
+	"github.com/gdagil/vmprober/pkg/interfaces"
 )
 
-// TCPProbe реализует TCP пробы
+// TCPProbe implements TCP probes
 type TCPProbe struct {
 	config *TCPConfig
 }
 
-// TCPConfig конфигурация TCP пробы
+// TCPConfig TCP probe configuration
 type TCPConfig struct {
 	ConnectTimeout time.Duration
 	ReadTimeout    time.Duration
 	WriteTimeout   time.Duration
 }
 
-// NewTCPProbe создает новый TCP probe
+// NewTCPProbe creates a new TCP probe
 func NewTCPProbe(config *TCPConfig) interfaces.Probe {
 	return &TCPProbe{
 		config: config,
 	}
 }
 
-// Execute выполняет TCP пробу
+// Execute performs a TCP probe
 func (p *TCPProbe) Execute(ctx context.Context, target types.Target) (*types.ProbeResult, error) {
 	start := time.Now()
 	result := &types.ProbeResult{
@@ -39,22 +39,22 @@ func (p *TCPProbe) Execute(ctx context.Context, target types.Target) (*types.Pro
 		Attempt:   1,
 	}
 
-	// Разрешение DNS
+	// DNS resolution
 	addr := target.Host
 	if target.Port > 0 {
 		addr = net.JoinHostPort(target.Host, strconv.Itoa(target.Port))
 	}
 
-	// Создание dialer с таймаутом
+	// Create dialer with timeout
 	dialer := &net.Dialer{
 		Timeout: target.Timeout,
 	}
 
-	// Сохраняем hostname для метрик
+	// Save hostname for metrics
 	result.TargetHost = target.Host
 	result.TargetPort = target.Port
 
-	// Выполнение подключения
+	// Perform connection
 	conn, err := dialer.DialContext(ctx, "tcp", addr)
 	if err != nil {
 		result.Error = err.Error()
@@ -63,23 +63,23 @@ func (p *TCPProbe) Execute(ctx context.Context, target types.Target) (*types.Pro
 	}
 	defer conn.Close()
 
-	// Успешное подключение
+	// Successful connection
 	result.Success = true
 	result.RTT = time.Since(start)
 	result.TargetIP = conn.RemoteAddr().(*net.TCPAddr).IP.String()
-	// TargetPort уже установлен выше
+	// TargetPort already set above
 	result.SourceIP = conn.LocalAddr().(*net.TCPAddr).IP.String()
 	result.Role = "client"
 
 	return result, nil
 }
 
-// Type возвращает тип пробы
+// Type returns the probe type
 func (p *TCPProbe) Type() types.ProbeType {
 	return types.ProbeTypeTCP
 }
 
-// Validate проверяет конфигурацию
+// Validate validates the configuration
 func (p *TCPProbe) Validate(config interface{}) error {
 	if p.config == nil {
 		return fmt.Errorf("TCP config is nil")
@@ -87,7 +87,7 @@ func (p *TCPProbe) Validate(config interface{}) error {
 	return nil
 }
 
-// Close освобождает ресурсы
+// Close releases resources
 func (p *TCPProbe) Close() error {
 	return nil
 }

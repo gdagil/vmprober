@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/sirupsen/logrus"
-	"github.com/vmprober/vmprober/internal/types"
+	"github.com/gdagil/vmprober/internal/types"
 )
 
 func TestNewNormalizer(t *testing.T) {
@@ -63,7 +63,7 @@ func TestNormalizer_Normalize(t *testing.T) {
 		t.Error("Labels are empty")
 	}
 
-	// Проверяем наличие основных метрик
+	// Check presence of main metrics
 	if _, ok := event.Metrics["vmprober_probe_rtt_seconds"]; !ok {
 		t.Error("vmprober_probe_rtt_seconds metric not found")
 	}
@@ -77,7 +77,7 @@ func TestNormalizer_Normalize(t *testing.T) {
 		t.Error("vmprober_probe_attempts_total metric not found")
 	}
 	
-	// Проверяем наличие лейбла status
+	// Check presence of status label
 	if status, ok := event.Labels["status"]; !ok {
 		t.Error("status label not found")
 	} else if status != "success" && status != "failed" {
@@ -142,7 +142,7 @@ func TestNormalizer_Dedup(t *testing.T) {
 		t.Fatalf("Normalize failed: %v", err)
 	}
 
-	// Первая проверка - не должно быть дубликатом
+	// First check - should not be duplicate
 	isDup, err := normalizer.Dedup(ctx, event)
 	if err != nil {
 		t.Fatalf("Dedup failed: %v", err)
@@ -151,7 +151,7 @@ func TestNormalizer_Dedup(t *testing.T) {
 		t.Error("First event should not be duplicate")
 	}
 
-	// Вторая проверка того же события - должно быть дубликатом
+	// Second check of same event - should be duplicate
 	isDup, err = normalizer.Dedup(ctx, event)
 	if err != nil {
 		t.Fatalf("Dedup failed: %v", err)
@@ -182,7 +182,7 @@ func TestNormalizer_Enrich(t *testing.T) {
 		t.Fatalf("Normalize failed: %v", err)
 	}
 
-	// Enrich вызывается автоматически в Normalize
+	// Enrich is called automatically in Normalize
 	if event.Metadata == nil {
 		t.Error("Metadata is nil after enrichment")
 	}
@@ -241,7 +241,7 @@ func TestNormalizer_SeriesIDGeneration(t *testing.T) {
 
 	ctx := context.Background()
 
-	// Создаем два одинаковых результата
+	// Create two identical results
 	result1 := &types.ProbeResult{
 		Success:   true,
 		RTT:       100 * time.Millisecond,
@@ -269,13 +269,13 @@ func TestNormalizer_SeriesIDGeneration(t *testing.T) {
 		t.Error("Same results should generate same SeriesID")
 	}
 
-	// Разные результаты должны генерировать разные SeriesID
+	// Different results should generate different SeriesID
 	result3 := &types.ProbeResult{
 		Success:   true,
 		RTT:       100 * time.Millisecond,
 		Timestamp: time.Now(),
 		Protocol:  types.ProbeTypeTCP,
-		TargetIP:  "192.168.1.2", // Другой IP
+		TargetIP:  "192.168.1.2", // Different IP
 		TargetPort: 80,
 		SourceIP:  "192.168.1.2",
 	}

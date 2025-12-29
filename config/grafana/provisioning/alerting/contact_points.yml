@@ -1,0 +1,101 @@
+apiVersion: 1
+
+# Contact points define how alerts are delivered.
+# Configure these with your actual notification endpoints.
+
+contactPoints:
+  - orgId: 1
+    name: vmprober-default
+    receivers:
+      # ============================================
+      # Email Notifications (Example)
+      # ============================================
+      # Uncomment and configure for email alerts
+      # - uid: vmprober-email
+      #   type: email
+      #   settings:
+      #     addresses: "alerts@example.com;oncall@example.com"
+      #     singleEmail: false
+      #   disableResolveMessage: false
+
+      # ============================================
+      # Slack Notifications (Example)
+      # ============================================
+      # Uncomment and configure for Slack alerts
+      # - uid: vmprober-slack
+      #   type: slack
+      #   settings:
+      #     url: "${SLACK_WEBHOOK_URL}"
+      #     recipient: "#alerts"
+      #     username: "Grafana VMProber"
+      #     icon_emoji: ":fire:"
+      #     mentionChannel: "channel"
+      #     text: |
+      #       {{ range .Alerts }}
+      #       *{{ .Status | toUpper }}* - {{ .Labels.alertname }}
+      #       {{ .Annotations.summary }}
+      #       {{ end }}
+      #   disableResolveMessage: false
+
+      # ============================================
+      # Telegram Notifications (Example)
+      # ============================================
+      # Uncomment and configure for Telegram alerts
+      # - uid: vmprober-telegram
+      #   type: telegram
+      #   settings:
+      #     bottoken: "${TELEGRAM_BOT_TOKEN}"
+      #     chatid: "${TELEGRAM_CHAT_ID}"
+      #     message: |
+      #       {{ range .Alerts }}
+      #       🔔 *{{ .Status | toUpper }}*: {{ .Labels.alertname }}
+      #       📝 {{ .Annotations.summary }}
+      #       📋 {{ .Annotations.description }}
+      #       {{ end }}
+      #   disableResolveMessage: false
+
+      # ============================================
+      # Webhook Notifications (Example)
+      # ============================================
+      # Uncomment and configure for generic webhook
+      # - uid: vmprober-webhook
+      #   type: webhook
+      #   settings:
+      #     url: "${ALERT_WEBHOOK_URL}"
+      #     httpMethod: POST
+      #     authorization_scheme: Bearer
+      #     authorization_credentials: "${ALERT_WEBHOOK_TOKEN}"
+      #   disableResolveMessage: false
+
+      # ============================================
+      # PagerDuty Integration (Example)
+      # ============================================
+      # Uncomment and configure for PagerDuty
+      # - uid: vmprober-pagerduty
+      #   type: pagerduty
+      #   settings:
+      #     integrationKey: "${PAGERDUTY_INTEGRATION_KEY}"
+      #     severity: critical
+      #     class: vmprober
+      #     component: network-monitoring
+      #   disableResolveMessage: false
+
+      # ============================================
+      # Alertmanager Integration (Example)
+      # ============================================
+      # Uncomment to forward to external Alertmanager
+      # - uid: vmprober-alertmanager
+      #   type: alertmanager
+      #   settings:
+      #     url: "http://alertmanager:9093"
+      #   disableResolveMessage: false
+
+      # ============================================
+      # Default: Grafana OnCall / Log only
+      # ============================================
+      - uid: vmprober-log
+        type: "webhook"
+        settings:
+          url: "http://localhost:9999/webhook"
+        disableResolveMessage: false
+

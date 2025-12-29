@@ -1,100 +1,146 @@
+<p align="center">
+  <img src="assets/banner.svg" alt="VMProber" width="600">
+</p>
+
 # VMProber Documentation
 
-Welcome to the VMProber documentation. VMProber is a standalone Go application for monitoring host availability through TCP/UDP/ICMP probes with support for both pull and push models for exporting metrics to Prometheus/VictoriaMetrics.
+This directory contains the documentation for VMProber, built with Jekyll for GitHub Pages.
 
-## Documentation Structure
+## Structure
 
-### 📚 [Getting Started](getting-started/)
-Start here if you're new to VMProber:
-- [Installation](getting-started/installation.md) - How to install and build VMProber
-- [Quick Start](getting-started/quick-start.md) - Get up and running in 5 minutes
-- [Configuration Guide](getting-started/configuration.md) - Understanding configuration files
-- [Basic Usage](getting-started/basic-usage.md) - Your first probes and metrics
+```
+docs/
+├── _config.yml              # Jekyll configuration
+├── _layouts/
+│   └── default.html         # Main layout template
+├── assets/                   # Logo and brand assets
+│   ├── logo.svg             # Main logo
+│   ├── banner.svg           # Banner for headers
+│   ├── favicon.svg          # Favicon
+│   └── logo-inline.svg      # Inline logo for footers
+├── index.md                 # Documentation home
+├── getting-started/         # Installation and setup guides
+│   ├── installation.md
+│   ├── quick-start.md
+│   ├── configuration.md
+│   └── basic-usage.md
+├── architecture/            # System design docs
+│   ├── overview.md
+│   └── design-principles.md
+├── components/              # Component documentation
+│   └── probes.md
+├── operations/              # Deployment and ops guides
+│   ├── deployment.md
+│   ├── docker.md
+│   └── troubleshooting.md
+├── development/             # Developer guides
+│   ├── setup.md
+│   └── e2e-testing.md
+├── reference/               # API and metrics reference
+│   ├── api.md
+│   └── metrics.md
+└── guides/                  # How-to guides
+    └── monitoring-setup.md
+```
 
-### 🏗️ [Architecture](architecture/)
-Understand how VMProber works:
-- [System Overview](architecture/overview.md) - High-level system architecture
-- [Design Principles](architecture/design-principles.md) - Architectural decisions and patterns
-- [Component Architecture](architecture/components.md) - Detailed component design
-- [Data Flow](architecture/data-flow.md) - How data moves through the system
+## Local Development
 
-### 🔧 [Components](components/)
-Deep dive into VMProber components:
-- [Probe System](components/probes.md) - TCP, UDP, and ICMP probes
-- [Scheduler](components/scheduler.md) - Task scheduling and execution
-- [Metrics System](components/metrics.md) - Prometheus metrics collection
-- [WAL System](components/wal.md) - Write-Ahead Log for reliability
-- [VictoriaMetrics Adapter](components/victoriametrics-adapter.md) - Push mode export
-- [Normalizer](components/normalizer.md) - Result normalization and deduplication
-- [HTTP Server](components/http-server.md) - API endpoints and health checks
-- [Observability](components/observability.md) - Logging, profiling, and monitoring
+### Prerequisites
 
-### 🚀 [Operations](operations/)
-Deploy and operate VMProber:
-- [Deployment](operations/deployment.md) - Docker, Kubernetes, systemd
-- [Configuration Management](operations/configuration.md) - Managing configs in production
-- [Monitoring](operations/monitoring.md) - Setting up monitoring and alerting
-- [Troubleshooting](operations/troubleshooting.md) - Common issues and solutions
-- [Performance Tuning](operations/performance.md) - Optimizing for your workload
-- [Security](operations/security.md) - Security best practices
+- Ruby 2.7+
+- Bundler
 
-### 👨‍💻 [Development](development/)
-For contributors and developers:
-- [Development Setup](development/setup.md) - Environment and tooling
-- [Project Structure](development/project-structure.md) - Codebase organization
-- [Contributing Guide](development/contributing.md) - How to contribute
-- [Testing](development/testing.md) - Testing strategies and practices
-- [Code Style](development/code-style.md) - Coding standards and conventions
+### Setup
 
-### 📖 [Reference](reference/)
-API and technical reference:
-- [API Reference](reference/api.md) - HTTP API endpoints
-- [Metrics Reference](reference/metrics.md) - All exported metrics
-- [Data Structures](reference/data-structures.md) - Types and structures
-- [Configuration Reference](reference/configuration-reference.md) - Complete config options
-- [CLI Reference](reference/cli.md) - Command-line options
+```bash
+cd docs
 
-### 📘 [Guides](guides/)
-Step-by-step guides for common tasks:
-- [Deployment Guide](guides/deployment-guide.md) - Complete deployment walkthrough
-- [Monitoring Setup](guides/monitoring-setup.md) - Setting up Prometheus/Grafana
-- [VictoriaMetrics Integration](guides/victoriametrics-integration.md) - Push mode setup
-- [High Availability](guides/high-availability.md) - Running VMProber in HA mode
-- [Migration Guide](guides/migration.md) - Upgrading between versions
+# Install dependencies
+bundle install
 
-## Quick Navigation
+# Start local server
+bundle exec jekyll serve
+```
 
-### I want to...
+Visit `http://localhost:4000` to view the documentation.
 
-- **Install VMProber** → [Getting Started: Installation](getting-started/installation.md)
-- **Configure my first probe** → [Getting Started: Quick Start](getting-started/quick-start.md)
-- **Deploy to production** → [Operations: Deployment](operations/deployment.md)
-- **Understand the architecture** → [Architecture: Overview](architecture/overview.md)
-- **Troubleshoot an issue** → [Operations: Troubleshooting](operations/troubleshooting.md)
-- **Contribute code** → [Development: Contributing](development/contributing.md)
-- **See all metrics** → [Reference: Metrics](reference/metrics.md)
-- **Set up monitoring** → [Guides: Monitoring Setup](guides/monitoring-setup.md)
+### Using Docker
 
-## Key Features
+```bash
+docker run --rm -v "$PWD:/srv/jekyll" -p 4000:4000 jekyll/jekyll jekyll serve
+```
 
-- ✅ **Multi-protocol probes** - TCP, UDP, and ICMP support
-- ✅ **Dual export modes** - Pull (Prometheus) and Push (VictoriaMetrics)
-- ✅ **Reliability** - WAL system for fault tolerance
-- ✅ **Performance** - Efficient scheduling with rate limiting
-- ✅ **Observability** - Comprehensive metrics, logging, and profiling
-- ✅ **Production-ready** - Graceful shutdown, health checks, hot reload
+## Building for Production
 
-## Getting Help
+```bash
+cd docs
+bundle exec jekyll build
+```
 
-- **Documentation Issues**: Open an issue in the repository
-- **Questions**: Check [Troubleshooting](operations/troubleshooting.md) first
-- **Bugs**: Report via GitHub Issues
-- **Feature Requests**: Open a GitHub Discussion
+Output is generated in the `_site` directory.
 
-## Version Information
+## GitHub Pages
 
-Current documentation version: See project README for version information.
+This documentation is automatically deployed to GitHub Pages when changes are pushed to the `main` branch.
+
+**Live URL**: https://gdagil.github.io/vmprober/
+
+## Writing Documentation
+
+### Frontmatter
+
+Each Markdown file should include frontmatter:
+
+```yaml
+---
+layout: default
+title: Page Title
+---
+```
+
+### Links
+
+Use relative links for internal documentation:
+
+```markdown
+See [Configuration Guide](getting-started/configuration.md) for details.
+```
+
+### Code Blocks
+
+Use fenced code blocks with language hints:
+
+````markdown
+```yaml
+listen:
+  address: ":8429"
+```
+````
+
+### Tables
+
+Use GitHub-flavored Markdown tables:
+
+```markdown
+| Column 1 | Column 2 |
+|----------|----------|
+| Value 1  | Value 2  |
+```
+
+## Brand Assets
+
+The documentation uses consistent branding:
+
+- **Primary Color**: `#00D4AA` (VMProber Green)
+- **Dark Background**: `#1a1a2e`
+- **Font**: Plus Jakarta Sans (headings), JetBrains Mono (code)
+
+## Contributing
+
+See [CONTRIBUTING.md](../CONTRIBUTING.md) for contribution guidelines.
 
 ---
 
-**Note**: This documentation is continuously updated. If you find any issues or have suggestions, please contribute!
+<p align="center">
+  <img src="assets/logo-inline.svg" alt="VMProber" width="100">
+</p>

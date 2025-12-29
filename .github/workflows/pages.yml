@@ -1,7 +1,13 @@
-name: Deploy Documentation to GitHub Pages
+name: Documentation
 
 on:
   push:
+    branches:
+      - main
+    paths:
+      - 'docs/**'
+      - '.github/workflows/pages.yml'
+  pull_request:
     branches:
       - main
     paths:
@@ -15,44 +21,75 @@ permissions:
   id-token: write
 
 concurrency:
-  group: "pages"
-  cancel-in-progress: false
+  group: "pages-${{ github.ref }}"
+  cancel-in-progress: true
 
 jobs:
-  deploy:
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
+  build:
+    name: Build Documentation
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-
-      - name: Setup Pages
-        uses: actions/configure-pages@v4
+        with:
+          fetch-depth: 0
 
       - name: Setup Ruby
         uses: ruby/setup-ruby@v1
         with:
-          ruby-version: '3.1'
+          ruby-version: '3.2'
           bundler-cache: true
+          working-directory: docs
 
-      - name: Install dependencies
-        working-directory: docs
-        run: |
-          bundle install
+      - name: Setup Pages
+        id: pages
+        uses: actions/configure-pages@v5
 
       - name: Build with Jekyll
         working-directory: docs
-        run: bundle exec jekyll build --destination ../_site
+        run: |
+          bundle exec jekyll build \
+            --destination ../_site \
+            --baseurl "${{ steps.pages.outputs.base_path }}"
         env:
           JEKYLL_ENV: production
+
+      - name: Check HTML
+        uses: chabad360/htmlproofer@master
+        with:
+          directory: ./_site
+          arguments: |
+            --ignore-urls "/fonts.googleapis.com/,/fonts.gstatic.com/,/github.com.*\/edit\//,/localhost/"
+            --ignore-status-codes "403,429"
+            --no-enforce-https
+            --allow-missing-href
+            --ignore-empty-alt
+            --check-external-hash=false
+        continue-on-error: true
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
           path: _site
 
+  deploy:
+    name: Deploy to GitHub Pages
+    if: github.event_name != 'pull_request'
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    needs: build
+    
+    steps:
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
+
+      - name: Create deployment summary
+        run: |
+          echo "## 📚 Documentation Deployed!" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "📖 **URL**: ${{ steps.deployment.outputs.page_url }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "🕐 **Deployed at**: $(date -u +"%Y-%m-%d %H:%M:%S UTC")" >> $GITHUB_STEP_SUMMARY

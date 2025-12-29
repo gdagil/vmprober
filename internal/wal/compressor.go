@@ -7,16 +7,16 @@ import (
 	"io"
 )
 
-// Compressor интерфейс для компрессии данных
+// Compressor interface for data compression
 type Compressor interface {
 	Compress(data []byte) ([]byte, error)
 	Decompress(data []byte) ([]byte, error)
 }
 
-// GzipCompressor реализация компрессора на основе gzip
+// GzipCompressor gzip-based compressor implementation
 type GzipCompressor struct{}
 
-// NewCompressor создает новый компрессор
+// NewCompressor creates a new compressor
 func NewCompressor(compressionType string) Compressor {
 	switch compressionType {
 	case "gzip", "gz":
@@ -26,7 +26,7 @@ func NewCompressor(compressionType string) Compressor {
 	}
 }
 
-// Compress сжимает данные
+// Compress compresses data
 func (g *GzipCompressor) Compress(data []byte) ([]byte, error) {
 	var buf bytes.Buffer
 	writer := gzip.NewWriter(&buf)
@@ -42,7 +42,7 @@ func (g *GzipCompressor) Compress(data []byte) ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
-// Decompress распаковывает данные
+// Decompress decompresses data
 func (g *GzipCompressor) Decompress(data []byte) ([]byte, error) {
 	reader, err := gzip.NewReader(bytes.NewReader(data))
 	if err != nil {

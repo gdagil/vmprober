@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/vmprober/vmprober/internal/types"
+	"github.com/gdagil/vmprober/internal/types"
 )
 
 func TestPrometheusFormatter_Format_Gauge(t *testing.T) {
@@ -174,10 +174,10 @@ func TestPrometheusFormatter_Format_EmptyMetrics(t *testing.T) {
 		t.Fatalf("Format failed: %v", err)
 	}
 
-	// Для пустого списка метрик может быть пустой вывод
+	// For empty metrics list, output may be empty
 	if data == nil {
 		t.Error("Data should not be nil")
 	}
-	// Пустой слайс байтов допустим для пустых метрик
+	// Empty byte slice is valid for empty metrics
 }
 

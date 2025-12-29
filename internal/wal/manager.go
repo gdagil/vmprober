@@ -9,32 +9,41 @@ import (
 	"time"
 
 	"github.com/sirupsen/logrus"
-	"github.com/vmprober/vmprober/internal/config"
-	"github.com/vmprober/vmprober/internal/types"
+	"github.com/gdagil/vmprober/internal/config"
+	"github.com/gdagil/vmprober/internal/types"
 )
 
-// WALManager управляет WAL системой
+// WALManager manages the WAL system
 type WALManager interface {
-	// Write записывает запись в WAL
+	// Write writes a record to WAL
 	Write(ctx context.Context, record *types.Record) error
 
-	// Read читает записи из WAL
+	// Read reads records from WAL
 	Read(ctx context.Context, filter WALFilter) ([]*types.Record, error)
 
-	// Flush принудительно синхронизирует все записи
+	// Flush forcefully syncs all records
 	Flush(ctx context.Context) error
 
-	// Rotate выполняет ротацию активного сегмента
+	// Rotate performs rotation of the active segment
 	Rotate(ctx context.Context) error
 
-	// Close закрывает WAL менеджер
+	// Close closes the WAL manager
 	Close(ctx context.Context) error
 
-	// GetStats возвращает статистику WAL
+	// GetStats returns WAL statistics
 	GetStats() *WALStats
+
+	// MarkSent marks a record as sent
+	MarkSent(ctx context.Context, recordID string) error
+
+	// GetUnsentRecords returns all unsent records
+	GetUnsentRecords(ctx context.Context) ([]*types.Record, error)
+
+	// DeleteSentRecords deletes all sent records older than given time
+	DeleteSentRecords(ctx context.Context, olderThan time.Duration) error
 }
 
-// WALFilter фильтр для чтения записей
+// WALFilter is a filter for reading records
 type WALFilter struct {
 	StartTime time.Time
 	EndTime   time.Time
@@ -43,7 +52,7 @@ type WALFilter struct {
 	Limit     int
 }
 
-// WALStats статистика WAL
+// WALStats represents WAL statistics
 type WALStats struct {
 	TotalRecords    int64         `json:"total_records"`
 	TotalSize       int64         `json:"total_size"`
@@ -53,7 +62,7 @@ type WALStats struct {
 	LastRotateTime  time.Time     `json:"last_rotate_time"`
 }
 
-// DefaultWALManager реализация WAL менеджера
+// DefaultWALManager is the WAL manager implementation
 type DefaultWALManager struct {
 	config        *config.WALConfig
 	dir           string
@@ -69,7 +78,7 @@ type DefaultWALManager struct {
 	closed        bool
 }
 
-// NewWALManager создает новый WAL менеджер
+// NewWALManager creates a new WAL manager
 func NewWALManager(cfg *config.WALConfig, logger *logrus.Logger) (WALManager, error) {
 	if cfg == nil {
 		return nil, fmt.Errorf("WAL config is nil")
@@ -80,7 +89,7 @@ func NewWALManager(cfg *config.WALConfig, logger *logrus.Logger) (WALManager, er
 		dir = "/var/lib/vmprober/wal"
 	}
 
-	// Создание директории если нужно
+	// Create directory if needed
 	if err := os.MkdirAll(dir, 0755); err != nil {
 		return nil, fmt.Errorf("failed to create WAL directory: %w", err)
 	}
@@ -97,19 +106,19 @@ func NewWALManager(cfg *config.WALConfig, logger *logrus.Logger) (WALManager, er
 		cancel:     cancel,
 	}
 
-	// Восстановление существующих сегментов
+	// Recover existing segments
 	if err := manager.recoverSegments(ctx); err != nil {
 		cancel()
 		return nil, fmt.Errorf("failed to recover segments: %w", err)
 	}
 
-	// Создание активного сегмента
+	// Create active segment
 	if err := manager.createActiveSegment(ctx); err != nil {
 		cancel()
 		return nil, fmt.Errorf("failed to create active segment: %w", err)
 	}
 
-	// Запуск фоновых задач
+	// Start background tasks
 	manager.wg.Add(2)
 	go manager.rotationLoop()
 	go manager.compactionLoop()
@@ -117,7 +126,7 @@ func NewWALManager(cfg *config.WALConfig, logger *logrus.Logger) (WALManager, er
 	return manager, nil
 }
 
-// Write записывает запись в WAL
+// Write writes a record to WAL
 func (w *DefaultWALManager) Write(ctx context.Context, record *types.Record) error {
 	w.mu.Lock()
 	defer w.mu.Unlock()
@@ -128,16 +137,16 @@ func (w *DefaultWALManager) Write(ctx context.Context, record *types.Record) err
 		}
 	}
 
-	// Запись в активный сегмент
+	// Write to active segment
 	if err := w.activeSegment.Write(ctx, record); err != nil {
 		return fmt.Errorf("failed to write to active segment: %w", err)
 	}
 
-	// Обновление статистики
+	// Update statistics
 	w.stats.TotalRecords++
 	w.stats.LastWriteTime = time.Now()
 
-	// Проверка необходимости ротации
+	// Check if rotation is needed
 	if w.shouldRotate() {
 		go func() {
 			if err := w.Rotate(w.ctx); err != nil {
@@ -149,14 +158,14 @@ func (w *DefaultWALManager) Write(ctx context.Context, record *types.Record) err
 	return nil
 }
 
-// Read читает записи из WAL
+// Read reads records from WAL
 func (w *DefaultWALManager) Read(ctx context.Context, filter WALFilter) ([]*types.Record, error) {
 	w.mu.RLock()
 	defer w.mu.RUnlock()
 
 	var allRecords []*types.Record
 
-	// Чтение из всех сегментов
+	// Read from all segments
 	for _, segment := range w.segments {
 		records, err := segment.Read(ctx, filter)
 		if err != nil {
@@ -166,7 +175,7 @@ func (w *DefaultWALManager) Read(ctx context.Context, filter WALFilter) ([]*type
 		allRecords = append(allRecords, records...)
 	}
 
-	// Чтение из активного сегмента
+	// Read from active segment
 	if w.activeSegment != nil {
 		records, err := w.activeSegment.Read(ctx, filter)
 		if err != nil {
@@ -176,7 +185,7 @@ func (w *DefaultWALManager) Read(ctx context.Context, filter WALFilter) ([]*type
 		}
 	}
 
-	// Применение лимита
+	// Apply limit
 	if filter.Limit > 0 && len(allRecords) > filter.Limit {
 		allRecords = allRecords[:filter.Limit]
 	}
@@ -184,7 +193,7 @@ func (w *DefaultWALManager) Read(ctx context.Context, filter WALFilter) ([]*type
 	return allRecords, nil
 }
 
-// Flush принудительно синхронизирует все записи
+// Flush forcefully syncs all records
 func (w *DefaultWALManager) Flush(ctx context.Context) error {
 	w.mu.Lock()
 	defer w.mu.Unlock()
@@ -198,7 +207,7 @@ func (w *DefaultWALManager) Flush(ctx context.Context) error {
 	return nil
 }
 
-// Rotate выполняет ротацию активного сегмента
+// Rotate performs rotation of the active segment
 func (w *DefaultWALManager) Rotate(ctx context.Context) error {
 	w.mu.Lock()
 	defer w.mu.Unlock()
@@ -207,17 +216,17 @@ func (w *DefaultWALManager) Rotate(ctx context.Context) error {
 		return nil
 	}
 
-	// Закрытие активного сегмента
+	// Close active segment
 	if err := w.activeSegment.Close(ctx); err != nil {
 		return fmt.Errorf("failed to close active segment: %w", err)
 	}
 
-	// Добавление в список сегментов
+	// Add to segments list
 	w.segments = append(w.segments, w.activeSegment)
 	w.stats.SegmentCount++
 	w.stats.LastRotateTime = time.Now()
 
-	// Создание нового активного сегмента
+	// Create new active segment
 	if err := w.createActiveSegment(ctx); err != nil {
 		return fmt.Errorf("failed to create new active segment: %w", err)
 	}
@@ -225,7 +234,7 @@ func (w *DefaultWALManager) Rotate(ctx context.Context) error {
 	return nil
 }
 
-// Close закрывает WAL менеджер
+// Close closes the WAL manager
 func (w *DefaultWALManager) Close(ctx context.Context) error {
 	w.mu.Lock()
 	if w.closed {
@@ -235,12 +244,12 @@ func (w *DefaultWALManager) Close(ctx context.Context) error {
 	w.closed = true
 	w.mu.Unlock()
 
-	// Остановка фоновых горутин
+	// Stop background goroutines
 	if w.cancel != nil {
 		w.cancel()
 	}
 
-	// Ожидание завершения фоновых горутин
+	// Wait for background goroutines to finish
 	done := make(chan struct{})
 	go func() {
 		w.wg.Wait()
@@ -249,25 +258,25 @@ func (w *DefaultWALManager) Close(ctx context.Context) error {
 
 	select {
 	case <-done:
-		// Горутины завершились
+		// Goroutines finished
 	case <-ctx.Done():
-		// Контекст отменен, но продолжаем закрытие
+		// Context cancelled, but continue closing
 	case <-time.After(5 * time.Second):
-		// Таймаут ожидания
+		// Waiting timeout
 		w.logger.Warn("Timeout waiting for background goroutines to finish")
 	}
 
 	w.mu.Lock()
 	defer w.mu.Unlock()
 
-	// Закрытие активного сегмента
+	// Close active segment
 	if w.activeSegment != nil {
 		if err := w.activeSegment.Close(ctx); err != nil {
 			w.logger.WithError(err).Error("Failed to close active segment")
 		}
 	}
 
-	// Закрытие всех сегментов
+	// Close all segments
 	for _, segment := range w.segments {
 		if err := segment.Close(ctx); err != nil {
 			w.logger.WithError(err).Error("Failed to close segment")
@@ -277,7 +286,7 @@ func (w *DefaultWALManager) Close(ctx context.Context) error {
 	return nil
 }
 
-// GetStats возвращает статистику WAL
+// GetStats returns WAL statistics
 func (w *DefaultWALManager) GetStats() *WALStats {
 	w.mu.RLock()
 	defer w.mu.RUnlock()
@@ -295,19 +304,19 @@ func (w *DefaultWALManager) GetStats() *WALStats {
 	return &stats
 }
 
-// shouldRotate проверяет нужно ли выполнить ротацию
+// shouldRotate checks if rotation should be performed
 func (w *DefaultWALManager) shouldRotate() bool {
 	if w.activeSegment == nil {
 		return true
 	}
 
-	// Проверка размера
+	// Check size
 	maxSize := parseSize(w.config.SegmentSize)
 	if maxSize > 0 && w.activeSegment.Size() >= maxSize {
 		return true
 	}
 
-	// Проверка возраста
+	// Check age
 	maxAge := w.config.MaxAge
 	if maxAge > 0 && time.Since(w.activeSegment.CreatedAt()) >= maxAge {
 		return true
@@ -316,7 +325,7 @@ func (w *DefaultWALManager) shouldRotate() bool {
 	return false
 }
 
-// createActiveSegment создает новый активный сегмент
+// createActiveSegment creates a new active segment
 func (w *DefaultWALManager) createActiveSegment(ctx context.Context) error {
 	segmentID := fmt.Sprintf("segment-%d", time.Now().Unix())
 	segmentPath := filepath.Join(w.dir, segmentID+".wal")
@@ -332,7 +341,7 @@ func (w *DefaultWALManager) createActiveSegment(ctx context.Context) error {
 	return nil
 }
 
-// recoverSegments восстанавливает существующие сегменты
+// recoverSegments recovers existing segments
 func (w *DefaultWALManager) recoverSegments(ctx context.Context) error {
 	entries, err := os.ReadDir(w.dir)
 	if err != nil {
@@ -352,7 +361,7 @@ func (w *DefaultWALManager) recoverSegments(ctx context.Context) error {
 		}
 
 		segmentPath := filepath.Join(w.dir, entry.Name())
-		segmentID := entry.Name()[:len(entry.Name())-4] // Убираем .wal
+		segmentID := entry.Name()[:len(entry.Name())-4] // Remove .wal
 
 		segment, err := OpenWALSegment(segmentID, segmentPath, w.config, w.compressor, w.logger)
 		if err != nil {
@@ -367,7 +376,7 @@ func (w *DefaultWALManager) recoverSegments(ctx context.Context) error {
 	return nil
 }
 
-// rotationLoop цикл ротации сегментов
+// rotationLoop is the segment rotation loop
 func (w *DefaultWALManager) rotationLoop() {
 	defer w.wg.Done()
 	ticker := time.NewTicker(1 * time.Minute)
@@ -387,7 +396,7 @@ func (w *DefaultWALManager) rotationLoop() {
 	}
 }
 
-// compactionLoop цикл компрессии старых сегментов
+// compactionLoop is the old segment compression loop
 func (w *DefaultWALManager) compactionLoop() {
 	defer w.wg.Done()
 	ticker := time.NewTicker(5 * time.Minute)
@@ -403,7 +412,7 @@ func (w *DefaultWALManager) compactionLoop() {
 	}
 }
 
-// compactOldSegments сжимает старые сегменты
+// compactOldSegments compresses old segments
 func (w *DefaultWALManager) compactOldSegments(ctx context.Context) {
 	w.mu.Lock()
 	defer w.mu.Unlock()
@@ -413,7 +422,7 @@ func (w *DefaultWALManager) compactOldSegments(ctx context.Context) {
 			continue
 		}
 
-		// Сжатие сегментов старше 1 часа
+		// Compress segments older than 1 hour
 		if time.Since(segment.CreatedAt()) > time.Hour {
 			if err := segment.Compress(ctx); err != nil {
 				w.logger.WithError(err).Warn("Failed to compress segment")
@@ -422,7 +431,7 @@ func (w *DefaultWALManager) compactOldSegments(ctx context.Context) {
 	}
 }
 
-// parseSize парсит размер из строки
+// parseSize parses size from string
 func parseSize(s string) int64 {
 	if s == "" {
 		return 0
@@ -443,5 +452,107 @@ func parseSize(s string) int64 {
 	default:
 		return size
 	}
+}
+
+// MarkSent marks a record as sent
+func (w *DefaultWALManager) MarkSent(ctx context.Context, recordID string) error {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+
+	// Search for record in all segments and active segment
+	// For optimization, we use a separate sent records index
+	if w.activeSegment != nil {
+		if err := w.activeSegment.MarkSent(ctx, recordID); err == nil {
+			return nil
+		}
+	}
+
+	for _, segment := range w.segments {
+		if err := segment.MarkSent(ctx, recordID); err == nil {
+			return nil
+		}
+	}
+
+	return fmt.Errorf("record %s not found", recordID)
+}
+
+// GetUnsentRecords returns all unsent records
+func (w *DefaultWALManager) GetUnsentRecords(ctx context.Context) ([]*types.Record, error) {
+	w.mu.RLock()
+	defer w.mu.RUnlock()
+
+	var allRecords []*types.Record
+
+	// Read from all segments
+	for _, segment := range w.segments {
+		records, err := segment.GetUnsentRecords(ctx)
+		if err != nil {
+			w.logger.WithError(err).Warn("Failed to get unsent records from segment")
+			continue
+		}
+		allRecords = append(allRecords, records...)
+	}
+
+	// Read from active segment
+	if w.activeSegment != nil {
+		records, err := w.activeSegment.GetUnsentRecords(ctx)
+		if err != nil {
+			w.logger.WithError(err).Warn("Failed to get unsent records from active segment")
+		} else {
+			allRecords = append(allRecords, records...)
+		}
+	}
+
+	return allRecords, nil
+}
+
+// DeleteSentRecords deletes all sent records older than given time
+func (w *DefaultWALManager) DeleteSentRecords(ctx context.Context, olderThan time.Duration) error {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+
+	cutoff := time.Now().Add(-olderThan)
+	var segmentsToRemove []*WALSegment
+
+	// Check each segment
+	for _, segment := range w.segments {
+		// If all records in segment are sent and segment is older than cutoff
+		allSent, err := segment.AllRecordsSent(ctx)
+		if err != nil {
+			w.logger.WithError(err).Warn("Failed to check if all records sent in segment")
+			continue
+		}
+
+		if allSent && segment.CreatedAt().Before(cutoff) {
+			segmentsToRemove = append(segmentsToRemove, segment)
+		}
+	}
+
+	// Delete segments
+	for _, segment := range segmentsToRemove {
+		if err := segment.Close(ctx); err != nil {
+			w.logger.WithError(err).Warn("Failed to close segment before deletion")
+			continue
+		}
+
+		segmentPath := filepath.Join(w.dir, segment.ID+".wal")
+		if err := os.Remove(segmentPath); err != nil {
+			w.logger.WithError(err).Warn("Failed to delete segment file")
+			continue
+		}
+
+		// Remove from segments list
+		for i, s := range w.segments {
+			if s.ID == segment.ID {
+				w.segments = append(w.segments[:i], w.segments[i+1:]...)
+				w.stats.SegmentCount--
+				break
+			}
+		}
+
+		w.logger.WithField("segment_id", segment.ID).Info("Deleted old segment with all records sent")
+	}
+
+	return nil
 }
 

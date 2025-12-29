@@ -38,7 +38,7 @@ WORKDIR /root/
 COPY --from=builder /app/vmprober .
 
 # Copy example config
-COPY configs/config.yaml.example /etc/vmprober/config.yaml
+COPY config/vmprober/config.yaml.example /etc/vmprober/config.yaml
 
 # Create WAL directory
 RUN mkdir -p /var/lib/vmprober/wal

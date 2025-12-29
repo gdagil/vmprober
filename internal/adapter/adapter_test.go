@@ -6,8 +6,8 @@ import (
 	"time"
 
 	"github.com/sirupsen/logrus"
-	"github.com/vmprober/vmprober/internal/config"
-	"github.com/vmprober/vmprober/internal/types"
+	"github.com/gdagil/vmprober/internal/config"
+	"github.com/gdagil/vmprober/internal/types"
 )
 
 func createTestPushConfig() *config.PushConfig {
@@ -68,7 +68,7 @@ func TestVictoriaMetricsAdapter_StartStop(t *testing.T) {
 		t.Fatalf("Failed to start adapter: %v", err)
 	}
 
-	// Даем время на запуск
+	// Give time to start
 	time.Sleep(100 * time.Millisecond)
 
 	if err := adapter.Stop(ctx); err != nil {
@@ -104,13 +104,13 @@ func TestVictoriaMetricsAdapter_Push(t *testing.T) {
 		},
 	}
 
-	// Push может завершиться с ошибкой если endpoint недоступен, это нормально для теста
+	// Push may fail if endpoint is unavailable, this is normal for testing
 	err = adapter.Push(ctx, metrics)
 	if err != nil {
 		t.Logf("Push failed (expected if endpoint unavailable): %v", err)
 	}
 
-	// Даем время на обработку
+	// Give time to process
 	time.Sleep(200 * time.Millisecond)
 
 	stats := adapter.GetStats()
@@ -135,7 +135,7 @@ func TestVictoriaMetricsAdapter_Flush(t *testing.T) {
 	}
 	defer adapter.Stop(ctx)
 
-	// Добавляем метрики в очередь
+	// Add metrics to queue
 	metrics := []types.Metric{
 		{
 			Name:      "test_metric",
@@ -147,7 +147,7 @@ func TestVictoriaMetricsAdapter_Flush(t *testing.T) {
 
 	adapter.Push(ctx, metrics)
 
-	// Flush должен отправить все метрики
+	// Flush should send all metrics
 	if err := adapter.Flush(ctx); err != nil {
 		t.Logf("Flush failed (expected if endpoint unavailable): %v", err)
 	}

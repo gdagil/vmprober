@@ -6,7 +6,7 @@ import (
 	"time"
 )
 
-// DedupCache кэш для дедупликации
+// DedupCache cache for deduplication
 type DedupCache struct {
 	cache      map[string]time.Time
 	window     time.Duration
@@ -14,7 +14,7 @@ type DedupCache struct {
 	cleanupTicker *time.Ticker
 }
 
-// NewDedupCache создает новый кэш дедупликации
+// NewDedupCache creates a new deduplication cache
 func NewDedupCache(window time.Duration) *DedupCache {
 	cache := &DedupCache{
 		cache:      make(map[string]time.Time),
@@ -22,13 +22,13 @@ func NewDedupCache(window time.Duration) *DedupCache {
 		cleanupTicker: time.NewTicker(1 * time.Minute),
 	}
 
-	// Запуск очистки
+	// Start cleanup
 	go cache.cleanupLoop(context.Background())
 
 	return cache
 }
 
-// Check проверяет является ли событие дубликатом
+// Check checks if the event is a duplicate
 func (d *DedupCache) Check(seriesID string, timestamp time.Time) bool {
 	d.mu.RLock()
 	defer d.mu.RUnlock()
@@ -38,11 +38,11 @@ func (d *DedupCache) Check(seriesID string, timestamp time.Time) bool {
 		return false
 	}
 
-	// Проверка окна дедупликации
+	// Check deduplication window
 	return timestamp.Sub(lastSeen) < d.window
 }
 
-// Mark отмечает событие как обработанное
+// Mark marks the event as processed
 func (d *DedupCache) Mark(seriesID string, timestamp time.Time) {
 	d.mu.Lock()
 	defer d.mu.Unlock()
@@ -50,7 +50,7 @@ func (d *DedupCache) Mark(seriesID string, timestamp time.Time) {
 	d.cache[seriesID] = timestamp
 }
 
-// Cleanup очищает устаревшие записи
+// Cleanup clears outdated entries
 func (d *DedupCache) Cleanup(ctx context.Context) {
 	d.mu.Lock()
 	defer d.mu.Unlock()
@@ -63,7 +63,7 @@ func (d *DedupCache) Cleanup(ctx context.Context) {
 	}
 }
 
-// cleanupLoop цикл очистки кэша
+// cleanupLoop cache cleanup loop
 func (d *DedupCache) cleanupLoop(ctx context.Context) {
 	for {
 		select {

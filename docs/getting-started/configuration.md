@@ -76,9 +76,10 @@ Define what to monitor. Supports multiple sources:
 targets:
   # Static targets (defined in config)
   static:
+    # TCP probe
     - host: "example.com"
       port: 80
-      protocols: ["tcp"]          # Array of protocols to probe
+      protocols: ["tcp"]
       interval: 30s
       timeout: 5s
       labels:
@@ -92,6 +93,38 @@ targets:
       timeout: 3s
       labels:
         service: "dns"
+    
+    # HTTP/HTTPS probe
+    - host: "api.example.com"
+      port: 443
+      proto: "https"
+      interval: 30s
+      http:
+        method: "GET"
+        path: "/health"
+        expected_status_code: 200
+        validate_cert: true
+        headers:
+          Accept: "application/json"
+    
+    # DNS probe
+    - host: "8.8.8.8"
+      port: 53
+      proto: "dns"
+      interval: 30s
+      dns:
+        query_name: "google.com"
+        query_type: "A"
+        protocol: "udp"
+    
+    # gRPC probe
+    - host: "grpc.example.com"
+      port: 50051
+      proto: "grpc"
+      interval: 15s
+      grpc:
+        service: "user.UserService"
+        expected_status: "SERVING"
   
   # File-based targets
   files:
@@ -110,7 +143,16 @@ targets:
       interval: 10m
 ```
 
-**Note**: The `protocols` field accepts an array of protocol names (`tcp`, `udp`, `icmp`). For each protocol specified, VMProber will create a separate probe job. This allows monitoring the same target with multiple protocols simultaneously.
+**Supported Protocols:**
+- `tcp` - TCP connection check
+- `udp` - UDP packet probe
+- `icmp` - ICMP ping (requires root)
+- `http` - HTTP request probe
+- `https` - HTTPS request probe with TLS
+- `dns` - DNS query probe
+- `grpc` - gRPC health check probe
+
+**Note**: The `protocols` field accepts an array of protocol names. For each protocol specified, VMProber will create a separate probe job. This allows monitoring the same target with multiple protocols simultaneously.
 
 ### Scheduler (`scheduler`)
 
@@ -126,6 +168,10 @@ scheduler:
     tcp: 5s
     udp: 3s
     icmp: 2s
+    http: 10s
+    https: 10s
+    dns: 5s
+    grpc: 10s
   queue_size: 10000
 ```
 
@@ -140,18 +186,55 @@ probes:
     interval: 30s
     timeout: 5s
   
+  # TCP probe defaults
   tcp:
     connect_timeout: 5s
     tls:
       enabled: false
+    keep_alive:
+      enabled: true
+      period: 30s
   
+  # UDP probe defaults
   udp:
     payload_type: "random"
     payload_size: 64
+    response_timeout: 2s
+    max_packet_size: 1024
   
+  # ICMP probe defaults
   icmp:
     library: "systicmp"
+    sequence_start: 1
     ttl: 64
+  
+  # HTTP/HTTPS probe defaults
+  http:
+    method: "GET"
+    path: "/"
+    expected_status_code: 200
+    follow_redirects: true
+    max_redirects: 10
+    validate_cert: true
+    timeout: 10s
+    headers:
+      User-Agent: "vmprober/1.0"
+  
+  # DNS probe defaults
+  dns:
+    query_type: "A"         # A, AAAA, CNAME, MX, TXT, NS, SOA, SRV, PTR
+    protocol: "udp"         # udp, tcp, tcp-tls (DoT)
+    validate_answer: true
+    recursion: true
+    timeout: 5s
+  
+  # gRPC probe defaults
+  grpc:
+    service: ""             # Empty = overall health check
+    tls: false
+    tls_skip_verify: false
+    expected_status: "SERVING"  # SERVING, NOT_SERVING, UNKNOWN
+    timeout: 10s
 ```
 
 ### Metrics (`metrics`)

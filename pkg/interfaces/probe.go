@@ -3,25 +3,25 @@ package interfaces
 import (
 	"context"
 
-	"github.com/vmprober/vmprober/internal/types"
+	"github.com/gdagil/vmprober/internal/types"
 )
 
-// Probe интерфейс для всех типов проб
+// Probe interface for all probe types
 type Probe interface {
-	// Execute выполняет пробу
+	// Execute performs the probe
 	Execute(ctx context.Context, target types.Target) (*types.ProbeResult, error)
 	
-	// Type возвращает тип пробы
+	// Type returns the probe type
 	Type() types.ProbeType
 	
-	// Validate проверяет конфигурацию пробы
+	// Validate validates probe configuration
 	Validate(config interface{}) error
 	
-	// Close освобождает ресурсы
+	// Close releases resources
 	Close() error
 }
 
-// ProbeFactory фабрика для создания проб
+// ProbeFactory factory for creating probes
 type ProbeFactory interface {
 	CreateProbe(probeType types.ProbeType, config interface{}) (Probe, error)
 	GetSupportedTypes() []types.ProbeType

@@ -1,10 +1,8 @@
 blank_issues_enabled: false
 contact_links:
-  - name: 💬 Discussions
-    url: https://github.com/gdagil/vmprober/discussions
-    about: Ask questions and discuss ideas with the community
   - name: 📚 Documentation
     url: https://github.com/gdagil/vmprober/tree/main/docs
     about: Check the documentation for answers
-
-
+  - name: 💬 Discussions
+    url: https://github.com/gdagil/vmprober/discussions
+    about: Ask questions and discuss ideas with the community

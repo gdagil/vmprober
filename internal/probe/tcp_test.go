@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/vmprober/vmprober/internal/types"
+	"github.com/gdagil/vmprober/internal/types"
 )
 
 func TestNewTCPProbe(t *testing.T) {
@@ -25,7 +25,7 @@ func TestNewTCPProbe(t *testing.T) {
 }
 
 func TestTCPProbe_Execute_Success(t *testing.T) {
-	// Запускаем тестовый TCP сервер
+	// Start test TCP server
 	ln, err := net.Listen("tcp", "127.0.0.1:0")
 	if err != nil {
 		t.Fatalf("Failed to start test server: %v", err)
@@ -92,7 +92,7 @@ func TestTCPProbe_Execute_ConnectionRefused(t *testing.T) {
 	probe := NewTCPProbe(config)
 	defer probe.Close()
 	
-	// Используем порт, который точно не слушается
+	// Use a port that is definitely not listening
 	target := types.Target{
 		Host:     "127.0.0.1",
 		Port:     65535,
@@ -122,9 +122,9 @@ func TestTCPProbe_Execute_Timeout(t *testing.T) {
 	probe := NewTCPProbe(config)
 	defer probe.Close()
 	
-	// Используем несуществующий хост, который вызовет таймаут
+	// Use a non-existent host that will cause a timeout
 	target := types.Target{
-		Host:     "192.0.2.1", // Тестовый IP из RFC 5737
+		Host:     "192.0.2.1", // Test IP from RFC 5737
 		Port:     80,
 		Protocol: types.ProbeTypeTCP,
 		Timeout:  100 * time.Millisecond,
@@ -134,7 +134,7 @@ func TestTCPProbe_Execute_Timeout(t *testing.T) {
 	defer cancel()
 	
 	result, err := probe.Execute(ctx, target)
-	// Может быть ошибка или таймаут
+	// May be error or timeout
 	if result != nil && result.Success {
 		t.Error("Expected unsuccessful probe")
 	}

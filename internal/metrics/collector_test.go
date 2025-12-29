@@ -5,11 +5,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/vmprober/vmprober/internal/types"
+	"github.com/gdagil/vmprober/internal/types"
 )
 
 func TestNewCollector(t *testing.T) {
-	collector := NewCollector("test_new", false)
+	collector := NewCollector("test_new", false, nil)
 	if collector == nil {
 		t.Fatal("NewCollector returned nil")
 	}
@@ -20,7 +20,7 @@ func TestNewCollector(t *testing.T) {
 }
 
 func TestNewCollector_DefaultNamespace(t *testing.T) {
-	collector := NewCollector("", false)
+	collector := NewCollector("", false, nil)
 	if collector == nil {
 		t.Fatal("NewCollector returned nil")
 	}
@@ -30,8 +30,26 @@ func TestNewCollector_DefaultNamespace(t *testing.T) {
 	}
 }
 
+func TestNewCollector_WithCustomLabels(t *testing.T) {
+	customLabels := map[string]string{
+		"job": "blackbox/vmprober",
+		"env": "test",
+	}
+	collector := NewCollector("test_labels", false, customLabels)
+	if collector == nil {
+		t.Fatal("NewCollector returned nil")
+	}
+	
+	if collector.customLabels["job"] != "blackbox/vmprober" {
+		t.Errorf("Expected job label 'blackbox/vmprober', got '%s'", collector.customLabels["job"])
+	}
+	if collector.customLabels["env"] != "test" {
+		t.Errorf("Expected env label 'test', got '%s'", collector.customLabels["env"])
+	}
+}
+
 func TestCollector_Record_Success(t *testing.T) {
-	collector := NewCollector("test_record_success", false)
+	collector := NewCollector("test_record_success", false, nil)
 	
 	result := &types.ProbeResult{
 		Success:   true,
@@ -51,7 +69,7 @@ func TestCollector_Record_Success(t *testing.T) {
 }
 
 func TestCollector_Record_Failure(t *testing.T) {
-	collector := NewCollector("test_record_failure", false)
+	collector := NewCollector("test_record_failure", false, nil)
 	
 	result := &types.ProbeResult{
 		Success:   false,
@@ -72,11 +90,11 @@ func TestCollector_Record_Failure(t *testing.T) {
 }
 
 func TestCollector_Record_MultipleResults(t *testing.T) {
-	collector := NewCollector("test_multiple_results", false)
+	collector := NewCollector("test_multiple_results", false, nil)
 	
 	ctx := context.Background()
 	
-	// Записываем несколько успешных результатов
+	// Record several successful results
 	for i := 0; i < 5; i++ {
 		result := &types.ProbeResult{
 			Success:   true,
@@ -93,7 +111,7 @@ func TestCollector_Record_MultipleResults(t *testing.T) {
 		}
 	}
 	
-	// Записываем несколько неудачных результатов
+	// Record several failed results
 	for i := 0; i < 3; i++ {
 		result := &types.ProbeResult{
 			Success:   false,
@@ -113,7 +131,7 @@ func TestCollector_Record_MultipleResults(t *testing.T) {
 }
 
 func TestCollector_Record_DifferentProtocols(t *testing.T) {
-	collector := NewCollector("test_different_protocols", false)
+	collector := NewCollector("test_different_protocols", false, nil)
 	
 	ctx := context.Background()
 	
@@ -140,13 +158,13 @@ func TestCollector_Record_DifferentProtocols(t *testing.T) {
 }
 
 func TestCollector_Record_UnknownTargetIP(t *testing.T) {
-	collector := NewCollector("test_unknown_target", false)
+	collector := NewCollector("test_unknown_target", false, nil)
 	
 	result := &types.ProbeResult{
 		Success:   true,
 		RTT:       100 * time.Millisecond,
 		Protocol:  types.ProbeTypeTCP,
-		TargetIP:  "", // Пустой IP
+		TargetIP:  "", // Empty IP
 		Timestamp: time.Now(),
 		Attempt:   1,
 	}
@@ -159,7 +177,7 @@ func TestCollector_Record_UnknownTargetIP(t *testing.T) {
 }
 
 func TestCollector_Record_DifferentTargets(t *testing.T) {
-	collector := NewCollector("test_different_targets", false)
+	collector := NewCollector("test_different_targets", false, nil)
 	
 	ctx := context.Background()
 	
@@ -185,11 +203,11 @@ func TestCollector_Record_DifferentTargets(t *testing.T) {
 // GetRegistry test removed - VictoriaMetrics doesn't use registry pattern
 
 func TestCollector_Record_RTT(t *testing.T) {
-	collector := NewCollector("test_rtt", false)
+	collector := NewCollector("test_rtt", false, nil)
 	
 	ctx := context.Background()
 	
-	// Записываем результаты с разным RTT
+	// Record results with different RTT values
 	rtts := []time.Duration{
 		1 * time.Millisecond,
 		10 * time.Millisecond,

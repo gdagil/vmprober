@@ -54,37 +54,13 @@ services:
       timeout: 5s
       retries: 3
 
-  # vmprober:
-  #   build:
-  #     context: .
-  #     dockerfile: Dockerfile
-  #   container_name: vmprober
-  #   depends_on:
-  #     - vminsert
-  #   volumes:
-  #     - ./config.docker.yaml:/etc/vmprober/config.yaml:ro
-  #     - ./data/vmprober/wal:/var/lib/vmprober/wal
-  #   ports:
-  #     - "8429:8429"
-  #   restart: unless-stopped
-  #   command:
-  #     - "./vmprober"
-  #     - "--config=/etc/vmprober/config.yaml"
-  #   healthcheck:
-  #     test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8429/health"]
-  #     interval: 30s
-  #     timeout: 5s
-  #     retries: 3
 
   grafana:
     image: grafana/grafana:latest
     container_name: grafana
-    depends_on:
-      vmselect:
-        condition: service_healthy
     volumes:
+      - ./config/grafana/provisioning:/etc/grafana/provisioning
       - ./data/grafana:/var/lib/grafana
-      - ./grafana/provisioning:/etc/grafana/provisioning
     ports:
       - "3000:3000"
     environment:
@@ -97,8 +73,3 @@ services:
       - GF_PROVISIONING_DATASOURCES_ENABLED=true
       - GF_DATASOURCES_DEFAULT_URL=http://vmselect:8481/select/0/prometheus
     restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000/api/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3

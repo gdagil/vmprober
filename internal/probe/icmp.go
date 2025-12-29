@@ -8,14 +8,14 @@ import (
 	"sync"
 	"time"
 
-	"github.com/vmprober/vmprober/internal/types"
-	"github.com/vmprober/vmprober/pkg/interfaces"
+	"github.com/gdagil/vmprober/internal/types"
+	"github.com/gdagil/vmprober/pkg/interfaces"
 	"golang.org/x/net/icmp"
 	"golang.org/x/net/ipv4"
 	"golang.org/x/net/ipv6"
 )
 
-// ICMPProbe реализует ICMP пробы
+// ICMPProbe implements ICMP probes
 type ICMPProbe struct {
 	config   *ICMPConfig
 	socket   *icmp.PacketConn
@@ -23,7 +23,7 @@ type ICMPProbe struct {
 	mu       sync.RWMutex
 }
 
-// ICMPConfig конфигурация ICMP пробы
+// ICMPConfig ICMP probe configuration
 type ICMPConfig struct {
 	Library       string
 	SequenceStart int
@@ -31,7 +31,7 @@ type ICMPConfig struct {
 	Data          []byte
 }
 
-// ICMPResponse структура для парсинга ICMP ответа
+// ICMPResponse structure for parsing ICMP response
 type ICMPResponse struct {
 	Type     int
 	Code     int
@@ -40,7 +40,7 @@ type ICMPResponse struct {
 	Data     []byte
 }
 
-// NewICMPProbe создает новый ICMP probe
+// NewICMPProbe creates a new ICMP probe
 func NewICMPProbe(config *ICMPConfig) interfaces.Probe {
 	if config == nil {
 		config = &ICMPConfig{
@@ -49,18 +49,18 @@ func NewICMPProbe(config *ICMPConfig) interfaces.Probe {
 		}
 	}
 
-	// Создание ICMP сокета
+	// Create ICMP socket
 	var conn *icmp.PacketConn
 	var err error
 
-	// Пытаемся создать IPv4 сокет
+	// Try to create IPv4 socket
 	conn, err = icmp.ListenPacket("ip4:icmp", "0.0.0.0")
 	if err != nil {
-		// Если не получилось, пробуем IPv6
+		// If that failed, try IPv6
 		conn, err = icmp.ListenPacket("ip6:ipv6-icmp", "::")
 		if err != nil {
-			// Если и это не получилось, возвращаем probe без сокета
-			// Сокет будет создан при первом выполнении
+			// If that also failed, return probe without socket
+			// Socket will be created on first execution
 		}
 	}
 
@@ -71,7 +71,7 @@ func NewICMPProbe(config *ICMPConfig) interfaces.Probe {
 	}
 }
 
-// Execute выполняет ICMP пробу
+// Execute performs an ICMP probe
 func (p *ICMPProbe) Execute(ctx context.Context, target types.Target) (*types.ProbeResult, error) {
 	start := time.Now()
 	result := &types.ProbeResult{
@@ -80,7 +80,7 @@ func (p *ICMPProbe) Execute(ctx context.Context, target types.Target) (*types.Pr
 		Attempt:   1,
 	}
 
-	// Инициализация сокета если нужно
+	// Initialize socket if needed
 	if p.socket == nil {
 		if err := p.initSocket(); err != nil {
 			result.Error = fmt.Sprintf("failed to initialize ICMP socket: %v", err)
@@ -89,10 +89,10 @@ func (p *ICMPProbe) Execute(ctx context.Context, target types.Target) (*types.Pr
 		}
 	}
 
-	// Сохраняем hostname для метрик (до DNS резолвинга)
+	// Save hostname for metrics (before DNS resolution)
 	result.TargetHost = target.Host
 
-	// Разрешение DNS если нужно
+	// Resolve DNS if needed
 	if isHostname(target.Host) {
 		resolvedIPs, lookupTime, err := p.resolveDNS(ctx, target.Host, target.NetworkFamily)
 		if err != nil {
@@ -104,12 +104,12 @@ func (p *ICMPProbe) Execute(ctx context.Context, target types.Target) (*types.Pr
 			ResolvedIPs: resolvedIPs,
 			LookupTime:  lookupTime,
 		}
-		target.Host = resolvedIPs[0] // Используем первый IP
+		target.Host = resolvedIPs[0] // Use first IP
 	}
 
 	result.TargetIP = target.Host
 
-	// Определение семейства адресов
+	// Determine address family
 	ip := net.ParseIP(target.Host)
 	if ip == nil {
 		result.Error = fmt.Sprintf("invalid IP address: %s", target.Host)
@@ -128,7 +128,7 @@ func (p *ICMPProbe) Execute(ctx context.Context, target types.Target) (*types.Pr
 		result.SocketFamily = "inet6"
 	}
 
-	// Создание нового сокета для этого запроса если нужно
+	// Create new socket for this request if needed
 	conn, err := icmp.ListenPacket(network, "0.0.0.0")
 	if err != nil {
 		result.Error = fmt.Sprintf("failed to create ICMP socket: %v", err)
@@ -137,7 +137,7 @@ func (p *ICMPProbe) Execute(ctx context.Context, target types.Target) (*types.Pr
 	}
 	defer conn.Close()
 
-	// Установка TTL если нужно
+	// Set TTL if needed
 	if p.config.TTL > 0 {
 		if isIPv4 {
 			if err := conn.IPv4PacketConn().SetTTL(p.config.TTL); err != nil {
@@ -154,7 +154,7 @@ func (p *ICMPProbe) Execute(ctx context.Context, target types.Target) (*types.Pr
 		}
 	}
 
-	// Создание ICMP пакета
+	// Create ICMP packet
 	icmpID := uint16(os.Getpid() & 0xFFFF)
 	p.mu.Lock()
 	p.sequence++
@@ -164,10 +164,10 @@ func (p *ICMPProbe) Execute(ctx context.Context, target types.Target) (*types.Pr
 	icmpSeq := p.sequence
 	p.mu.Unlock()
 
-	// Подготовка данных
+	// Prepare data
 	data := p.config.Data
 	if data == nil {
-		data = make([]byte, 56) // Стандартный размер для ping
+		data = make([]byte, 56) // Standard size for ping
 		for i := range data {
 			data[i] = byte(i)
 		}
@@ -196,7 +196,7 @@ func (p *ICMPProbe) Execute(ctx context.Context, target types.Target) (*types.Pr
 		}
 	}
 
-	// Сериализация сообщения
+	// Serialize message
 	packet, err := msg.Marshal(nil)
 	if err != nil {
 		result.Error = fmt.Sprintf("failed to marshal ICMP packet: %v", err)
@@ -205,7 +205,7 @@ func (p *ICMPProbe) Execute(ctx context.Context, target types.Target) (*types.Pr
 	}
 	result.Payload = packet
 
-	// Создание адреса назначения
+	// Create destination address
 	var targetAddr net.Addr
 	if isIPv4 {
 		targetAddr = &net.IPAddr{IP: ip}
@@ -213,35 +213,35 @@ func (p *ICMPProbe) Execute(ctx context.Context, target types.Target) (*types.Pr
 		targetAddr = &net.IPAddr{IP: ip}
 	}
 
-	// Установка таймаута чтения
+	// Set read timeout
 	if err := conn.SetReadDeadline(time.Now().Add(target.Timeout)); err != nil {
 		result.Error = fmt.Sprintf("failed to set read deadline: %v", err)
 		result.RTT = time.Since(start)
 		return result, err
 	}
 
-	// Отправка пакета
+	// Send packet
 	if _, err := conn.WriteTo(packet, targetAddr); err != nil {
 		result.Error = fmt.Sprintf("failed to send ICMP packet: %v", err)
 		result.RTT = time.Since(start)
 		return result, err
 	}
 
-	// Получение ответа
-	buffer := make([]byte, 1500) // Стандартный MTU
+	// Receive response
+	buffer := make([]byte, 1500) // Standard MTU
 	n, peer, err := conn.ReadFrom(buffer)
 	if err != nil {
 		if netErr, ok := err.(net.Error); ok && netErr.Timeout() {
 			result.Error = "ICMP response timeout"
 			result.RTT = time.Since(start)
-			return result, nil // Timeout не является критической ошибкой
+			return result, nil // Timeout is not a critical error
 		}
 		result.Error = fmt.Sprintf("failed to receive ICMP response: %v", err)
 		result.RTT = time.Since(start)
 		return result, err
 	}
 
-	// Парсинг ответа
+	// Parse response
 	response, err := p.parseICMPResponse(buffer[:n], isIPv4)
 	if err != nil {
 		result.Error = fmt.Sprintf("failed to parse ICMP response: %v", err)
@@ -249,14 +249,14 @@ func (p *ICMPProbe) Execute(ctx context.Context, target types.Target) (*types.Pr
 		return result, err
 	}
 
-	// Проверка соответствия запроса и ответа
+	// Check request and response match
 	if !p.isMatchingResponse(response, icmpID, icmpSeq) {
 		result.Error = "ICMP response does not match request"
 		result.RTT = time.Since(start)
 		return result, nil
 	}
 
-	// Успешный ответ
+	// Successful response
 	result.Success = true
 	result.RTT = time.Since(start)
 	result.Response = buffer[:n]
@@ -266,7 +266,7 @@ func (p *ICMPProbe) Execute(ctx context.Context, target types.Target) (*types.Pr
 	return result, nil
 }
 
-// initSocket инициализирует ICMP сокет
+// initSocket initializes the ICMP socket
 func (p *ICMPProbe) initSocket() error {
 	conn, err := icmp.ListenPacket("ip4:icmp", "0.0.0.0")
 	if err != nil {
@@ -279,7 +279,7 @@ func (p *ICMPProbe) initSocket() error {
 	return nil
 }
 
-// resolveDNS разрешает DNS имя
+// resolveDNS resolves DNS name
 func (p *ICMPProbe) resolveDNS(ctx context.Context, hostname string, family types.NetworkFamily) ([]string, time.Duration, error) {
 	start := time.Now()
 	var network string
@@ -307,7 +307,7 @@ func (p *ICMPProbe) resolveDNS(ctx context.Context, hostname string, family type
 	return result, time.Since(start), nil
 }
 
-// parseICMPResponse парсит ICMP ответ
+// parseICMPResponse parses ICMP response
 func (p *ICMPProbe) parseICMPResponse(data []byte, isIPv4 bool) (*ICMPResponse, error) {
 	var msg *icmp.Message
 	var err error
@@ -336,23 +336,23 @@ func (p *ICMPProbe) parseICMPResponse(data []byte, isIPv4 bool) (*ICMPResponse, 
 	}, nil
 }
 
-// isMatchingResponse проверяет соответствие ответа запросу
+// isMatchingResponse checks if response matches the request
 func (p *ICMPProbe) isMatchingResponse(response *ICMPResponse, expectedID, expectedSeq uint16) bool {
 	return response.ID == expectedID && response.Sequence == expectedSeq
 }
 
-// isHostname проверяет является ли строка hostname
+// isHostname checks if the string is a hostname
 func isHostname(s string) bool {
 	ip := net.ParseIP(s)
 	return ip == nil
 }
 
-// Type возвращает тип пробы
+// Type returns the probe type
 func (p *ICMPProbe) Type() types.ProbeType {
 	return types.ProbeTypeICMP
 }
 
-// Validate проверяет конфигурацию
+// Validate validates the configuration
 func (p *ICMPProbe) Validate(config interface{}) error {
 	if p.config == nil {
 		return fmt.Errorf("ICMP config is nil")
@@ -360,7 +360,7 @@ func (p *ICMPProbe) Validate(config interface{}) error {
 	return nil
 }
 
-// Close освобождает ресурсы
+// Close releases resources
 func (p *ICMPProbe) Close() error {
 	if p.socket != nil {
 		return p.socket.Close()

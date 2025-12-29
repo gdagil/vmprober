@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VMProber — Network Probe Monitor</title>
+    <meta name="description" content="High-performance network probe monitoring for Prometheus & VictoriaMetrics">
+    <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
+    <link href="/static/css/custom.css" rel="stylesheet">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <header class="vm-header">
+        <a href="/" class="vm-header__logo">
+            <svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
+                <defs>
+                    <linearGradient id="headerGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" style="stop-color:#00D4AA"/>
+                        <stop offset="100%" style="stop-color:#009B77"/>
+                    </linearGradient>
+                </defs>
+                <rect x="1" y="1" width="30" height="30" rx="6" fill="#1a1a2e"/>
+                <path d="M 6 9 L 18 16 L 6 23 L 6 19 L 12 16 L 6 13 Z" fill="url(#headerGrad)"/>
+                <path d="M 20 11 Q 24 13, 24 16 Q 24 19, 20 21" fill="none" stroke="#00D4AA" stroke-width="2" stroke-linecap="round" opacity="0.7"/>
+                <path d="M 23 8 Q 28 11, 28 16 Q 28 21, 23 24" fill="none" stroke="#00D4AA" stroke-width="2" stroke-linecap="round" opacity="0.4"/>
+                <circle cx="19" cy="16" r="2" fill="#00D4AA"/>
+            </svg>
+            <span class="vm-header__title"><span style="color: #00D4AA;">vm</span>prober</span>
+            <span class="vm-header__version">v1.0</span>
+        </a>
+        <nav class="vm-header__nav">
+            <a href="/" class="vm-header__link active" data-page="dashboard">
+                <svg viewBox="0 0 24 24"><path d="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z"/></svg>
+                Dashboard
+            </a>
+            <a href="/metrics" class="vm-header__link" data-page="metrics">
+                <svg viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM9 17H7v-7h2v7zm4 0h-2V7h2v10zm4 0h-2v-4h2v4z"/></svg>
+                Metrics
+            </a>
+            <a href="/health" class="vm-header__link" data-page="health">
+                <svg viewBox="0 0 24 24"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
+                Health
+            </a>
+        </nav>
+        <div class="vm-header__actions">
+            <div class="vm-auto-refresh">
+                <label class="vm-switch">
+                    <input type="checkbox" id="autoRefreshToggle" checked>
+                    <span class="vm-switch__slider"></span>
+                </label>
+                <span class="vm-auto-refresh__label">Auto-refresh</span>
+            </div>
+            <button class="vm-button vm-button--icon" onclick="loadData()" id="refreshBtn" title="Refresh now">
+                <svg viewBox="0 0 24 24">
+                    <path d="M17.65 6.35C16.2 4.9 14.21 4 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08c-.82 2.33-3.04 4-5.65 4-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/>
+                </svg>
+            </button>
+        </div>
+    </header>
+
+    <main class="vm-container">
+        <!-- System Overview -->
+        <section class="vm-section">
+            <div class="vm-section__header">
+                <h2 class="vm-section__title">System Overview</h2>
+                <span class="vm-section__subtitle" id="lastUpdate">Last update: —</span>
+            </div>
+            <div class="vm-stats-grid" id="statsGrid">
+                <div class="vm-stat-card vm-stat-card--primary">
+                    <div class="vm-stat-card__icon">
+                        <svg viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-5 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z"/></svg>
+                    </div>
+                    <div class="vm-stat-card__content">
+                        <div class="vm-stat-card__value" id="totalJobs">—</div>
+                        <div class="vm-stat-card__label">Total Probes</div>
+                    </div>
+                </div>
+                <div class="vm-stat-card vm-stat-card--success">
+                    <div class="vm-stat-card__icon">
+                        <svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>
+                    </div>
+                    <div class="vm-stat-card__content">
+                        <div class="vm-stat-card__value" id="upCount">—</div>
+                        <div class="vm-stat-card__label">Healthy</div>
+                    </div>
+                </div>
+                <div class="vm-stat-card vm-stat-card--danger">
+                    <div class="vm-stat-card__icon">
+                        <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg>
+                    </div>
+                    <div class="vm-stat-card__content">
+                        <div class="vm-stat-card__value" id="failedJobs">—</div>
+                        <div class="vm-stat-card__label">Failed</div>
+                    </div>
+                </div>
+                <div class="vm-stat-card vm-stat-card--warning">
+                    <div class="vm-stat-card__icon">
+                        <svg viewBox="0 0 24 24"><path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/></svg>
+                    </div>
+                    <div class="vm-stat-card__content">
+                        <div class="vm-stat-card__value" id="runningJobs">—</div>
+                        <div class="vm-stat-card__label">In Progress</div>
+                    </div>
+                </div>
+                <div class="vm-stat-card vm-stat-card--info">
+                    <div class="vm-stat-card__icon">
+                        <svg viewBox="0 0 24 24"><path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67z"/></svg>
+                    </div>
+                    <div class="vm-stat-card__content">
+                        <div class="vm-stat-card__value" id="uptime">—</div>
+                        <div class="vm-stat-card__label">Uptime</div>
+                    </div>
+                </div>
+                <div class="vm-stat-card vm-stat-card--neutral">
+                    <div class="vm-stat-card__icon">
+                        <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/></svg>
+                    </div>
+                    <div class="vm-stat-card__content">
+                        <div class="vm-stat-card__value" id="successRate">—</div>
+                        <div class="vm-stat-card__label">Success Rate</div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Health Summary -->
+        <section class="vm-section">
+            <div class="vm-section__header">
+                <h2 class="vm-section__title">Health Summary</h2>
+            </div>
+            <div class="vm-health-bar" id="healthBar">
+                <div class="vm-health-bar__segment vm-health-bar__segment--up" id="healthUp" style="width: 0%"></div>
+                <div class="vm-health-bar__segment vm-health-bar__segment--down" id="healthDown" style="width: 0%"></div>
+                <div class="vm-health-bar__segment vm-health-bar__segment--unknown" id="healthUnknown" style="width: 100%"></div>
+            </div>
+            <div class="vm-health-legend">
+                <span class="vm-health-legend__item"><span class="vm-dot vm-dot--up"></span> Up <span id="healthUpPct">0%</span></span>
+                <span class="vm-health-legend__item"><span class="vm-dot vm-dot--down"></span> Down <span id="healthDownPct">0%</span></span>
+                <span class="vm-health-legend__item"><span class="vm-dot vm-dot--unknown"></span> Unknown <span id="healthUnknownPct">100%</span></span>
+            </div>
+        </section>
+
+        <!-- Probe Jobs -->
+        <section class="vm-section">
+            <div class="vm-card">
+                <div class="vm-card__header">
+                    <div class="vm-card__header-left">
+                        <h2 class="vm-card__title">
+                            <svg viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-5 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z"/></svg>
+                            Probe Jobs
+                        </h2>
+                        <span class="vm-card__count" id="jobsCount">0</span>
+                    </div>
+                    <div class="vm-toolbar">
+                        <div class="vm-filter-group">
+                            <button class="vm-filter-btn active" data-filter="all">All</button>
+                            <button class="vm-filter-btn" data-filter="up">Up</button>
+                            <button class="vm-filter-btn" data-filter="down">Down</button>
+                        </div>
+                        <div class="vm-search">
+                            <svg class="vm-search__icon" viewBox="0 0 24 24">
+                                <path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/>
+                            </svg>
+                            <input type="text" class="vm-search__input" id="search" placeholder="Search probes...">
+                        </div>
+                    </div>
+                </div>
+                <div class="vm-card__body" id="jobsContent">
+                    <div class="vm-loading">
+                        <div class="vm-loading__spinner"></div>
+                        <span>Loading probes...</span>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Targets Detail -->
+        <section class="vm-section">
+            <div class="vm-card">
+                <div class="vm-card__header">
+                    <div class="vm-card__header-left">
+                        <h2 class="vm-card__title">
+                            <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/></svg>
+                            Target Details
+                        </h2>
+                        <span class="vm-card__count" id="targetsCount">0</span>
+                    </div>
+                </div>
+                <div class="vm-card__body" id="targetsContent">
+                    <div class="vm-loading">
+                        <div class="vm-loading__spinner"></div>
+                        <span>Loading targets...</span>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Protocol Distribution -->
+        <section class="vm-section">
+            <div class="vm-protocols-grid">
+                <div class="vm-protocol-card" id="protocolTCP">
+                    <div class="vm-protocol-card__icon vm-protocol-card__icon--tcp">TCP</div>
+                    <div class="vm-protocol-card__stats">
+                        <span class="vm-protocol-card__count">0</span>
+                        <span class="vm-protocol-card__label">probes</span>
+                    </div>
+                </div>
+                <div class="vm-protocol-card" id="protocolUDP">
+                    <div class="vm-protocol-card__icon vm-protocol-card__icon--udp">UDP</div>
+                    <div class="vm-protocol-card__stats">
+                        <span class="vm-protocol-card__count">0</span>
+                        <span class="vm-protocol-card__label">probes</span>
+                    </div>
+                </div>
+                <div class="vm-protocol-card" id="protocolICMP">
+                    <div class="vm-protocol-card__icon vm-protocol-card__icon--icmp">ICMP</div>
+                    <div class="vm-protocol-card__stats">
+                        <span class="vm-protocol-card__count">0</span>
+                        <span class="vm-protocol-card__label">probes</span>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer class="vm-footer">
+        <div class="vm-footer__logo">
+            <svg viewBox="0 0 32 32" width="20" height="20" xmlns="http://www.w3.org/2000/svg">
+                <defs>
+                    <linearGradient id="footerGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" style="stop-color:#00D4AA"/>
+                        <stop offset="100%" style="stop-color:#009B77"/>
+                    </linearGradient>
+                </defs>
+                <path d="M 6 9 L 18 16 L 6 23 L 6 19 L 12 16 L 6 13 Z" fill="url(#footerGrad)"/>
+                <circle cx="19" cy="16" r="2" fill="#00D4AA"/>
+            </svg>
+            <span><span style="color: #00D4AA;">VM</span>Prober © 2025</span>
+        </div>
+        <span>|</span>
+        <a href="https://github.com/gdagil/vmprober" target="_blank">GitHub</a>
+        <span>|</span>
+        <a href="/api/v1/stats" target="_blank">API</a>
+        <span>|</span>
+        <a href="/metrics" target="_blank">Metrics</a>
+    </footer>
+
+    <script src="/static/js/app.js"></script>
+</body>
+</html>
+

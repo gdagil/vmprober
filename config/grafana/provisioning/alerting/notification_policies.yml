@@ -1,0 +1,55 @@
+apiVersion: 1
+
+# Notification policies define how alerts are routed and grouped.
+
+policies:
+  - orgId: 1
+    receiver: vmprober-default
+    # Group alerts by these labels to reduce noise
+    group_by:
+      - alertname
+      - severity
+      - instance
+    # How long to wait before sending initial notification
+    group_wait: 30s
+    # How long to wait before sending updates about new alerts in the group
+    group_interval: 5m
+    # How long to wait before resending notification if alert continues to fire
+    repeat_interval: 4h
+    # Child policies for routing based on labels
+    routes:
+      # ============================================
+      # Critical alerts - immediate notification
+      # ============================================
+      - receiver: vmprober-default
+        matchers:
+          - severity = critical
+        group_wait: 10s
+        group_interval: 1m
+        repeat_interval: 1h
+        continue: false
+
+      # ============================================
+      # Warning alerts - less aggressive notification
+      # ============================================
+      - receiver: vmprober-default
+        matchers:
+          - severity = warning
+        group_wait: 1m
+        group_interval: 10m
+        repeat_interval: 6h
+        continue: false
+
+      # ============================================
+      # Route by team (example)
+      # ============================================
+      # - receiver: team-network-alerts
+      #   matchers:
+      #     - team = network
+      #   continue: false
+
+      # - receiver: team-infrastructure-alerts
+      #   matchers:
+      #     - team = infrastructure
+      #   continue: false
+

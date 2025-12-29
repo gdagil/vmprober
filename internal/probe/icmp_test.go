@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/vmprober/vmprober/internal/types"
+	"github.com/gdagil/vmprober/internal/types"
 )
 
 func TestNewICMPProbe(t *testing.T) {
@@ -43,11 +43,11 @@ func TestICMPProbe_Validate(t *testing.T) {
 		t.Errorf("Validate failed: %v", err)
 	}
 
-	// ICMP probe может работать с nil config (создается дефолтный)
+	// ICMP probe can work with nil config (default is created)
 	probeNil := NewICMPProbe(nil)
 	defer probeNil.Close()
 
-	// Validate проверяет внутренний config, который всегда создается
+	// Validate checks internal config, which is always created
 	if err := probeNil.Validate(nil); err != nil {
 		t.Logf("Validate with nil config returned: %v (may be expected)", err)
 	}
@@ -89,16 +89,16 @@ func TestICMPProbe_Execute_Timeout(t *testing.T) {
 	defer probe.Close()
 
 	ctx := context.Background()
-	// Используем несуществующий IP для теста таймаута
+	// Use non-existent IP for timeout test
 	target := types.Target{
 		ID:       "test",
-		Host:     "192.0.2.1", // TEST-NET-1, обычно не отвечает
+		Host:     "192.0.2.1", // TEST-NET-1, usually doesn't respond
 		Protocol: types.ProbeTypeICMP,
 		Timeout:  100 * time.Millisecond,
 	}
 
 	result, err := probe.Execute(ctx, target)
-	// ICMP может не получить ответ, это нормально
+	// ICMP may not receive a response, this is normal
 	if err != nil && result == nil {
 		t.Errorf("Execute failed: %v", err)
 	}
@@ -125,7 +125,7 @@ func TestICMPProbe_Execute_WithConfig(t *testing.T) {
 	}
 
 	result, err := probe.Execute(ctx, target)
-	// Результат зависит от доступности localhost
+	// Result depends on localhost availability
 	if err != nil && result == nil {
 		t.Logf("ICMP probe result: %v, error: %v", result, err)
 	}
@@ -138,8 +138,8 @@ func TestICMPProbe_SequenceIncrement(t *testing.T) {
 	probe := NewICMPProbe(config)
 	defer probe.Close()
 
-	// Проверяем, что sequence увеличивается
-	// Это внутренняя логика, но мы можем проверить через выполнение нескольких проб
+	// Check that sequence increases
+	// This is internal logic, but we can verify by executing multiple probes
 	ctx := context.Background()
 	target := types.Target{
 		ID:       "test",
@@ -148,7 +148,7 @@ func TestICMPProbe_SequenceIncrement(t *testing.T) {
 		Timeout:  100 * time.Millisecond,
 	}
 
-	// Выполняем несколько проб для проверки sequence
+	// Execute several probes to check sequence
 	for i := 0; i < 3; i++ {
 		result, _ := probe.Execute(ctx, target)
 		if result != nil {

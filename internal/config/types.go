@@ -3,10 +3,10 @@ package config
 import (
 	"time"
 
-	"github.com/vmprober/vmprober/internal/types"
+	"github.com/gdagil/vmprober/internal/types"
 )
 
-// Config основная конфигурация VMProber
+// Config is the main VMProber configuration
 type Config struct {
 	Listen       ListenConfig       `yaml:"listen" json:"listen"`
 	Pull         PullConfig         `yaml:"pull" json:"pull"`
@@ -20,21 +20,21 @@ type Config struct {
 	TLS          TLSConfig          `yaml:"tls" json:"tls"`
 	Observability ObservabilityConfig `yaml:"observability" json:"observability"`
 	
-	// Метаданные
+	// Metadata
 	Version   string    `yaml:"-" json:"version,omitempty"`
 	Source    string    `yaml:"-" json:"source,omitempty"`
 	Hash      string    `yaml:"-" json:"hash,omitempty"`
 	Timestamp time.Time `yaml:"-" json:"timestamp,omitempty"`
 }
 
-// ListenConfig конфигурация HTTP сервера
+// ListenConfig is the HTTP server configuration
 type ListenConfig struct {
 	Port int              `yaml:"port" json:"port"`
 	Host string           `yaml:"host" json:"host"`
 	TLS  *TLSServerConfig `yaml:"tls,omitempty" json:"tls,omitempty"`
 }
 
-// TLSServerConfig конфигурация TLS сервера
+// TLSServerConfig is the TLS server configuration
 type TLSServerConfig struct {
 	Enabled    bool   `yaml:"enabled" json:"enabled"`
 	CertFile   string `yaml:"cert_file" json:"cert_file"`
@@ -42,14 +42,14 @@ type TLSServerConfig struct {
 	ClientAuth string `yaml:"client_auth" json:"client_auth"`
 }
 
-// PullConfig конфигурация pull режима
+// PullConfig is the pull mode configuration
 type PullConfig struct {
 	Enabled bool          `yaml:"enabled" json:"enabled"`
 	Path    string        `yaml:"path" json:"path"`
 	Timeout time.Duration `yaml:"timeout" json:"timeout"`
 }
 
-// PushConfig конфигурация push режима
+// PushConfig is the push mode configuration
 type PushConfig struct {
 	Enabled     bool              `yaml:"enabled" json:"enabled"`
 	Endpoints   []EndpointConfig  `yaml:"endpoints" json:"endpoints"`
@@ -59,14 +59,14 @@ type PushConfig struct {
 	RemoteWrite RemoteWriteConfig `yaml:"remote_write" json:"remote_write"`
 }
 
-// EndpointConfig конфигурация endpoint
+// EndpointConfig is the endpoint configuration
 type EndpointConfig struct {
 	URL     string            `yaml:"url" json:"url"`
 	Headers map[string]string `yaml:"headers" json:"headers"`
 	Auth    AuthConfig        `yaml:"auth" json:"auth"`
 }
 
-// AuthConfig конфигурация аутентификации
+// AuthConfig is the authentication configuration
 type AuthConfig struct {
 	Type     string `yaml:"type" json:"type"`
 	Token    string `yaml:"token" json:"token"`
@@ -74,7 +74,7 @@ type AuthConfig struct {
 	Password string `yaml:"password" json:"password"`
 }
 
-// RetryConfig конфигурация retry
+// RetryConfig is the retry configuration
 type RetryConfig struct {
 	MaxAttempts  int           `yaml:"max_attempts" json:"max_attempts"`
 	Backoff     string        `yaml:"backoff" json:"backoff"`
@@ -83,27 +83,27 @@ type RetryConfig struct {
 	Multiplier   float64       `yaml:"multiplier" json:"multiplier"`
 }
 
-// DedupConfig конфигурация дедупликации
+// DedupConfig is the deduplication configuration
 type DedupConfig struct {
 	Enabled bool          `yaml:"enabled" json:"enabled"`
 	Window  time.Duration `yaml:"window" json:"window"`
 	Keys    []string      `yaml:"keys" json:"keys"`
 }
 
-// BatchConfig конфигурация batch отправки
+// BatchConfig is the batch sending configuration
 type BatchConfig struct {
 	Size    int           `yaml:"size" json:"size"`
 	Timeout time.Duration `yaml:"timeout" json:"timeout"`
 }
 
-// RemoteWriteConfig конфигурация RemoteWrite
+// RemoteWriteConfig is the RemoteWrite configuration
 type RemoteWriteConfig struct {
 	Enabled bool              `yaml:"enabled" json:"enabled"`
 	URL     string            `yaml:"url" json:"url"`
 	Headers map[string]string `yaml:"headers" json:"headers"`
 }
 
-// SchedulerConfig конфигурация планировщика
+// SchedulerConfig is the scheduler configuration
 type SchedulerConfig struct {
 	Concurrent    int                      `yaml:"concurrent" json:"concurrent"`
 	RPSLimit      int                      `yaml:"rps_limit" json:"rps_limit"`
@@ -114,7 +114,7 @@ type SchedulerConfig struct {
 	WorkerTimeout time.Duration            `yaml:"worker_timeout" json:"worker_timeout"`
 }
 
-// TargetsConfig конфигурация целей
+// TargetsConfig is the targets configuration
 type TargetsConfig struct {
 	Static         []TargetConfig    `yaml:"static" json:"static"`
 	Files          []FileConfig      `yaml:"files" json:"files"`
@@ -124,7 +124,7 @@ type TargetsConfig struct {
 	HotReload      bool              `yaml:"hot_reload" json:"hot_reload"`
 }
 
-// TargetConfig конфигурация цели
+// TargetConfig is the target configuration
 type TargetConfig struct {
 	Host      string            `yaml:"host" json:"host"`
 	Port      int               `yaml:"port" json:"port"`
@@ -134,15 +134,15 @@ type TargetConfig struct {
 	Labels   map[string]string `yaml:"labels" json:"labels"`
 }
 
-// UnmarshalYAML кастомный парсер для корректной обработки массива протоколов
+// UnmarshalYAML custom parser for correct handling of protocols array and proto field
 func (tc *TargetConfig) UnmarshalYAML(unmarshal func(interface{}) error) error {
-	type targetConfigAlias TargetConfig
 	aux := &struct {
 		Host      string            `yaml:"host"`
 		Port      int               `yaml:"port"`
-		Protocols []string          `yaml:"protocols"`
-		Interval  time.Duration    `yaml:"interval"`
-		Timeout   time.Duration    `yaml:"timeout"`
+		Proto     string            `yaml:"proto"`     // Одиночный протокол (для обратной совместимости)
+		Protocols []string          `yaml:"protocols"` // Массив протоколов
+		Interval  time.Duration     `yaml:"interval"`
+		Timeout   time.Duration     `yaml:"timeout"`
 		Labels    map[string]string `yaml:"labels"`
 	}{}
 
@@ -150,20 +150,24 @@ func (tc *TargetConfig) UnmarshalYAML(unmarshal func(interface{}) error) error {
 		return err
 	}
 
-	// Копируем поля
+	// Copy fields
 	tc.Host = aux.Host
 	tc.Port = aux.Port
 	tc.Interval = aux.Interval
 	tc.Timeout = aux.Timeout
 	tc.Labels = aux.Labels
 
-	// Копируем протоколы
-	tc.Protocols = aux.Protocols
+	// Priority: protocols > proto
+	if len(aux.Protocols) > 0 {
+		tc.Protocols = aux.Protocols
+	} else if aux.Proto != "" {
+		tc.Protocols = []string{aux.Proto}
+	}
 
 	return nil
 }
 
-// GetProtocols возвращает список протоколов для таргета
+// GetProtocols returns the list of protocols for the target
 func (tc *TargetConfig) GetProtocols() []types.ProbeType {
 	if len(tc.Protocols) > 0 {
 		result := make([]types.ProbeType, 0, len(tc.Protocols))
@@ -172,25 +176,25 @@ func (tc *TargetConfig) GetProtocols() []types.ProbeType {
 		}
 		return result
 	}
-	// По умолчанию TCP, если протоколы не указаны
+	// Default to TCP if protocols not specified
 	return []types.ProbeType{types.ProbeTypeTCP}
 }
 
-// FileConfig конфигурация файлового источника
+// FileConfig is the file source configuration
 type FileConfig struct {
 	Path          string        `yaml:"path" json:"path"`
 	ReloadInterval time.Duration `yaml:"reload_interval" json:"reload_interval"`
 	Watch         bool          `yaml:"watch" json:"watch"`
 }
 
-// URLConfig конфигурация HTTP источника
+// URLConfig is the HTTP source configuration
 type URLConfig struct {
 	URL           string            `yaml:"url" json:"url"`
 	ReloadInterval time.Duration     `yaml:"reload_interval" json:"reload_interval"`
 	Headers       map[string]string `yaml:"headers" json:"headers"`
 }
 
-// CommandConfig конфигурация командного источника
+// CommandConfig is the command source configuration
 type CommandConfig struct {
 	Command   string        `yaml:"command" json:"command"`
 	Interval  time.Duration `yaml:"interval" json:"interval"`
@@ -198,28 +202,31 @@ type CommandConfig struct {
 	Filter    string        `yaml:"filter" json:"filter"`
 }
 
-// ProbesConfig конфигурация проб
+// ProbesConfig is the probes configuration
 type ProbesConfig struct {
 	Defaults map[string]interface{} `yaml:"defaults" json:"defaults"`
 	TCP      TCPProbeConfig         `yaml:"tcp" json:"tcp"`
 	UDP      UDPProbeConfig         `yaml:"udp" json:"udp"`
 	ICMP     ICMPProbeConfig        `yaml:"icmp" json:"icmp"`
+	HTTP     HTTPProbeConfig        `yaml:"http" json:"http"`
+	DNS      DNSProbeConfig         `yaml:"dns" json:"dns"`
+	GRPC     GRPCProbeConfig        `yaml:"grpc" json:"grpc"`
 }
 
-// TCPProbeConfig конфигурация TCP проб
+// TCPProbeConfig is the TCP probes configuration
 type TCPProbeConfig struct {
 	ConnectTimeout time.Duration     `yaml:"connect_timeout" json:"connect_timeout"`
 	TLS            types.TLSConfig   `yaml:"tls" json:"tls"`
 	KeepAlive      KeepAliveConfig   `yaml:"keep_alive" json:"keep_alive"`
 }
 
-// KeepAliveConfig конфигурация keep-alive
+// KeepAliveConfig is the keep-alive configuration
 type KeepAliveConfig struct {
 	Enabled bool          `yaml:"enabled" json:"enabled"`
 	Period  time.Duration `yaml:"period" json:"period"`
 }
 
-// UDPProbeConfig конфигурация UDP проб
+// UDPProbeConfig is the UDP probes configuration
 type UDPProbeConfig struct {
 	PayloadType     string        `yaml:"payload_type" json:"payload_type"`
 	PayloadSize     int           `yaml:"payload_size" json:"payload_size"`
@@ -227,14 +234,60 @@ type UDPProbeConfig struct {
 	MaxPacketSize   int           `yaml:"max_packet_size" json:"max_packet_size"`
 }
 
-// ICMPProbeConfig конфигурация ICMP проб
+// ICMPProbeConfig is the ICMP probes configuration
 type ICMPProbeConfig struct {
 	Library       string `yaml:"library" json:"library"`
 	SequenceStart int    `yaml:"sequence_start" json:"sequence_start"`
 	TTL           int    `yaml:"ttl" json:"ttl"`
 }
 
-// MetricsConfig конфигурация метрик
+// HTTPProbeConfig is the HTTP/HTTPS probes configuration
+type HTTPProbeConfig struct {
+	Method             string            `yaml:"method" json:"method"`                             // GET, POST, HEAD, PUT, etc.
+	Path               string            `yaml:"path" json:"path"`                                 // URL path (default: "/")
+	Headers            map[string]string `yaml:"headers" json:"headers"`                           // Custom headers
+	Body               string            `yaml:"body" json:"body"`                                 // Request body for POST/PUT
+	ExpectedStatusCode int               `yaml:"expected_status_code" json:"expected_status_code"` // Expected HTTP status (default: 200)
+	ExpectedBody       string            `yaml:"expected_body" json:"expected_body"`               // Expected response body substring
+	FollowRedirects    bool              `yaml:"follow_redirects" json:"follow_redirects"`         // Follow HTTP redirects (default: true)
+	MaxRedirects       int               `yaml:"max_redirects" json:"max_redirects"`               // Maximum redirects to follow (default: 10)
+	ValidateCert       bool              `yaml:"validate_cert" json:"validate_cert"`               // Validate TLS certificate (default: true)
+	BasicAuth          *BasicAuthConfig  `yaml:"basic_auth,omitempty" json:"basic_auth"`           // Basic authentication
+	BearerToken        string            `yaml:"bearer_token,omitempty" json:"bearer_token"`       // Bearer token for Authorization header
+	Proxy              string            `yaml:"proxy,omitempty" json:"proxy"`                     // HTTP proxy URL
+	Timeout            time.Duration     `yaml:"timeout" json:"timeout"`                           // Request timeout
+}
+
+// BasicAuthConfig is the Basic Auth configuration
+type BasicAuthConfig struct {
+	Username string `yaml:"username" json:"username"`
+	Password string `yaml:"password" json:"password"`
+}
+
+// DNSProbeConfig is the DNS probes configuration
+type DNSProbeConfig struct {
+	QueryName       string        `yaml:"query_name" json:"query_name"`             // Domain to query
+	QueryType       string        `yaml:"query_type" json:"query_type"`             // A, AAAA, CNAME, MX, TXT, NS, SOA, SRV, PTR (default: A)
+	Protocol        string        `yaml:"protocol" json:"protocol"`                 // udp, tcp, tcp-tls/dot (default: udp)
+	ExpectedRecords []string      `yaml:"expected_records" json:"expected_records"` // Expected records in response
+	ValidateAnswer  bool          `yaml:"validate_answer" json:"validate_answer"`   // Validate RCODE is NOERROR (default: true)
+	Recursion       bool          `yaml:"recursion" json:"recursion"`               // Request recursive resolution (default: true)
+	Timeout         time.Duration `yaml:"timeout" json:"timeout"`                   // Query timeout
+}
+
+// GRPCProbeConfig is the gRPC probes configuration
+type GRPCProbeConfig struct {
+	Service         string            `yaml:"service" json:"service"`                   // Service name for health check (empty = overall health)
+	TLS             bool              `yaml:"tls" json:"tls"`                           // Use TLS
+	TLSSkipVerify   bool              `yaml:"tls_skip_verify" json:"tls_skip_verify"`   // Skip TLS certificate verification
+	ServerName      string            `yaml:"server_name" json:"server_name"`           // TLS server name
+	Metadata        map[string]string `yaml:"metadata" json:"metadata"`                 // gRPC metadata (headers)
+	ExpectedStatus  string            `yaml:"expected_status" json:"expected_status"`   // Expected health status (SERVING, NOT_SERVING, UNKNOWN)
+	ReflectionProbe bool              `yaml:"reflection_probe" json:"reflection_probe"` // Use gRPC reflection instead of health check
+	Timeout         time.Duration     `yaml:"timeout" json:"timeout"`                   // Request timeout
+}
+
+// MetricsConfig is the metrics configuration
 type MetricsConfig struct {
 	Namespace            string            `yaml:"namespace" json:"namespace"`
 	IncludeLabels        []string          `yaml:"include_labels" json:"include_labels"`
@@ -245,7 +298,7 @@ type MetricsConfig struct {
 	EnableJobMetrics     *bool             `yaml:"enable_job_metrics" json:"enable_job_metrics"`
 }
 
-// WALConfig конфигурация WAL
+// WALConfig is the WAL configuration
 type WALConfig struct {
 	Dir             string        `yaml:"dir" json:"dir"`
 	MaxSize         string        `yaml:"max_size" json:"max_size"`
@@ -258,7 +311,7 @@ type WALConfig struct {
 	IndexCacheSize  int           `yaml:"index_cache_size" json:"index_cache_size"`
 }
 
-// LoggingConfig конфигурация логирования
+// LoggingConfig is the logging configuration
 type LoggingConfig struct {
 	Level        string            `yaml:"level" json:"level"`
 	Format       string            `yaml:"format" json:"format"`
@@ -268,7 +321,7 @@ type LoggingConfig struct {
 	IncludeSource bool             `yaml:"include_source" json:"include_source"`
 }
 
-// FileLoggingConfig конфигурация файлового логирования
+// FileLoggingConfig is the file logging configuration
 type FileLoggingConfig struct {
 	Path       string `yaml:"path" json:"path"`
 	MaxSize    string `yaml:"max_size" json:"max_size"`
@@ -277,7 +330,7 @@ type FileLoggingConfig struct {
 	Compress   bool   `yaml:"compress" json:"compress"`
 }
 
-// TLSConfig конфигурация TLS
+// TLSConfig is the TLS configuration
 type TLSConfig struct {
 	ClientCerts       ClientCertsConfig `yaml:"client_certs" json:"client_certs"`
 	ServerCerts       ServerCertsConfig `yaml:"server_certs" json:"server_certs"`
@@ -287,7 +340,7 @@ type TLSConfig struct {
 	CipherSuites       []string         `yaml:"cipher_suites" json:"cipher_suites"`
 }
 
-// ClientCertsConfig конфигурация клиентских сертификатов
+// ClientCertsConfig is the client certificates configuration
 type ClientCertsConfig struct {
 	Enabled  bool   `yaml:"enabled" json:"enabled"`
 	CertFile string `yaml:"cert_file" json:"cert_file"`
@@ -295,7 +348,7 @@ type ClientCertsConfig struct {
 	CAFile   string `yaml:"ca_file" json:"ca_file"`
 }
 
-// ServerCertsConfig конфигурация серверных сертификатов
+// ServerCertsConfig is the server certificates configuration
 type ServerCertsConfig struct {
 	Enabled  bool   `yaml:"enabled" json:"enabled"`
 	CertFile string `yaml:"cert_file" json:"cert_file"`
@@ -303,7 +356,7 @@ type ServerCertsConfig struct {
 	CAFile   string `yaml:"ca_file" json:"ca_file"`
 }
 
-// ObservabilityConfig конфигурация наблюдаемости
+// ObservabilityConfig is the observability configuration
 type ObservabilityConfig struct {
 	Pprof      PprofConfig      `yaml:"pprof" json:"pprof"`
 	OpenCensus OpenCensusConfig `yaml:"opencensus" json:"opencensus"`
@@ -311,35 +364,35 @@ type ObservabilityConfig struct {
 	HealthCheck HealthCheckConfig `yaml:"health_check" json:"health_check"`
 }
 
-// PprofConfig конфигурация pprof
+// PprofConfig is the pprof configuration
 type PprofConfig struct {
 	Enabled bool   `yaml:"enabled" json:"enabled"`
 	Port    int    `yaml:"port" json:"port"`
 	Host    string `yaml:"host" json:"host"`
 }
 
-// OpenCensusConfig конфигурация OpenCensus
+// OpenCensusConfig is the OpenCensus configuration
 type OpenCensusConfig struct {
 	Enabled      bool                      `yaml:"enabled" json:"enabled"`
 	SamplingRate float64                   `yaml:"sampling_rate" json:"sampling_rate"`
 	Exporters    []OpenCensusExporterConfig `yaml:"exporters" json:"exporters"`
 }
 
-// OpenCensusExporterConfig конфигурация OpenCensus exporter
+// OpenCensusExporterConfig is the OpenCensus exporter configuration
 type OpenCensusExporterConfig struct {
 	Type     string            `yaml:"type" json:"type"`
 	Endpoint string            `yaml:"endpoint" json:"endpoint"`
 	Headers  map[string]string `yaml:"headers" json:"headers"`
 }
 
-// PrometheusConfig конфигурация Prometheus метрик
+// PrometheusConfig is the Prometheus metrics configuration
 type PrometheusConfig struct {
 	Enabled   bool   `yaml:"enabled" json:"enabled"`
 	Namespace string `yaml:"namespace" json:"namespace"`
 	Subsystem string `yaml:"subsystem" json:"subsystem"`
 }
 
-// HealthCheckConfig конфигурация health check
+// HealthCheckConfig is the health check configuration
 type HealthCheckConfig struct {
 	Enabled  bool          `yaml:"enabled" json:"enabled"`
 	Timeout  time.Duration `yaml:"timeout" json:"timeout"`

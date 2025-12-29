@@ -79,21 +79,54 @@ Edit `config.yaml` to add more targets:
 ```yaml
 targets:
   static:
+    # TCP probe
     - host: "google.com"
       port: 80
       protocols: ["tcp"]
       interval: 30s
+    
+    # UDP and TCP probes for DNS
     - host: "8.8.8.8"
       port: 53
-      protocols: ["udp", "tcp"]   # Probe both UDP and TCP
+      protocols: ["udp", "tcp"]
       interval: 60s
       labels:
         service: "dns"
+    
+    # ICMP ping
     - host: "1.1.1.1"
       protocols: ["icmp"]
       interval: 30s
       labels:
         service: "ping"
+    
+    # HTTP health check
+    - host: "api.example.com"
+      port: 443
+      proto: "https"
+      interval: 30s
+      http:
+        method: "GET"
+        path: "/health"
+        expected_status_code: 200
+    
+    # DNS resolution check
+    - host: "8.8.8.8"
+      port: 53
+      proto: "dns"
+      interval: 60s
+      dns:
+        query_name: "google.com"
+        query_type: "A"
+    
+    # gRPC health check
+    - host: "grpc.example.com"
+      port: 50051
+      proto: "grpc"
+      interval: 15s
+      grpc:
+        service: "my.Service"
+        expected_status: "SERVING"
 ```
 
 VMProber supports hot reload, so changes are picked up automatically.
@@ -132,21 +165,63 @@ targets:
         port: "https"
 ```
 
-### Use HTTPS/TLS
+### Use HTTPS Probes
 
 ```yaml
 targets:
   static:
-    - host: "example.com"
+    # HTTPS probe with validation
+    - host: "api.example.com"
       port: 443
-      protocols: ["tcp"]
+      proto: "https"
       interval: 30s
+      http:
+        method: "GET"
+        path: "/health"
+        expected_status_code: 200
+        validate_cert: true
+        expected_body: "ok"
 
-probes:
-  tcp:
-    tls:
-      enabled: true
-      server_name: "example.com"
+    # HTTPS with authentication
+    - host: "secure.example.com"
+      port: 443
+      proto: "https"
+      interval: 60s
+      http:
+        method: "GET"
+        path: "/api/status"
+        bearer_token: "${API_TOKEN}"
+```
+
+### Monitor DNS Servers
+
+```yaml
+targets:
+  static:
+    - host: "8.8.8.8"
+      port: 53
+      proto: "dns"
+      interval: 30s
+      dns:
+        query_name: "google.com"
+        query_type: "A"
+        protocol: "udp"
+        validate_answer: true
+```
+
+### Monitor gRPC Services
+
+```yaml
+targets:
+  static:
+    - host: "grpc.example.com"
+      port: 50051
+      proto: "grpc"
+      interval: 15s
+      grpc:
+        service: "user.UserService"
+        expected_status: "SERVING"
+        tls: true
 ```
 
 ### Configure Rate Limiting

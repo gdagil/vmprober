@@ -10,19 +10,19 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/gdagil/vmprober/internal/adapter"
+	"github.com/gdagil/vmprober/internal/config"
+	internalmetrics "github.com/gdagil/vmprober/internal/metrics"
+	"github.com/gdagil/vmprober/internal/normalizer"
+	"github.com/gdagil/vmprober/internal/observability"
+	"github.com/gdagil/vmprober/internal/probe"
+	"github.com/gdagil/vmprober/internal/scheduler"
+	"github.com/gdagil/vmprober/internal/server"
+	"github.com/gdagil/vmprober/internal/shutdown"
+	"github.com/gdagil/vmprober/internal/types"
+	"github.com/gdagil/vmprober/internal/wal"
+	"github.com/gdagil/vmprober/pkg/interfaces"
 	"github.com/sirupsen/logrus"
-	"github.com/vmprober/vmprober/internal/adapter"
-	"github.com/vmprober/vmprober/internal/config"
-	internalmetrics "github.com/vmprober/vmprober/internal/metrics"
-	"github.com/vmprober/vmprober/internal/normalizer"
-	"github.com/vmprober/vmprober/internal/observability"
-	"github.com/vmprober/vmprober/internal/probe"
-	"github.com/vmprober/vmprober/internal/scheduler"
-	"github.com/vmprober/vmprober/internal/server"
-	"github.com/vmprober/vmprober/internal/shutdown"
-	"github.com/vmprober/vmprober/internal/types"
-	"github.com/vmprober/vmprober/internal/wal"
-	"github.com/vmprober/vmprober/pkg/interfaces"
 )
 
 var (
@@ -31,11 +31,11 @@ var (
 	GitCommit = "unknown"
 )
 
-// setupLogger настраивает логгер на основе конфигурации
+// setupLogger configures the logger based on configuration
 func setupLogger(cfg *config.Config, cmdLogLevel string) *logrus.Logger {
 	logger := logrus.New()
 
-	// Приоритет: командная строка > конфигурация > по умолчанию
+	// Priority: command line > config > default
 	var level logrus.Level
 	var err error
 
@@ -54,7 +54,7 @@ func setupLogger(cfg *config.Config, cmdLogLevel string) *logrus.Logger {
 	}
 	logger.SetLevel(level)
 
-	// Настройка формата
+	// Configure format
 	format := cfg.Logging.Format
 	switch format {
 	case "text":
@@ -65,24 +65,24 @@ func setupLogger(cfg *config.Config, cmdLogLevel string) *logrus.Logger {
 	case "json":
 		logger.SetFormatter(&logrus.JSONFormatter{})
 	default:
-		// По умолчанию JSON, если формат не указан или неизвестен
+		// Default to JSON if format is not specified or unknown
 		logger.SetFormatter(&logrus.JSONFormatter{})
 	}
 
-	// Настройка вывода
+	// Configure output
 	switch cfg.Logging.Output {
 	case "stderr":
 		logger.SetOutput(os.Stderr)
 	case "file":
 		if cfg.Logging.File.Path != "" {
-			// TODO: Реализовать файловый вывод с ротацией
-			// Для простоты пока используем стандартный вывод
+			// TODO: Implement file output with rotation
+			// For simplicity, using standard output for now
 			logger.SetOutput(os.Stdout)
 		} else {
 			logger.SetOutput(os.Stdout)
 		}
 	default:
-		// По умолчанию stdout
+		// Default to stdout
 		logger.SetOutput(os.Stdout)
 	}
 
@@ -94,22 +94,22 @@ func main() {
 	logLevel := flag.String("log-level", "", "Log level (debug, info, warn, error) - overrides config")
 	flag.Parse()
 
-	// Временный логгер для начальной загрузки конфигурации
+	// Temporary logger for initial configuration loading
 	tempLogger := logrus.New()
 	tempLogger.SetFormatter(&logrus.JSONFormatter{})
 	tempLogger.SetLevel(logrus.InfoLevel)
 
-	// Загрузка конфигурации
+	// Load configuration
 	cfgManager := config.NewManager(*configPath, tempLogger)
 	cfg, err := cfgManager.Load(context.Background())
 	if err != nil {
 		tempLogger.WithError(err).Fatal("Failed to load configuration")
 	}
 
-	// Настройка логгера на основе конфигурации
+	// Configure logger based on configuration
 	logger := setupLogger(cfg, *logLevel)
 
-	// Обновляем логгер в менеджере конфигурации
+	// Update logger in configuration manager
 	cfgManager.SetLogger(logger)
 
 	logger.WithFields(logrus.Fields{
@@ -118,17 +118,17 @@ func main() {
 		"gitCommit": GitCommit,
 	}).Info("Starting VMProber")
 
-	// Создание компонентов
+	// Create components
 	probeFactory := probe.NewFactory()
 	enableJobMetrics := true
 	if cfg.Metrics.EnableJobMetrics != nil {
 		enableJobMetrics = *cfg.Metrics.EnableJobMetrics
 	}
-	metricsCollector := internalmetrics.NewCollector(cfg.Metrics.Namespace, enableJobMetrics)
+	metricsCollector := internalmetrics.NewCollector(cfg.Metrics.Namespace, enableJobMetrics, cfg.Metrics.CustomLabels)
 	taskScheduler := scheduler.NewScheduler(logger)
 	httpServer := server.NewServer(cfg.Listen.Host, cfg.Listen.Port, logger)
 
-	// Создание WAL системы
+	// Create WAL system
 	var walManager wal.WALManager
 	if cfg.WAL.Dir != "" {
 		walManager, err = wal.NewWALManager(&cfg.WAL, logger)
@@ -139,10 +139,10 @@ func main() {
 		}
 	}
 
-	// Создание нормализатора
+	// Create normalizer
 	resultNormalizer := normalizer.NewNormalizer(logger)
 
-	// Создание VictoriaMetrics адаптера
+	// Create VictoriaMetrics adapter
 	var vmAdapter adapter.VictoriaMetricsAdapter
 	if cfg.Push.Enabled {
 		vmAdapter, err = adapter.NewVictoriaMetricsAdapter(&cfg.Push, logger)
@@ -156,22 +156,22 @@ func main() {
 			}
 		}
 
-		// Настройка автоматической отправки метрик из VictoriaMetrics библиотеки
-		// Используем первый endpoint из конфигурации
-		// Примечание: InitPush может не поддерживать формат vminsert напрямую
-		// Метрики из библиотеки будут отправляться через адаптер вместе с другими метриками
-		// Если нужна прямая отправка, можно использовать правильный формат для single-node VM:
+		// Configure automatic metrics push from VictoriaMetrics library
+		// Using the first endpoint from configuration
+		// Note: InitPush may not support vminsert format directly
+		// Metrics from the library will be sent through the adapter along with other metrics
+		// For direct push, you can use the correct format for single-node VM:
 		// metrics.InitPush("http://localhost:8428/api/v1/import/prometheus", 10*time.Second, ...)
-		// Но для vminsert лучше использовать адаптер
+		// But for vminsert it's better to use the adapter
 	}
 
-	// Создание observability менеджера
+	// Create observability manager
 	obsManager := observability.NewObservabilityManager(&cfg.Observability, logger)
 	if err := obsManager.Start(context.Background()); err != nil {
 		logger.WithError(err).Warn("Failed to start observability manager")
 	}
 
-	// Создание shutdown менеджера
+	// Create shutdown manager
 	shutdownManager := shutdown.NewShutdownManager(logger)
 	shutdownManager.Register(shutdown.NewServerComponent(httpServer))
 	shutdownManager.Register(shutdown.NewSchedulerComponent(taskScheduler))
@@ -184,33 +184,33 @@ func main() {
 	shutdownManager.Register(shutdown.NewNormalizerComponent(resultNormalizer))
 	shutdownManager.Register(shutdown.NewObservabilityComponent(obsManager))
 
-	// Настройка сервера
+	// Configure server
 	httpServer.SetScheduler(taskScheduler)
 	// Metrics are now handled by VictoriaMetrics library directly
 
-	// Запуск HTTP сервера
+	// Start HTTP server
 	if err := httpServer.Start(context.Background()); err != nil {
 		logger.WithError(err).Fatal("Failed to start HTTP server")
 	}
 
-	// Запуск планировщика
+	// Start scheduler
 	if err := taskScheduler.Start(context.Background()); err != nil {
 		logger.WithError(err).Fatal("Failed to start scheduler")
 	}
 
-	// Обработка сигналов для graceful shutdown
+	// Handle signals for graceful shutdown
 	sigChan := make(chan os.Signal, 1)
 	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
 
-	// Главный цикл обработки задач
+	// Main task processing loop
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	// Загрузка целей из конфигурации
+	// Load targets from configuration
 	for _, targetCfg := range cfg.Targets.Static {
 		protocols := targetCfg.GetProtocols()
 
-		// Если протоколы не найдены, пропускаем таргет
+		// If protocols not found, skip target
 		if len(protocols) == 0 {
 			logger.Warnf("No protocols specified for target %s:%d (raw: %v), skipping", targetCfg.Host, targetCfg.Port, targetCfg.Protocols)
 			continue
@@ -218,9 +218,9 @@ func main() {
 
 		logger.Debugf("Target %s:%d has protocols: %v", targetCfg.Host, targetCfg.Port, protocols)
 
-		// Создаем джоб для каждого протокола
+		// Create a job for each protocol
 		for _, protocol := range protocols {
-			// ID джоба включает протокол для уникальности
+			// Job ID includes protocol for uniqueness
 			jobID := fmt.Sprintf("%s:%d/%s", targetCfg.Host, targetCfg.Port, protocol)
 
 			target := types.Target{
@@ -256,22 +256,66 @@ func main() {
 		}
 	}
 
-	// Worker pool для выполнения проб
+	// Worker pool for probe execution (limited number of workers)
+	workerCount := cfg.Scheduler.Concurrent
+	if workerCount <= 0 {
+		workerCount = 10 // Default value
+	}
+
+	// Semaphore to limit concurrently executing probes
+	probeSemaphore := make(chan struct{}, workerCount)
+
 	go func() {
 		for {
 			select {
 			case <-ctx.Done():
 				return
 			case job := <-taskScheduler.GetJobChan():
-				go func(j *types.Job) {
-					taskScheduler.MarkJobStarted(j.ID)
-					executeProbe(ctx, j, probeFactory, metricsCollector, resultNormalizer, walManager, vmAdapter, logger, taskScheduler, cfg.Probes, cfg.Scheduler, cfg)
-				}(job)
+				// Get a slot in semaphore (blocks if all workers are busy)
+				select {
+				case probeSemaphore <- struct{}{}:
+					go func(j *types.Job) {
+						defer func() { <-probeSemaphore }() // Release slot after completion
+						taskScheduler.MarkJobStarted(j.ID)
+						executeProbe(ctx, j, probeFactory, metricsCollector, resultNormalizer, walManager, vmAdapter, logger, taskScheduler, cfg.Probes, cfg.Scheduler, cfg)
+					}(job)
+				case <-ctx.Done():
+					return
+				}
 			}
 		}
 	}()
 
-	// Обновление метрик джобов периодически
+	// Replay unsent records from WAL at startup
+	if walManager != nil && vmAdapter != nil {
+		go replayWALRecords(ctx, walManager, vmAdapter, logger, cfg)
+
+		// Periodic cleanup of old sent records from WAL
+		go func() {
+			cleanupInterval := cfg.WAL.Retention
+			if cleanupInterval <= 0 {
+				cleanupInterval = 24 * time.Hour // Default 24 hours
+			}
+
+			ticker := time.NewTicker(1 * time.Hour) // Check every hour
+			defer ticker.Stop()
+
+			for {
+				select {
+				case <-ctx.Done():
+					return
+				case <-ticker.C:
+					if err := walManager.DeleteSentRecords(ctx, cleanupInterval); err != nil {
+						logger.WithError(err).Warn("Failed to cleanup old WAL records")
+					} else {
+						logger.Debug("WAL cleanup completed")
+					}
+				}
+			}
+		}()
+	}
+
+	// Update job metrics periodically
 	if enableJobMetrics {
 		go func() {
 			ticker := time.NewTicker(5 * time.Second)
@@ -293,10 +337,10 @@ func main() {
 		}()
 	}
 
-	// Периодическая отправка метрик из collector в vminsert
+	// Periodic metrics push from collector to vminsert
 	if vmAdapter != nil {
 		go func() {
-			ticker := time.NewTicker(30 * time.Second) // Отправляем каждые 30 секунд
+			ticker := time.NewTicker(30 * time.Second) // Push every 30 seconds
 			defer ticker.Stop()
 
 			for {
@@ -304,7 +348,7 @@ func main() {
 				case <-ctx.Done():
 					return
 				case <-ticker.C:
-					// Экспортируем все метрики из collector
+					// Export all metrics from collector
 					exportedMetrics := metricsCollector.ExportMetrics()
 					if len(exportedMetrics) > 0 {
 						if err := vmAdapter.Push(ctx, exportedMetrics); err != nil {
@@ -314,7 +358,7 @@ func main() {
 						}
 					}
 
-					// Экспортируем метрики шедулера
+					// Export scheduler metrics
 					schedulerMetrics := taskScheduler.ExportMetrics()
 					if len(schedulerMetrics) > 0 {
 						if err := vmAdapter.Push(ctx, schedulerMetrics); err != nil {
@@ -330,11 +374,11 @@ func main() {
 
 	logger.Info("VMProber started successfully")
 
-	// Ожидание сигнала завершения
+	// Wait for shutdown signal
 	<-sigChan
 	logger.Info("Shutting down VMProber...")
 
-	// Graceful shutdown через менеджер
+	// Graceful shutdown through manager
 	shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer shutdownCancel()
 
@@ -345,7 +389,143 @@ func main() {
 	logger.Info("VMProber stopped")
 }
 
-// buildProbeConfig создает конфигурацию пробы из глобальной конфигурации
+// replayWALRecords replays unsent records from WAL at application startup
+func replayWALRecords(ctx context.Context, walManager wal.WALManager, vmAdapter adapter.VictoriaMetricsAdapter, logger *logrus.Logger, cfg *config.Config) {
+	logger.Info("Starting WAL replay to send unsent records...")
+
+	// Get all unsent records
+	unsentRecords, err := walManager.GetUnsentRecords(ctx)
+	if err != nil {
+		logger.WithError(err).Error("Failed to get unsent records from WAL")
+		return
+	}
+
+	if len(unsentRecords) == 0 {
+		logger.Info("No unsent records found in WAL")
+		return
+	}
+
+	logger.WithField("count", len(unsentRecords)).Info("Found unsent records in WAL, starting replay")
+
+	// Counters for statistics
+	successCount := 0
+	failedCount := 0
+
+	// Process each record
+	for _, record := range unsentRecords {
+		select {
+		case <-ctx.Done():
+			logger.Warn("WAL replay cancelled due to context cancellation")
+			return
+		default:
+		}
+
+		// Extract event from data
+		eventData, ok := record.Data["event"]
+		if !ok {
+			logger.WithField("record_id", record.ID).Warn("Record has no event data, skipping")
+			// Mark as sent to avoid processing again
+			if err := walManager.MarkSent(ctx, record.ID); err != nil {
+				logger.WithError(err).Warn("Failed to mark invalid record as sent")
+			}
+			continue
+		}
+
+		// Convert eventData back to NormalizedEvent
+		eventMap, ok := eventData.(map[string]interface{})
+		if !ok {
+			logger.WithField("record_id", record.ID).Warn("Invalid event data format, skipping")
+			if err := walManager.MarkSent(ctx, record.ID); err != nil {
+				logger.WithError(err).Warn("Failed to mark invalid record as sent")
+			}
+			continue
+		}
+
+		// Create metrics from event
+		metrics := make([]types.Metric, 0)
+
+		// Extract metrics from event
+		if metricsData, ok := eventMap["metrics"].(map[string]interface{}); ok {
+			for name, value := range metricsData {
+				var floatValue float64
+				switch v := value.(type) {
+				case float64:
+					floatValue = v
+				case int:
+					floatValue = float64(v)
+				case int64:
+					floatValue = float64(v)
+				default:
+					continue
+				}
+
+				// Determine metric type
+				metricType := types.MetricTypeGauge
+				if strings.HasSuffix(name, "_total") {
+					metricType = types.MetricTypeCounter
+				}
+
+				// Collect labels
+				labels := make(map[string]string)
+				if labelsData, ok := eventMap["labels"].(map[string]interface{}); ok {
+					for k, v := range labelsData {
+						if strVal, ok := v.(string); ok {
+							labels[k] = strVal
+						}
+					}
+				}
+				// Add custom_labels from configuration
+				for k, v := range cfg.Metrics.CustomLabels {
+					labels[k] = v
+				}
+
+				metrics = append(metrics, types.Metric{
+					Name:      name,
+					Value:     floatValue,
+					Timestamp: record.Timestamp,
+					Labels:    labels,
+					Type:      metricType,
+				})
+			}
+		}
+
+		if len(metrics) == 0 {
+			logger.WithField("record_id", record.ID).Debug("No metrics to send for record, marking as sent")
+			if err := walManager.MarkSent(ctx, record.ID); err != nil {
+				logger.WithError(err).Warn("Failed to mark empty record as sent")
+			}
+			continue
+		}
+
+		// Send metrics
+		if err := vmAdapter.Push(ctx, metrics); err != nil {
+			logger.WithError(err).WithField("record_id", record.ID).Warn("Failed to push WAL record metrics")
+			failedCount++
+			// Don't mark as sent - will try again on next startup
+			continue
+		}
+
+		// Mark record as sent
+		if err := walManager.MarkSent(ctx, record.ID); err != nil {
+			logger.WithError(err).WithField("record_id", record.ID).Warn("Failed to mark record as sent")
+		} else {
+			successCount++
+		}
+	}
+
+	logger.WithFields(logrus.Fields{
+		"total":   len(unsentRecords),
+		"success": successCount,
+		"failed":  failedCount,
+	}).Info("WAL replay completed")
+
+	// Clean up old sent records (older than 24 hours)
+	if err := walManager.DeleteSentRecords(ctx, 24*time.Hour); err != nil {
+		logger.WithError(err).Warn("Failed to delete old sent records")
+	}
+}
+
+// buildProbeConfig creates probe configuration from global configuration
 func buildProbeConfig(probeType types.ProbeType, probesConfig config.ProbesConfig, schedulerConfig config.SchedulerConfig) interface{} {
 	switch probeType {
 	case types.ProbeTypeTCP:
@@ -403,7 +583,7 @@ func buildProbeConfig(probeType types.ProbeType, probesConfig config.ProbesConfi
 	}
 }
 
-// executeProbe выполняет пробу и перепланирует задачу
+// executeProbe executes probe and reschedules task
 func executeProbe(
 	ctx context.Context,
 	job *types.Job,
@@ -418,10 +598,10 @@ func executeProbe(
 	schedulerConfig config.SchedulerConfig,
 	cfg *config.Config,
 ) {
-	// Создание конфигурации пробы
+	// Create probe configuration
 	probeConfig := buildProbeConfig(job.Target.Protocol, probesConfig, schedulerConfig)
 
-	// Создание пробы
+	// Create probe
 	probeInstance, err := factory.CreateProbe(job.Target.Protocol, probeConfig)
 	if err != nil {
 		logger.WithError(err).Errorf("Failed to create probe for %s", job.ID)
@@ -430,7 +610,7 @@ func executeProbe(
 	}
 	defer probeInstance.Close()
 
-	// Выполнение пробы
+	// Execute probe
 	result, err := probeInstance.Execute(ctx, job.Target)
 	if err != nil && result == nil {
 		logger.WithError(err).Errorf("Probe execution failed for %s", job.ID)
@@ -438,13 +618,13 @@ func executeProbe(
 		return
 	}
 
-	// Нормализация результата
+	// Normalize result
 	if result != nil && normalizer != nil {
 		event, err := normalizer.Normalize(ctx, result)
 		if err != nil {
 			logger.WithError(err).Warn("Failed to normalize result")
 		} else {
-			// Проверка на дубликаты (только если dedup включен)
+			// Check for duplicates (only if dedup is enabled)
 			var isDup bool
 			if cfg.Push.Dedup.Enabled {
 				isDup, err = normalizer.Dedup(ctx, event)
@@ -457,10 +637,13 @@ func executeProbe(
 			}
 
 			if !isDup {
-				// Запись в WAL если доступен
+				// Generate record ID for WAL
+				recordID := fmt.Sprintf("%s-%d", event.SeriesID, time.Now().UnixNano())
+
+				// Write to WAL if available
 				if walManager != nil {
 					record := &types.Record{
-						ID:        fmt.Sprintf("%s-%d", event.SeriesID, time.Now().UnixNano()),
+						ID:        recordID,
 						Timestamp: event.Timestamp,
 						Type:      "probe_result",
 						SeriesID:  event.SeriesID,
@@ -468,28 +651,29 @@ func executeProbe(
 							"event": event,
 						},
 						Labels: event.Labels,
+						Sent:   false,
 					}
 					if err := walManager.Write(ctx, record); err != nil {
 						logger.WithError(err).Warn("Failed to write to WAL")
 					}
 				}
 
-				// Отправка в VictoriaMetrics если доступен
+				// Send to VictoriaMetrics if available
 				if vmAdapter != nil {
 					metrics := make([]types.Metric, 0)
 					for name, value := range event.Metrics {
-						// Определяем тип метрики по имени
+						// Determine metric type by name
 						metricType := types.MetricTypeGauge
 						if strings.HasSuffix(name, "_total") {
 							metricType = types.MetricTypeCounter
 						}
 
-						// Копируем лейблы из события и добавляем custom_labels из конфигурации
+						// Copy labels from event and add custom_labels from configuration
 						labels := make(map[string]string)
 						for k, v := range event.Labels {
 							labels[k] = v
 						}
-						// Добавляем custom_labels из конфигурации (перезаписывают существующие)
+						// Add custom_labels from configuration (override existing)
 						for k, v := range cfg.Metrics.CustomLabels {
 							labels[k] = v
 						}
@@ -505,6 +689,13 @@ func executeProbe(
 					if len(metrics) > 0 {
 						if err := vmAdapter.Push(ctx, metrics); err != nil {
 							logger.WithError(err).Warn("Failed to push metrics to VictoriaMetrics")
+						} else {
+							// Mark WAL record as sent
+							if walManager != nil {
+								if err := walManager.MarkSent(ctx, recordID); err != nil {
+									logger.WithError(err).Debug("Failed to mark WAL record as sent")
+								}
+							}
 						}
 					}
 				}
@@ -512,25 +703,25 @@ func executeProbe(
 		}
 	}
 
-	// Запись метрик в коллектор (если результат есть)
+	// Write metrics to collector (if result exists)
 	if result != nil {
 		if err := collector.Record(ctx, result); err != nil {
 			logger.WithError(err).Error("Failed to record metrics")
 		}
 	}
 
-	// Отметка джоба как завершенного или проваленного
+	// Mark job as completed or failed
 	if result != nil && result.Success {
 		sched.MarkJobCompleted(job.ID)
 	} else {
-		// Если result == nil или result.Success == false, считаем провалом
+		// If result == nil or result.Success == false, consider it a failure
 		sched.MarkJobFailed(job.ID)
 	}
 
-	// Обновляем NextRun перед перепланированием
+	// Update NextRun before rescheduling
 	job.NextRun = time.Now().Add(job.Interval)
 
-	// Перепланирование задачи без увеличения счетчика TotalJobs
+	// Reschedule task without incrementing TotalJobs counter
 	if err := sched.Reschedule(ctx, job); err != nil {
 		logger.WithError(err).Errorf("Failed to reschedule job %s", job.ID)
 	}

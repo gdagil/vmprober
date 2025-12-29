@@ -8,30 +8,30 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/vmprober/vmprober/internal/types"
-	"github.com/vmprober/vmprober/pkg/interfaces"
+	"github.com/gdagil/vmprober/internal/types"
+	"github.com/gdagil/vmprober/pkg/interfaces"
 )
 
-// UDPProbe реализует UDP пробы
+// UDPProbe implements UDP probes
 type UDPProbe struct {
 	config *UDPConfig
 }
 
-// UDPConfig конфигурация UDP пробы
+// UDPConfig UDP probe configuration
 type UDPConfig struct {
 	PayloadSize     int
 	ResponseTimeout time.Duration
 	MaxPacketSize   int
 }
 
-// NewUDPProbe создает новый UDP probe
+// NewUDPProbe creates a new UDP probe
 func NewUDPProbe(config *UDPConfig) interfaces.Probe {
 	return &UDPProbe{
 		config: config,
 	}
 }
 
-// Execute выполняет UDP пробу
+// Execute performs a UDP probe
 func (p *UDPProbe) Execute(ctx context.Context, target types.Target) (*types.ProbeResult, error) {
 	start := time.Now()
 	result := &types.ProbeResult{
@@ -40,7 +40,7 @@ func (p *UDPProbe) Execute(ctx context.Context, target types.Target) (*types.Pro
 		Attempt:   1,
 	}
 
-	// Создание UDP соединения
+	// Create UDP connection
 	conn, err := net.ListenUDP("udp", nil)
 	if err != nil {
 		result.Error = fmt.Sprintf("failed to create UDP socket: %v", err)
@@ -49,11 +49,11 @@ func (p *UDPProbe) Execute(ctx context.Context, target types.Target) (*types.Pro
 	}
 	defer conn.Close()
 
-	// Сохраняем hostname для метрик
+	// Save hostname for metrics
 	result.TargetHost = target.Host
 	result.TargetPort = target.Port
 
-	// Разрешение адреса
+	// Resolve address
 	addr := net.JoinHostPort(target.Host, strconv.Itoa(target.Port))
 	udpAddr, err := net.ResolveUDPAddr("udp", addr)
 	if err != nil {
@@ -62,7 +62,7 @@ func (p *UDPProbe) Execute(ctx context.Context, target types.Target) (*types.Pro
 		return result, err
 	}
 
-	// Генерация payload
+	// Generate payload
 	payloadSize := p.config.PayloadSize
 	if payloadSize == 0 {
 		payloadSize = 64
@@ -75,14 +75,14 @@ func (p *UDPProbe) Execute(ctx context.Context, target types.Target) (*types.Pro
 	}
 	result.Payload = payload
 
-	// Отправка пакета
+	// Send packet
 	if _, err := conn.WriteToUDP(payload, udpAddr); err != nil {
 		result.Error = fmt.Sprintf("failed to send UDP packet: %v", err)
 		result.RTT = time.Since(start)
 		return result, err
 	}
 
-	// Установка таймаута для чтения
+	// Set read timeout
 	timeout := p.config.ResponseTimeout
 	if timeout == 0 {
 		timeout = target.Timeout
@@ -93,7 +93,7 @@ func (p *UDPProbe) Execute(ctx context.Context, target types.Target) (*types.Pro
 		return result, err
 	}
 
-	// Попытка чтения ответа
+	// Attempt to read response
 	buffer := make([]byte, p.config.MaxPacketSize)
 	if p.config.MaxPacketSize == 0 {
 		buffer = make([]byte, 1500)
@@ -101,34 +101,34 @@ func (p *UDPProbe) Execute(ctx context.Context, target types.Target) (*types.Pro
 
 	_, _, err = conn.ReadFromUDP(buffer)
 	if err != nil {
-		// UDP может не получить ответ, это не всегда ошибка
+		// UDP may not receive a response, this is not always an error
 		if netErr, ok := err.(net.Error); ok && netErr.Timeout() {
 			result.Error = "UDP response timeout"
 		} else {
 			result.Error = fmt.Sprintf("failed to receive UDP response: %v", err)
 		}
 		result.RTT = time.Since(start)
-		// Не возвращаем ошибку для UDP timeout, это нормально
+		// Don't return error for UDP timeout, this is normal
 		return result, nil
 	}
 
-	// Успешный ответ
+	// Successful response
 	result.Success = true
 	result.RTT = time.Since(start)
 	result.TargetIP = udpAddr.IP.String()
-	// TargetPort уже установлен выше
+	// TargetPort already set above
 	result.SourceIP = conn.LocalAddr().(*net.UDPAddr).IP.String()
 	result.Role = "client"
 
 	return result, nil
 }
 
-// Type возвращает тип пробы
+// Type returns the probe type
 func (p *UDPProbe) Type() types.ProbeType {
 	return types.ProbeTypeUDP
 }
 
-// Validate проверяет конфигурацию
+// Validate validates the configuration
 func (p *UDPProbe) Validate(config interface{}) error {
 	if p.config == nil {
 		return fmt.Errorf("UDP config is nil")
@@ -136,7 +136,7 @@ func (p *UDPProbe) Validate(config interface{}) error {
 	return nil
 }
 
-// Close освобождает ресурсы
+// Close releases resources
 func (p *UDPProbe) Close() error {
 	return nil
 }

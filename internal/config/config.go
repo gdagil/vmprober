@@ -11,11 +11,11 @@ import (
 	"time"
 
 	"github.com/sirupsen/logrus"
-	"github.com/vmprober/vmprober/internal/types"
+	"github.com/gdagil/vmprober/internal/types"
 	"gopkg.in/yaml.v3"
 )
 
-// Manager управляет конфигурацией VMProber
+// Manager manages VMProber configuration
 type Manager struct {
 	config     *Config
 	configPath string
@@ -25,7 +25,7 @@ type Manager struct {
 	watcher    *watcher
 }
 
-// NewManager создает новый менеджер конфигурации
+// NewManager creates a new configuration manager
 func NewManager(configPath string, logger *logrus.Logger) *Manager {
 	return &Manager{
 		configPath:  configPath,
@@ -34,7 +34,7 @@ func NewManager(configPath string, logger *logrus.Logger) *Manager {
 	}
 }
 
-// Load загружает конфигурацию из файла
+// Load loads configuration from file
 func (m *Manager) Load(ctx context.Context) (*Config, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
@@ -55,23 +55,23 @@ func (m *Manager) Load(ctx context.Context) (*Config, error) {
 		return nil, fmt.Errorf("failed to parse config: %w", err)
 	}
 
-	// Установка метаданных
+	// Set metadata
 	cfg.Source = m.configPath
 	cfg.Timestamp = time.Now()
 	cfg.Hash = m.computeHash(data)
 
-	// Валидация
+	// Validation
 	if err := m.validate(&cfg); err != nil {
 		return nil, fmt.Errorf("config validation failed: %w", err)
 	}
 
-	// Применение значений по умолчанию
+	// Apply default values
 	m.applyDefaults(&cfg)
 
 	oldConfig := m.config
 	m.config = &cfg
 
-	// Уведомление подписчиков об изменении
+	// Notify subscribers about change
 	if oldConfig != nil {
 		m.notifySubscribers(types.ConfigUpdate{
 			Type:      types.UpdateTypeFull,
@@ -90,21 +90,21 @@ func (m *Manager) Load(ctx context.Context) (*Config, error) {
 	return &cfg, nil
 }
 
-// Get возвращает текущую конфигурацию
+// Get returns current configuration
 func (m *Manager) Get() *Config {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 	return m.config
 }
 
-// SetLogger обновляет логгер менеджера
+// SetLogger updates manager logger
 func (m *Manager) SetLogger(logger *logrus.Logger) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	m.logger = logger
 }
 
-// Watch подписывается на изменения конфигурации
+// Watch subscribes to configuration changes
 func (m *Manager) Watch(ctx context.Context) (<-chan types.ConfigUpdate, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
@@ -112,7 +112,7 @@ func (m *Manager) Watch(ctx context.Context) (<-chan types.ConfigUpdate, error) 
 	ch := make(chan types.ConfigUpdate, 10)
 	m.subscribers = append(m.subscribers, ch)
 
-	// Запуск watcher если еще не запущен
+	// Start watcher if not already started
 	if m.watcher == nil {
 		m.watcher = newWatcher(m.configPath, m.logger)
 		go m.watcher.watch(ctx, func() {
@@ -125,7 +125,7 @@ func (m *Manager) Watch(ctx context.Context) (<-chan types.ConfigUpdate, error) 
 	return ch, nil
 }
 
-// validate валидирует конфигурацию
+// validate validates configuration
 func (m *Manager) validate(cfg *Config) error {
 	if cfg.Listen.Port <= 0 || cfg.Listen.Port > 65535 {
 		return fmt.Errorf("invalid listen port: %d", cfg.Listen.Port)
@@ -142,7 +142,7 @@ func (m *Manager) validate(cfg *Config) error {
 	return nil
 }
 
-// applyDefaults применяет значения по умолчанию
+// applyDefaults applies default values
 func (m *Manager) applyDefaults(cfg *Config) {
 	if cfg.Listen.Host == "" {
 		cfg.Listen.Host = "0.0.0.0"
@@ -160,7 +160,7 @@ func (m *Manager) applyDefaults(cfg *Config) {
 		cfg.Metrics.Namespace = "vmprober"
 	}
 
-	// По умолчанию метрики джобов включены
+	// Job metrics are enabled by default
 	if cfg.Metrics.EnableJobMetrics == nil {
 		enabled := true
 		cfg.Metrics.EnableJobMetrics = &enabled
@@ -175,24 +175,24 @@ func (m *Manager) applyDefaults(cfg *Config) {
 	}
 }
 
-// computeHash вычисляет хеш конфигурации
+// computeHash computes configuration hash
 func (m *Manager) computeHash(data []byte) string {
 	hash := sha256.Sum256(data)
 	return hex.EncodeToString(hash[:])
 }
 
-// notifySubscribers уведомляет подписчиков об изменении
+// notifySubscribers notifies subscribers about change
 func (m *Manager) notifySubscribers(update types.ConfigUpdate) {
 	for _, ch := range m.subscribers {
 		select {
 		case ch <- update:
 		default:
-			// Пропуск если канал заполнен
+			// Skip if channel is full
 		}
 	}
 }
 
-// watcher отслеживает изменения файла конфигурации
+// watcher monitors configuration file changes
 type watcher struct {
 	path   string
 	logger *logrus.Logger

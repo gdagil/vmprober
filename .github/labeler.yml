@@ -1,0 +1,70 @@
+# Configuration for actions/labeler
+# https://github.com/actions/labeler
+
+# Go source code
+go:
+  - changed-files:
+      - any-glob-to-any-file: '**/*.go'
+
+# Documentation
+documentation:
+  - changed-files:
+      - any-glob-to-any-file:
+          - 'docs/**'
+          - '*.md'
+          - 'LICENSE'
+
+# CI/CD
+ci:
+  - changed-files:
+      - any-glob-to-any-file:
+          - '.github/**'
+          - 'Makefile'
+          - '.golangci.yml'
+
+# Docker
+docker:
+  - changed-files:
+      - any-glob-to-any-file:
+          - 'Dockerfile*'
+          - '.dockerignore'
+          - 'docker-compose*.yml'
+
+# Configuration
+config:
+  - changed-files:
+      - any-glob-to-any-file:
+          - 'config/**'
+          - '*.yml'
+          - '*.yaml'
+
+# Internal packages
+internal:
+  - changed-files:
+      - any-glob-to-any-file: 'internal/**'
+
+# Commands
+cmd:
+  - changed-files:
+      - any-glob-to-any-file: 'cmd/**'
+
+# Tests
+tests:
+  - changed-files:
+      - any-glob-to-any-file:
+          - '**/*_test.go'
+          - 'e2e_test.go'
+          - 'testdata/**'
+
+# Dependencies
+dependencies:
+  - changed-files:
+      - any-glob-to-any-file:
+          - 'go.mod'
+          - 'go.sum'
+
+# Grafana dashboards
+grafana:
+  - changed-files:
+      - any-glob-to-any-file: 'config/grafana/**'
+

@@ -6,34 +6,28 @@ labels: documentation
 assignees: ''
 ---
 
-## Documentation Issue
+## Issue Type
 
-**Type**: [ ] Bug in documentation [ ] Missing documentation [ ] Unclear documentation [ ] Other
-
-## Description
-
-A clear description of the documentation issue.
+- [ ] Incorrect information
+- [ ] Missing documentation
+- [ ] Unclear explanation
+- [ ] Typo / Grammar
+- [ ] Broken link
+- [ ] Other
 
 ## Location
 
-- **File**: [e.g. `docs/getting-started/installation.md`]
-- **Section**: [e.g. "Installation from Source"]
-- **URL** (if applicable): [e.g. https://username.github.io/vmprober/getting-started/installation/]
+- **File**: e.g. `docs/getting-started/installation.md`
+- **Section**: e.g. "Installation from Source"
 
-## Current Content
+## Description
 
-What the documentation currently says (if applicable).
+What is the issue with the documentation?
 
-## Expected Content
+## Suggested Fix
 
-What the documentation should say or what information is missing.
-
-## Suggested Changes
-
-If you have specific suggestions for improvement, please provide them here.
+What should the documentation say instead?
 
 ## Additional Context
 
-Add any other context, screenshots, or examples about the documentation issue here.
-
-
+Any other relevant information.

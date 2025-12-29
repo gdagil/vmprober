@@ -1,6 +1,6 @@
 ---
 name: Bug Report
-about: Create a report to help us improve
+about: Report a bug in VMProber
 title: '[BUG] '
 labels: bug
 assignees: ''
@@ -10,47 +10,70 @@ assignees: ''
 
 A clear and concise description of what the bug is.
 
+## Component Affected
+
+- [ ] HTTP Probe
+- [ ] TCP Probe
+- [ ] UDP Probe
+- [ ] DNS Probe
+- [ ] ICMP Probe
+- [ ] gRPC Probe
+- [ ] Scheduler
+- [ ] Metrics Collector
+- [ ] VictoriaMetrics Adapter
+- [ ] WAL (Write-Ahead Log)
+- [ ] Configuration
+- [ ] Web UI
+- [ ] Docker / Deployment
+- [ ] Other: ___
+
 ## Steps to Reproduce
 
-1. Go to '...'
-2. Click on '....'
-3. Scroll down to '....'
-4. See error
+1. Configure vmprober with...
+2. Start with command...
+3. Observe...
 
 ## Expected Behavior
 
-A clear and concise description of what you expected to happen.
+What you expected to happen.
 
 ## Actual Behavior
 
-A clear and concise description of what actually happened.
+What actually happened.
 
 ## Environment
 
-- **VMProber Version**: [e.g. 1.0.0]
-- **Go Version**: [e.g. 1.21.0]
-- **OS**: [e.g. Linux, macOS, Windows]
-- **OS Version**: [e.g. Ubuntu 22.04, macOS 13.0]
-- **Architecture**: [e.g. amd64, arm64]
+| Field | Value |
+|-------|-------|
+| VMProber Version | e.g. 1.0.0 |
+| Go Version | e.g. 1.21.0 |
+| OS | e.g. Ubuntu 22.04 |
+| Architecture | e.g. amd64, arm64 |
+| Deployment | e.g. binary, Docker, Docker Compose |
 
 ## Configuration
 
 ```yaml
 # Relevant parts of your config.yaml (remove sensitive information)
+probes:
+  - name: example
+    type: http
+    target: https://example.com
+    interval: 30s
 ```
 
 ## Logs
 
 ```
-# Paste relevant logs here
+# vmprober logs (use --log-level=debug for more details)
 ```
 
-## Additional Context
+## Metrics Output
 
-Add any other context about the problem here.
+```
+# If applicable, include relevant metric output
+```
 
 ## Possible Solution
 
 If you have ideas on how to fix this, please describe them here.
-
-

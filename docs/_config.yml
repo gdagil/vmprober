@@ -50,6 +50,7 @@ exclude:
 # Include files
 include:
   - _pages
+  - assets
 
 # Collections
 collections:

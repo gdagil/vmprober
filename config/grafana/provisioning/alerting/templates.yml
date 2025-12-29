@@ -1,0 +1,191 @@
+apiVersion: 1
+
+# Templates for customizing alert notification messages.
+
+templates:
+  - orgId: 1
+    name: vmprober-templates
+    template: |
+      {{ define "vmprober.title" }}
+      [{{ .Status | toUpper }}{{ if eq .Status "firing" }}:{{ .Alerts.Firing | len }}{{ end }}] {{ .GroupLabels.SortedPairs.Values | join " " }} {{ if gt (len .CommonLabels) (len .GroupLabels) }}({{ with .CommonLabels.Remove .GroupLabels.Names }}{{ .Values | join " " }}{{ end }}){{ end }}
+      {{ end }}
+
+      {{ define "vmprober.message" }}
+      {{ if gt (len .Alerts.Firing) 0 }}
+      🔥 *Firing Alerts:*
+      {{ range .Alerts.Firing }}
+      ━━━━━━━━━━━━━━━━━━━━━
+      *Alert:* {{ .Labels.alertname }}
+      *Severity:* {{ .Labels.severity }}
+      *Instance:* {{ .Labels.instance }}
+      {{ if .Labels.target_ip }}*Target IP:* {{ .Labels.target_ip }}{{ end }}
+      {{ if .Labels.protocol }}*Protocol:* {{ .Labels.protocol }}{{ end }}
+      
+      *Summary:* {{ .Annotations.summary }}
+      
+      *Description:*
+      {{ .Annotations.description }}
+      
+      *Started:* {{ .StartsAt.Format "2006-01-02 15:04:05 MST" }}
+      {{ if .GeneratorURL }}*Dashboard:* {{ .GeneratorURL }}{{ end }}
+      {{ end }}
+      {{ end }}
+
+      {{ if gt (len .Alerts.Resolved) 0 }}
+      ✅ *Resolved Alerts:*
+      {{ range .Alerts.Resolved }}
+      ━━━━━━━━━━━━━━━━━━━━━
+      *Alert:* {{ .Labels.alertname }}
+      *Instance:* {{ .Labels.instance }}
+      {{ if .Labels.target_ip }}*Target IP:* {{ .Labels.target_ip }}{{ end }}
+      
+      *Summary:* {{ .Annotations.summary }}
+      
+      *Resolved:* {{ .EndsAt.Format "2006-01-02 15:04:05 MST" }}
+      *Duration:* {{ (.EndsAt.Sub .StartsAt).Round 1000000000 }}
+      {{ end }}
+      {{ end }}
+      {{ end }}
+
+      {{ define "vmprober.slack" }}
+      {
+        "blocks": [
+          {
+            "type": "header",
+            "text": {
+              "type": "plain_text",
+              "text": "{{ template "vmprober.title" . }}",
+              "emoji": true
+            }
+          },
+          {{ if gt (len .Alerts.Firing) 0 }}
+          {
+            "type": "section",
+            "text": {
+              "type": "mrkdwn",
+              "text": "🔥 *{{ .Alerts.Firing | len }} Firing Alert(s)*"
+            }
+          },
+          {{ range .Alerts.Firing }}
+          {
+            "type": "section",
+            "fields": [
+              {"type": "mrkdwn", "text": "*Alert:*\n{{ .Labels.alertname }}"},
+              {"type": "mrkdwn", "text": "*Severity:*\n{{ .Labels.severity }}"},
+              {"type": "mrkdwn", "text": "*Instance:*\n{{ .Labels.instance }}"},
+              {"type": "mrkdwn", "text": "*Protocol:*\n{{ .Labels.protocol | default "N/A" }}"}
+            ]
+          },
+          {
+            "type": "section",
+            "text": {
+              "type": "mrkdwn",
+              "text": "{{ .Annotations.summary }}"
+            }
+          },
+          {"type": "divider"},
+          {{ end }}
+          {{ end }}
+          {{ if gt (len .Alerts.Resolved) 0 }}
+          {
+            "type": "section",
+            "text": {
+              "type": "mrkdwn",
+              "text": "✅ *{{ .Alerts.Resolved | len }} Resolved Alert(s)*"
+            }
+          },
+          {{ range .Alerts.Resolved }}
+          {
+            "type": "section",
+            "fields": [
+              {"type": "mrkdwn", "text": "*Alert:*\n{{ .Labels.alertname }}"},
+              {"type": "mrkdwn", "text": "*Instance:*\n{{ .Labels.instance }}"}
+            ]
+          },
+          {"type": "divider"},
+          {{ end }}
+          {{ end }}
+          {
+            "type": "context",
+            "elements": [
+              {
+                "type": "mrkdwn",
+                "text": "VMProber Monitoring | {{ .ExternalURL }}"
+              }
+            ]
+          }
+        ]
+      }
+      {{ end }}
+
+      {{ define "vmprober.email.subject" }}
+      [VMProber] {{ template "vmprober.title" . }}
+      {{ end }}
+
+      {{ define "vmprober.email.html" }}
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <style>
+          body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
+          .header { background: #1a1a2e; color: white; padding: 20px; }
+          .header h1 { margin: 0; }
+          .alert { border-left: 4px solid; padding: 15px; margin: 10px 0; background: #f9f9f9; }
+          .alert.firing { border-color: #dc3545; }
+          .alert.resolved { border-color: #28a745; }
+          .label { background: #e9ecef; padding: 2px 8px; border-radius: 4px; margin-right: 5px; }
+          .severity-critical { background: #dc3545; color: white; }
+          .severity-warning { background: #ffc107; color: black; }
+          table { width: 100%; border-collapse: collapse; }
+          td { padding: 8px; border-bottom: 1px solid #ddd; }
+          .footer { color: #666; font-size: 12px; margin-top: 20px; }
+        </style>
+      </head>
+      <body>
+        <div class="header">
+          <h1>🔔 VMProber Alert</h1>
+          <p>{{ template "vmprober.title" . }}</p>
+        </div>
+
+        {{ if gt (len .Alerts.Firing) 0 }}
+        <h2>🔥 Firing Alerts ({{ .Alerts.Firing | len }})</h2>
+        {{ range .Alerts.Firing }}
+        <div class="alert firing">
+          <h3>{{ .Labels.alertname }}</h3>
+          <p>
+            <span class="label severity-{{ .Labels.severity }}">{{ .Labels.severity }}</span>
+            <span class="label">{{ .Labels.instance }}</span>
+            {{ if .Labels.protocol }}<span class="label">{{ .Labels.protocol }}</span>{{ end }}
+          </p>
+          <table>
+            <tr><td><strong>Summary:</strong></td><td>{{ .Annotations.summary }}</td></tr>
+            <tr><td><strong>Description:</strong></td><td>{{ .Annotations.description }}</td></tr>
+            {{ if .Labels.target_ip }}<tr><td><strong>Target IP:</strong></td><td>{{ .Labels.target_ip }}</td></tr>{{ end }}
+            <tr><td><strong>Started:</strong></td><td>{{ .StartsAt.Format "2006-01-02 15:04:05 MST" }}</td></tr>
+          </table>
+        </div>
+        {{ end }}
+        {{ end }}
+
+        {{ if gt (len .Alerts.Resolved) 0 }}
+        <h2>✅ Resolved Alerts ({{ .Alerts.Resolved | len }})</h2>
+        {{ range .Alerts.Resolved }}
+        <div class="alert resolved">
+          <h3>{{ .Labels.alertname }}</h3>
+          <table>
+            <tr><td><strong>Instance:</strong></td><td>{{ .Labels.instance }}</td></tr>
+            <tr><td><strong>Resolved:</strong></td><td>{{ .EndsAt.Format "2006-01-02 15:04:05 MST" }}</td></tr>
+            <tr><td><strong>Duration:</strong></td><td>{{ (.EndsAt.Sub .StartsAt).Round 1000000000 }}</td></tr>
+          </table>
+        </div>
+        {{ end }}
+        {{ end }}
+
+        <div class="footer">
+          <p>Generated by VMProber Monitoring</p>
+          <p><a href="{{ .ExternalURL }}">View in Grafana</a></p>
+        </div>
+      </body>
+      </html>
+      {{ end }}
+

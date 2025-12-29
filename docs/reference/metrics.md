@@ -18,7 +18,7 @@ All metrics use the `vmprober` prefix (configurable via `metrics.namespace`).
 - `instance` (string) - Target hostname and port from configuration (e.g., "google.com:443")
 - `target_ip` (string) - IP address that was actually connected to (e.g., "142.250.109.100")
 - `port` (string) - Target port (e.g., "443")
-- `protocol` (string) - Probe protocol: "tcp", "udp", "icmp"
+- `protocol` (string) - Probe protocol: "tcp", "udp", "icmp", "http", "https", "dns", "grpc"
 
 **Example:**
 ```
@@ -105,6 +105,32 @@ rate(vmprober_probe_rtt_seconds_sum[5m]) / rate(vmprober_probe_rtt_seconds_count
 
 ```promql
 histogram_quantile(0.95, rate(vmprober_probe_rtt_seconds_bucket[5m]))
+```
+
+## Protocol-Specific Metrics
+
+### HTTP/HTTPS Probes
+
+For HTTP/HTTPS probes, the following additional information is available in labels:
+
+```
+vmprober_probe_success_total{instance="api.example.com:443",protocol="https",path="/health"} 1234
+```
+
+### DNS Probes
+
+For DNS probes, the query type is included:
+
+```
+vmprober_probe_success_total{instance="8.8.8.8:53",protocol="dns",query_type="A",query_name="google.com"} 1234
+```
+
+### gRPC Probes
+
+For gRPC probes, the service name is included:
+
+```
+vmprober_probe_success_total{instance="grpc.example.com:50051",protocol="grpc",service="user.UserService"} 1234
 ```
 
 ## See Also

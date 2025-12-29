@@ -9,41 +9,41 @@ import (
 	"sync"
 	"time"
 
+	"github.com/gdagil/vmprober/internal/config"
+	"github.com/gdagil/vmprober/internal/types"
 	"github.com/sirupsen/logrus"
-	"github.com/vmprober/vmprober/internal/config"
-	"github.com/vmprober/vmprober/internal/types"
 )
 
-// VictoriaMetricsAdapter адаптер для отправки метрик в VictoriaMetrics
+// VictoriaMetricsAdapter is an adapter for sending metrics to VictoriaMetrics
 type VictoriaMetricsAdapter interface {
-	// Start запускает адаптер
+	// Start starts the adapter
 	Start(ctx context.Context) error
 
-	// Stop останавливает адаптер
+	// Stop stops the adapter
 	Stop(ctx context.Context) error
 
-	// Push отправляет метрики
+	// Push sends metrics
 	Push(ctx context.Context, metrics []types.Metric) error
 
-	// Flush принудительно отправляет все буферизованные метрики
+	// Flush forcefully sends all buffered metrics
 	Flush(ctx context.Context) error
 
-	// GetStats возвращает статистику адаптера
+	// GetStats returns adapter statistics
 	GetStats() *AdapterStats
 }
 
-// AdapterStats статистика адаптера
+// AdapterStats represents adapter statistics
 type AdapterStats struct {
-	TotalPushed   int64         `json:"total_pushed"`
-	TotalFailed   int64         `json:"total_failed"`
-	RetryCount    int64         `json:"retry_count"`
-	AvgPushTime   time.Duration `json:"avg_push_time"`
-	QueueSize     int           `json:"queue_size"`
-	LastPushTime  time.Time     `json:"last_push_time"`
-	SuccessRate   float64       `json:"success_rate"`
+	TotalPushed  int64         `json:"total_pushed"`
+	TotalFailed  int64         `json:"total_failed"`
+	RetryCount   int64         `json:"retry_count"`
+	AvgPushTime  time.Duration `json:"avg_push_time"`
+	QueueSize    int           `json:"queue_size"`
+	LastPushTime time.Time     `json:"last_push_time"`
+	SuccessRate  float64       `json:"success_rate"`
 }
 
-// DefaultVictoriaMetricsAdapter реализация адаптера VictoriaMetrics
+// DefaultVictoriaMetricsAdapter is the VictoriaMetrics adapter implementation
 type DefaultVictoriaMetricsAdapter struct {
 	config      *config.PushConfig
 	endpoints   []*Endpoint
@@ -59,14 +59,14 @@ type DefaultVictoriaMetricsAdapter struct {
 	retryEngine *RetryEngine
 }
 
-// Endpoint представляет endpoint для отправки метрик
+// Endpoint represents an endpoint for sending metrics
 type Endpoint struct {
 	URL     string
 	Headers map[string]string
 	Auth    *AuthConfig
 }
 
-// AuthConfig конфигурация аутентификации
+// AuthConfig represents authentication configuration
 type AuthConfig struct {
 	Type     string
 	Token    string
@@ -74,7 +74,7 @@ type AuthConfig struct {
 	Password string
 }
 
-// NewVictoriaMetricsAdapter создает новый адаптер VictoriaMetrics
+// NewVictoriaMetricsAdapter creates a new VictoriaMetrics adapter
 func NewVictoriaMetricsAdapter(cfg *config.PushConfig, logger *logrus.Logger) (VictoriaMetricsAdapter, error) {
 	if cfg == nil {
 		return nil, fmt.Errorf("push config is nil")
@@ -82,7 +82,7 @@ func NewVictoriaMetricsAdapter(cfg *config.PushConfig, logger *logrus.Logger) (V
 
 	ctx, cancel := context.WithCancel(context.Background())
 
-	// Настройка HTTP клиента с таймаутами
+	// Configure HTTP client with timeouts
 	transport := &http.Transport{
 		MaxIdleConns:        100,
 		MaxIdleConnsPerHost: 10,
@@ -94,19 +94,19 @@ func NewVictoriaMetricsAdapter(cfg *config.PushConfig, logger *logrus.Logger) (V
 	}
 
 	adapter := &DefaultVictoriaMetricsAdapter{
-		config:     cfg,
-		endpoints:  make([]*Endpoint, 0),
-		client:     client,
-		batchQueue: make(chan []types.Metric, cfg.Batch.Size),
-		logger:     logger,
-		stats:      &AdapterStats{},
-		ctx:        ctx,
-		cancel:     cancel,
-		formatter:  NewJSONLineFormatter(), // Используем JSON line format для vminsert
+		config:      cfg,
+		endpoints:   make([]*Endpoint, 0),
+		client:      client,
+		batchQueue:  make(chan []types.Metric, cfg.Batch.Size),
+		logger:      logger,
+		stats:       &AdapterStats{},
+		ctx:         ctx,
+		cancel:      cancel,
+		formatter:   NewJSONLineFormatter(), // Use JSON line format for vminsert (/api/v1/import)
 		retryEngine: NewRetryEngine(&cfg.Retry, logger),
 	}
 
-	// Инициализация endpoints
+	// Initialize endpoints
 	if err := adapter.initializeEndpoints(); err != nil {
 		cancel()
 		return nil, fmt.Errorf("failed to initialize endpoints: %w", err)
@@ -115,9 +115,9 @@ func NewVictoriaMetricsAdapter(cfg *config.PushConfig, logger *logrus.Logger) (V
 	return adapter, nil
 }
 
-// Start запускает адаптер
+// Start starts the adapter
 func (a *DefaultVictoriaMetricsAdapter) Start(ctx context.Context) error {
-	// Запуск воркеров для обработки батчей
+	// Start workers for batch processing
 	workerCount := 3
 	for i := 0; i < workerCount; i++ {
 		a.wg.Add(1)
@@ -128,23 +128,29 @@ func (a *DefaultVictoriaMetricsAdapter) Start(ctx context.Context) error {
 	return nil
 }
 
-// Stop останавливает адаптер
+// Stop stops the adapter
 func (a *DefaultVictoriaMetricsAdapter) Stop(ctx context.Context) error {
 	a.cancel()
 	close(a.batchQueue)
 	a.wg.Wait()
+
+	// Stop retry engine
+	if a.retryEngine != nil {
+		a.retryEngine.Stop()
+	}
+
 	a.logger.Info("VictoriaMetrics adapter stopped")
 	return nil
 }
 
-// Push отправляет метрики
+// Push sends metrics
 func (a *DefaultVictoriaMetricsAdapter) Push(ctx context.Context, metrics []types.Metric) error {
-	// Используем таймаут для избежания бесконечной блокировки
+	// Use timeout to avoid infinite blocking
 	pushTimeout := 5 * time.Second
 	if a.config.Batch.Timeout < pushTimeout {
 		pushTimeout = a.config.Batch.Timeout
 	}
-	
+
 	select {
 	case a.batchQueue <- metrics:
 		a.mu.Lock()
@@ -156,15 +162,15 @@ func (a *DefaultVictoriaMetricsAdapter) Push(ctx context.Context, metrics []type
 	case <-a.ctx.Done():
 		return fmt.Errorf("adapter is stopped")
 	case <-time.After(pushTimeout):
-		// Очередь заполнена, пытаемся отправить напрямую
+		// Queue is full, trying to send directly
 		a.logger.WithField("queue_size", len(a.batchQueue)).Warn("Batch queue is full, sending metrics directly")
 		return a.sendBatch(ctx, metrics)
 	}
 }
 
-// Flush принудительно отправляет все буферизованные метрики
+// Flush forcefully sends all buffered metrics
 func (a *DefaultVictoriaMetricsAdapter) Flush(ctx context.Context) error {
-	// Отправка всех метрик из очереди
+	// Send all metrics from queue
 	for {
 		select {
 		case metrics := <-a.batchQueue:
@@ -177,7 +183,7 @@ func (a *DefaultVictoriaMetricsAdapter) Flush(ctx context.Context) error {
 	}
 }
 
-// GetStats возвращает статистику адаптера
+// GetStats returns adapter statistics
 func (a *DefaultVictoriaMetricsAdapter) GetStats() *AdapterStats {
 	a.mu.RLock()
 	defer a.mu.RUnlock()
@@ -192,11 +198,11 @@ func (a *DefaultVictoriaMetricsAdapter) GetStats() *AdapterStats {
 	return &stats
 }
 
-// batchWorker воркер для обработки батчей
+// batchWorker is a worker for batch processing
 func (a *DefaultVictoriaMetricsAdapter) batchWorker(ctx context.Context) {
 	defer a.wg.Done()
-	
-	// Обработка паник для предотвращения падения воркера
+
+	// Handle panics to prevent worker crash
 	defer func() {
 		if r := recover(); r != nil {
 			a.logger.WithField("panic", r).Error("Panic in batchWorker, recovering")
@@ -210,7 +216,7 @@ func (a *DefaultVictoriaMetricsAdapter) batchWorker(ctx context.Context) {
 	for {
 		select {
 		case <-ctx.Done():
-			// Отправка оставшихся метрик
+			// Send remaining metrics
 			if len(batch) > 0 {
 				if err := a.sendBatch(ctx, batch); err != nil {
 					a.logger.WithError(err).Error("Failed to send final batch")
@@ -218,7 +224,7 @@ func (a *DefaultVictoriaMetricsAdapter) batchWorker(ctx context.Context) {
 			}
 			return
 		case <-a.ctx.Done():
-			// Отправка оставшихся метрик
+			// Send remaining metrics
 			if len(batch) > 0 {
 				if err := a.sendBatch(ctx, batch); err != nil {
 					a.logger.WithError(err).Error("Failed to send final batch")
@@ -227,7 +233,7 @@ func (a *DefaultVictoriaMetricsAdapter) batchWorker(ctx context.Context) {
 			return
 		case metrics, ok := <-a.batchQueue:
 			if !ok {
-				// Канал закрыт, отправляем оставшиеся метрики
+				// Channel closed, send remaining metrics
 				if len(batch) > 0 {
 					if err := a.sendBatch(ctx, batch); err != nil {
 						a.logger.WithError(err).Error("Failed to send final batch after channel close")
@@ -239,7 +245,7 @@ func (a *DefaultVictoriaMetricsAdapter) batchWorker(ctx context.Context) {
 			if len(batch) >= a.config.Batch.Size {
 				if err := a.sendBatch(ctx, batch); err != nil {
 					a.logger.WithError(err).Error("Failed to send batch")
-					// Продолжаем работу даже при ошибке, чтобы не блокировать обработку
+					// Continue working even on error to avoid blocking processing
 				}
 				batch = batch[:0]
 			}
@@ -247,7 +253,7 @@ func (a *DefaultVictoriaMetricsAdapter) batchWorker(ctx context.Context) {
 			if len(batch) > 0 {
 				if err := a.sendBatch(ctx, batch); err != nil {
 					a.logger.WithError(err).Error("Failed to send batch on timeout")
-					// Продолжаем работу даже при ошибке
+					// Continue working even on error
 				}
 				batch = batch[:0]
 			}
@@ -255,7 +261,7 @@ func (a *DefaultVictoriaMetricsAdapter) batchWorker(ctx context.Context) {
 	}
 }
 
-// sendBatch отправляет батч метрик
+// sendBatch sends a batch of metrics
 func (a *DefaultVictoriaMetricsAdapter) sendBatch(ctx context.Context, metrics []types.Metric) error {
 	if len(metrics) == 0 {
 		return nil
@@ -263,13 +269,13 @@ func (a *DefaultVictoriaMetricsAdapter) sendBatch(ctx context.Context, metrics [
 
 	start := time.Now()
 
-	// Форматирование метрик
+	// Format metrics
 	data, err := a.formatter.Format(metrics)
 	if err != nil {
 		return fmt.Errorf("failed to format metrics: %w", err)
 	}
 
-	// Отправка на все endpoints
+	// Send to all endpoints
 	var lastErr error
 	successCount := 0
 	for _, endpoint := range a.endpoints {
@@ -277,7 +283,7 @@ func (a *DefaultVictoriaMetricsAdapter) sendBatch(ctx context.Context, metrics [
 			lastErr = err
 			a.logger.WithError(err).WithField("endpoint", endpoint.URL).Error("Failed to send metrics to endpoint")
 
-			// Retry логика
+			// Retry logic
 			if a.retryEngine.ShouldRetry(err) {
 				a.retryEngine.ScheduleRetry(ctx, endpoint.URL, func() error {
 					return a.sendToEndpoint(ctx, endpoint, data)
@@ -288,13 +294,13 @@ func (a *DefaultVictoriaMetricsAdapter) sendBatch(ctx context.Context, metrics [
 			a.logger.WithField("endpoint", endpoint.URL).Debug("Successfully sent metrics to endpoint")
 		}
 	}
-	
-	// Если хотя бы один endpoint успешно получил метрики, считаем успешным
+
+	// If at least one endpoint successfully received metrics, consider it successful
 	if successCount > 0 {
 		lastErr = nil
 	}
 
-	// Обновление статистики
+	// Update statistics
 	a.mu.Lock()
 	if lastErr == nil {
 		a.stats.TotalPushed += int64(len(metrics))
@@ -308,22 +314,22 @@ func (a *DefaultVictoriaMetricsAdapter) sendBatch(ctx context.Context, metrics [
 	return lastErr
 }
 
-// sendToEndpoint отправляет данные на endpoint
+// sendToEndpoint sends data to an endpoint
 func (a *DefaultVictoriaMetricsAdapter) sendToEndpoint(ctx context.Context, endpoint *Endpoint, data []byte) error {
 	req, err := http.NewRequestWithContext(ctx, "POST", endpoint.URL, bytes.NewReader(data))
 	if err != nil {
 		return fmt.Errorf("failed to create request: %w", err)
 	}
 
-	// Установка заголовков
-	// Для JSON line format используем application/json
-	// Для vminsert endpoint /insert/0/prometheus/api/v1/import поддерживает JSON line format
+	// Set headers
+	// For JSON line format we use application/json
+	// For vminsert endpoint /insert/0/prometheus/api/v1/import vmimport JSON format is used
 	req.Header.Set("Content-Type", "application/json")
 	for k, v := range endpoint.Headers {
 		req.Header.Set(k, v)
 	}
 
-	// Аутентификация
+	// Authentication
 	if endpoint.Auth != nil {
 		switch endpoint.Auth.Type {
 		case "bearer", "token":
@@ -347,7 +353,7 @@ func (a *DefaultVictoriaMetricsAdapter) sendToEndpoint(ctx context.Context, endp
 	return nil
 }
 
-// initializeEndpoints инициализирует endpoints
+// initializeEndpoints initializes endpoints
 func (a *DefaultVictoriaMetricsAdapter) initializeEndpoints() error {
 	for _, endpointCfg := range a.config.Endpoints {
 		endpoint := &Endpoint{
@@ -373,4 +379,3 @@ func (a *DefaultVictoriaMetricsAdapter) initializeEndpoints() error {
 
 	return nil
 }
-

@@ -1,4 +1,4 @@
-name: Release Docker Image
+name: Release
 
 on:
   push:
@@ -6,12 +6,28 @@ on:
       - 'v*.*.*'
 
 permissions:
-  contents: read
+  contents: write
   packages: write
+  id-token: write
+  attestations: write
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+  GO_VERSION: '1.25'
 
 jobs:
-  build-and-push:
+  release-binaries:
+    name: Release Binaries
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        goos: [linux, darwin, windows]
+        goarch: [amd64, arm64]
+        exclude:
+          - goos: windows
+            goarch: arm64
     
     steps:
       - name: Checkout code
@@ -19,13 +35,86 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache: true
+
+      - name: Extract version from tag
+        id: version
+        run: |
+          VERSION=${GITHUB_REF#refs/tags/}
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "version_num=${VERSION#v}" >> $GITHUB_OUTPUT
+          echo "commit=$(git rev-parse HEAD)" >> $GITHUB_OUTPUT
+          echo "build_time=$(date -u +"%Y-%m-%dT%H:%M:%SZ")" >> $GITHUB_OUTPUT
+
+      - name: Build binary
+        env:
+          GOOS: ${{ matrix.goos }}
+          GOARCH: ${{ matrix.goarch }}
+          CGO_ENABLED: 0
+        run: |
+          mkdir -p dist
+          EXT=""
+          if [ "${{ matrix.goos }}" = "windows" ]; then
+            EXT=".exe"
+          fi
+          go build \
+            -trimpath \
+            -ldflags "-w -s -X main.Version=${{ steps.version.outputs.version }} -X main.BuildTime=${{ steps.version.outputs.build_time }} -X main.GitCommit=${{ steps.version.outputs.commit }}" \
+            -o dist/vmprober${EXT} \
+            ./cmd/vmprober
+
+      - name: Create archive (Unix)
+        if: matrix.goos != 'windows'
+        run: |
+          cd dist
+          ARCHIVE_NAME="vmprober-${{ steps.version.outputs.version }}-${{ matrix.goos }}-${{ matrix.goarch }}.tar.gz"
+          tar -czvf ${ARCHIVE_NAME} vmprober
+          sha256sum ${ARCHIVE_NAME} > ${ARCHIVE_NAME}.sha256
+          echo "archive_name=${ARCHIVE_NAME}" >> $GITHUB_ENV
+
+      - name: Create archive (Windows)
+        if: matrix.goos == 'windows'
+        run: |
+          cd dist
+          ARCHIVE_NAME="vmprober-${{ steps.version.outputs.version }}-${{ matrix.goos }}-${{ matrix.goarch }}.zip"
+          zip ${ARCHIVE_NAME} vmprober.exe
+          sha256sum ${ARCHIVE_NAME} > ${ARCHIVE_NAME}.sha256
+          echo "archive_name=${ARCHIVE_NAME}" >> $GITHUB_ENV
+
+      - name: Upload release artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: vmprober-${{ matrix.goos }}-${{ matrix.goarch }}
+          path: dist/vmprober-*
+          retention-days: 1
+
+  release-docker:
+    name: Release Docker Images
+    runs-on: ubuntu-latest
+    outputs:
+      alpine-digest: ${{ steps.build-alpine.outputs.digest }}
+      scratch-digest: ${{ steps.build-scratch.outputs.digest }}
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
       - name: Log in to GitHub Container Registry
         uses: docker/login-action@v3
         with:
-          registry: ghcr.io
+          registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
@@ -36,35 +125,38 @@ jobs:
           echo "version=$VERSION" >> $GITHUB_OUTPUT
           echo "major=$(echo $VERSION | cut -d. -f1)" >> $GITHUB_OUTPUT
           echo "minor=$(echo $VERSION | cut -d. -f1-2)" >> $GITHUB_OUTPUT
-          echo "Version: $VERSION"
+          echo "commit=$(git rev-parse HEAD)" >> $GITHUB_OUTPUT
+          echo "build_time=$(date -u +"%Y-%m-%dT%H:%M:%SZ")" >> $GITHUB_OUTPUT
 
       - name: Extract metadata for Alpine
         id: meta-alpine
         uses: docker/metadata-action@v5
         with:
-          images: ghcr.io/${{ github.repository }}
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          flavor: |
+            suffix=-alpine
           tags: |
-            type=ref,event=tag,prefix=v,suffix=-alpine
-            type=semver,pattern={{version}},suffix=-alpine
-            type=semver,pattern={{major}}.{{minor}},suffix=-alpine
-            type=semver,pattern={{major}},suffix=-alpine
-            type=raw,value=latest-alpine
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=semver,pattern={{major}}
+            type=raw,value=latest
 
       - name: Extract metadata for Scratch
         id: meta-scratch
         uses: docker/metadata-action@v5
         with:
-          images: ghcr.io/${{ github.repository }}
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          flavor: |
+            suffix=-scratch
           tags: |
-            type=ref,event=tag,prefix=v,suffix=-scratch
-            type=semver,pattern={{version}},suffix=-scratch
-            type=semver,pattern={{major}}.{{minor}},suffix=-scratch
-            type=semver,pattern={{major}},suffix=-scratch
-            type=raw,value=latest-scratch
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=semver,pattern={{major}}
+            type=raw,value=latest
 
       - name: Build and push Alpine image
         id: build-alpine
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v6
         with:
           context: .
           file: ./Dockerfile
@@ -74,14 +166,16 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
           platforms: linux/amd64,linux/arm64
+          provenance: true
+          sbom: true
           build-args: |
             VERSION=${{ steps.version.outputs.version }}
-            BUILD_TIME=${{ github.event.head_commit.timestamp }}
-            GIT_COMMIT=${{ github.sha }}
+            BUILD_TIME=${{ steps.version.outputs.build_time }}
+            GIT_COMMIT=${{ steps.version.outputs.commit }}
 
       - name: Build and push Scratch image
         id: build-scratch
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v6
         with:
           context: .
           file: ./Dockerfile.scratch
@@ -91,22 +185,139 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
           platforms: linux/amd64,linux/arm64
+          provenance: true
+          sbom: true
           build-args: |
             VERSION=${{ steps.version.outputs.version }}
-            BUILD_TIME=${{ github.event.head_commit.timestamp }}
-            GIT_COMMIT=${{ github.sha }}
+            BUILD_TIME=${{ steps.version.outputs.build_time }}
+            GIT_COMMIT=${{ steps.version.outputs.commit }}
 
       - name: Generate artifact attestation for Alpine
-        uses: actions/attest-build-provenance@v1
+        uses: actions/attest-build-provenance@v2
         with:
-          subject-name: ghcr.io/${{ github.repository }}
+          subject-name: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           subject-digest: ${{ steps.build-alpine.outputs.digest }}
           push-to-registry: true
 
       - name: Generate artifact attestation for Scratch
-        uses: actions/attest-build-provenance@v1
+        uses: actions/attest-build-provenance@v2
         with:
-          subject-name: ghcr.io/${{ github.repository }}
+          subject-name: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           subject-digest: ${{ steps.build-scratch.outputs.digest }}
           push-to-registry: true
 
+  create-release:
+    name: Create GitHub Release
+    runs-on: ubuntu-latest
+    needs: [release-binaries, release-docker]
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          pattern: vmprober-*
+          merge-multiple: true
+
+      - name: Extract version from tag
+        id: version
+        run: |
+          VERSION=${GITHUB_REF#refs/tags/}
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "version_num=${VERSION#v}" >> $GITHUB_OUTPUT
+
+      - name: Generate changelog
+        id: changelog
+        run: |
+          # Get the previous tag
+          PREV_TAG=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo "")
+          
+          if [ -n "$PREV_TAG" ]; then
+            echo "## What's Changed" > CHANGELOG.md
+            echo "" >> CHANGELOG.md
+            
+            # Get commit messages between tags
+            git log ${PREV_TAG}..HEAD --pretty=format:"* %s (%h)" >> CHANGELOG.md
+            echo "" >> CHANGELOG.md
+            echo "" >> CHANGELOG.md
+            echo "**Full Changelog**: https://github.com/${{ github.repository }}/compare/${PREV_TAG}...${{ steps.version.outputs.version }}" >> CHANGELOG.md
+          else
+            echo "## Initial Release" > CHANGELOG.md
+            echo "" >> CHANGELOG.md
+            echo "First release of vmprober!" >> CHANGELOG.md
+          fi
+
+      - name: Create release notes
+        run: |
+          cat << 'EOF' > RELEASE_NOTES.md
+          # vmprober ${{ steps.version.outputs.version }}
+          
+          ## Installation
+          
+          ### Binary Downloads
+          
+          | OS | Architecture | Download |
+          |---|---|---|
+          | Linux | amd64 | [vmprober-${{ steps.version.outputs.version }}-linux-amd64.tar.gz](https://github.com/${{ github.repository }}/releases/download/${{ steps.version.outputs.version }}/vmprober-${{ steps.version.outputs.version }}-linux-amd64.tar.gz) |
+          | Linux | arm64 | [vmprober-${{ steps.version.outputs.version }}-linux-arm64.tar.gz](https://github.com/${{ github.repository }}/releases/download/${{ steps.version.outputs.version }}/vmprober-${{ steps.version.outputs.version }}-linux-arm64.tar.gz) |
+          | macOS | amd64 | [vmprober-${{ steps.version.outputs.version }}-darwin-amd64.tar.gz](https://github.com/${{ github.repository }}/releases/download/${{ steps.version.outputs.version }}/vmprober-${{ steps.version.outputs.version }}-darwin-amd64.tar.gz) |
+          | macOS | arm64 | [vmprober-${{ steps.version.outputs.version }}-darwin-arm64.tar.gz](https://github.com/${{ github.repository }}/releases/download/${{ steps.version.outputs.version }}/vmprober-${{ steps.version.outputs.version }}-darwin-arm64.tar.gz) |
+          | Windows | amd64 | [vmprober-${{ steps.version.outputs.version }}-windows-amd64.zip](https://github.com/${{ github.repository }}/releases/download/${{ steps.version.outputs.version }}/vmprober-${{ steps.version.outputs.version }}-windows-amd64.zip) |
+          
+          ### Docker Images
+          
+          ```bash
+          # Alpine-based (with shell, useful for debugging)
+          docker pull ghcr.io/${{ github.repository }}:${{ steps.version.outputs.version_num }}-alpine
+          
+          # Scratch-based (minimal, ~10MB smaller)
+          docker pull ghcr.io/${{ github.repository }}:${{ steps.version.outputs.version_num }}-scratch
+          ```
+          
+          ### Verify checksums
+          
+          All binaries include SHA256 checksum files. Verify with:
+          ```bash
+          sha256sum -c vmprober-${{ steps.version.outputs.version }}-linux-amd64.tar.gz.sha256
+          ```
+          
+          EOF
+          
+          cat CHANGELOG.md >> RELEASE_NOTES.md
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: vmprober ${{ steps.version.outputs.version }}
+          body_path: RELEASE_NOTES.md
+          draft: false
+          prerelease: ${{ contains(steps.version.outputs.version, '-') }}
+          generate_release_notes: false
+          files: |
+            artifacts/*
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  announce:
+    name: Announce Release
+    runs-on: ubuntu-latest
+    needs: create-release
+    if: ${{ !contains(github.ref, '-') }}
+    
+    steps:
+      - name: Extract version
+        id: version
+        run: echo "version=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+
+      - name: Create job summary
+        run: |
+          echo "# 🎉 Release ${{ steps.version.outputs.version }} Published!" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "## Links" >> $GITHUB_STEP_SUMMARY
+          echo "- [GitHub Release](https://github.com/${{ github.repository }}/releases/tag/${{ steps.version.outputs.version }})" >> $GITHUB_STEP_SUMMARY
+          echo "- [Docker Images](https://github.com/${{ github.repository }}/pkgs/container/vmprober)" >> $GITHUB_STEP_SUMMARY

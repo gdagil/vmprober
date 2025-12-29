@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/vmprober/vmprober/internal/types"
+	"github.com/gdagil/vmprober/internal/types"
 )
 
 func TestNewUDPProbe(t *testing.T) {
@@ -27,7 +27,7 @@ func TestNewUDPProbe(t *testing.T) {
 }
 
 func TestUDPProbe_Execute_Success(t *testing.T) {
-	// Запускаем тестовый UDP сервер
+	// Start test UDP server
 	addr, err := net.ResolveUDPAddr("udp", "127.0.0.1:0")
 	if err != nil {
 		t.Fatalf("Failed to resolve UDP address: %v", err)
@@ -39,7 +39,7 @@ func TestUDPProbe_Execute_Success(t *testing.T) {
 	}
 	defer conn.Close()
 	
-	// Эхо-сервер
+	// Echo server
 	go func() {
 		buffer := make([]byte, 1024)
 		for {
@@ -100,7 +100,7 @@ func TestUDPProbe_Execute_NoResponse(t *testing.T) {
 	probe := NewUDPProbe(config)
 	defer probe.Close()
 	
-	// Используем порт, который не отвечает
+	// Use a port that doesn't respond
 	target := types.Target{
 		Host:     "127.0.0.1",
 		Port:     65535,
@@ -112,7 +112,7 @@ func TestUDPProbe_Execute_NoResponse(t *testing.T) {
 	defer cancel()
 	
 	result, err := probe.Execute(ctx, target)
-	// UDP может не получить ответ, это нормально
+	// UDP may not receive a response, this is normal
 	if err != nil {
 		t.Logf("UDP probe error (expected for no response): %v", err)
 	}
@@ -206,12 +206,12 @@ func TestUDPProbe_Close(t *testing.T) {
 
 func TestUDPProbe_DefaultPayloadSize(t *testing.T) {
 	config := &UDPConfig{
-		PayloadSize: 0, // Должен использоваться дефолт
+		PayloadSize: 0, // Should use default
 	}
 	probe := NewUDPProbe(config)
 	defer probe.Close()
 	
-	// Запускаем UDP сервер
+	// Start UDP server
 	addr, err := net.ResolveUDPAddr("udp", "127.0.0.1:0")
 	if err != nil {
 		t.Fatalf("Failed to resolve UDP address: %v", err)

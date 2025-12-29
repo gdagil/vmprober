@@ -9,31 +9,31 @@ import (
 	"time"
 
 	"github.com/sirupsen/logrus"
-	"github.com/vmprober/vmprober/internal/types"
+	"github.com/gdagil/vmprober/internal/types"
 )
 
-// Normalizer интерфейс для нормализации результатов проб
+// Normalizer interface for normalizing probe results
 type Normalizer interface {
-	// Normalize нормализует результат пробы
+	// Normalize normalizes probe result
 	Normalize(ctx context.Context, result *types.ProbeResult) (*types.NormalizedEvent, error)
 
-	// NormalizeBatch нормализует пакет результатов
+	// NormalizeBatch normalizes a batch of results
 	NormalizeBatch(ctx context.Context, results []*types.ProbeResult) ([]*types.NormalizedEvent, error)
 
-	// Dedup проверяет на дубликаты
+	// Dedup checks for duplicates
 	Dedup(ctx context.Context, event *types.NormalizedEvent) (bool, error)
 
-	// Enrich обогащает событие дополнительной информацией
+	// Enrich enriches event with additional information
 	Enrich(ctx context.Context, event *types.NormalizedEvent) error
 
-	// GetStats возвращает статистику нормализатора
+	// GetStats returns normalizer statistics
 	GetStats() *NormalizerStats
 
-	// Close закрывает нормализатор
+	// Close closes the normalizer
 	Close(ctx context.Context) error
 }
 
-// NormalizerStats статистика нормализатора
+// NormalizerStats normalizer statistics
 type NormalizerStats struct {
 	TotalNormalized int64         `json:"total_normalized"`
 	TotalDeduped    int64         `json:"total_deduped"`
@@ -41,7 +41,7 @@ type NormalizerStats struct {
 	AvgNormalizeTime time.Duration `json:"avg_normalize_time"`
 }
 
-// DefaultNormalizer реализация нормализатора
+// DefaultNormalizer normalizer implementation
 type DefaultNormalizer struct {
 	dedupCache  *DedupCache
 	enricher    *DataEnricher
@@ -50,7 +50,7 @@ type DefaultNormalizer struct {
 	stats       *NormalizerStats
 }
 
-// NewNormalizer создает новый нормализатор
+// NewNormalizer creates a new normalizer
 func NewNormalizer(logger *logrus.Logger) Normalizer {
 	return &DefaultNormalizer{
 		dedupCache: NewDedupCache(10 * time.Minute),
@@ -60,19 +60,19 @@ func NewNormalizer(logger *logrus.Logger) Normalizer {
 	}
 }
 
-// Normalize нормализует результат пробы
+// Normalize normalizes probe result
 func (n *DefaultNormalizer) Normalize(ctx context.Context, result *types.ProbeResult) (*types.NormalizedEvent, error) {
 	start := time.Now()
 
-	// Стандартизация результата
+	// Standardize result
 	event := n.standardize(result)
 
-	// Обогащение данными
+	// Enrich with data
 	if err := n.Enrich(ctx, event); err != nil {
 		n.logger.WithError(err).Warn("Failed to enrich event")
 	}
 
-	// Обновление статистики
+	// Update statistics
 	n.mu.Lock()
 	n.stats.TotalNormalized++
 	n.stats.AvgNormalizeTime = time.Since(start)
@@ -81,7 +81,7 @@ func (n *DefaultNormalizer) Normalize(ctx context.Context, result *types.ProbeRe
 	return event, nil
 }
 
-// NormalizeBatch нормализует пакет результатов
+// NormalizeBatch normalizes a batch of results
 func (n *DefaultNormalizer) NormalizeBatch(ctx context.Context, results []*types.ProbeResult) ([]*types.NormalizedEvent, error) {
 	events := make([]*types.NormalizedEvent, 0, len(results))
 
@@ -97,7 +97,7 @@ func (n *DefaultNormalizer) NormalizeBatch(ctx context.Context, results []*types
 	return events, nil
 }
 
-// Dedup проверяет на дубликаты
+// Dedup checks for duplicates
 func (n *DefaultNormalizer) Dedup(ctx context.Context, event *types.NormalizedEvent) (bool, error) {
 	isDuplicate := n.dedupCache.Check(event.SeriesID, event.Timestamp)
 
@@ -108,13 +108,13 @@ func (n *DefaultNormalizer) Dedup(ctx context.Context, event *types.NormalizedEv
 		return true, nil
 	}
 
-	// Отметка события как обработанного
+	// Mark event as processed
 	n.dedupCache.Mark(event.SeriesID, event.Timestamp)
 
 	return false, nil
 }
 
-// Enrich обогащает событие дополнительной информацией
+// Enrich enriches event with additional information
 func (n *DefaultNormalizer) Enrich(ctx context.Context, event *types.NormalizedEvent) error {
 	n.enricher.Enrich(event)
 
@@ -125,7 +125,7 @@ func (n *DefaultNormalizer) Enrich(ctx context.Context, event *types.NormalizedE
 	return nil
 }
 
-// GetStats возвращает статистику нормализатора
+// GetStats returns normalizer statistics
 func (n *DefaultNormalizer) GetStats() *NormalizerStats {
 	n.mu.RLock()
 	defer n.mu.RUnlock()
@@ -134,13 +134,13 @@ func (n *DefaultNormalizer) GetStats() *NormalizerStats {
 	return &stats
 }
 
-// Close закрывает нормализатор
+// Close closes the normalizer
 func (n *DefaultNormalizer) Close(ctx context.Context) error {
 	n.dedupCache.Cleanup(ctx)
 	return nil
 }
 
-// standardize стандартизирует результат пробы
+// standardize standardizes probe result
 func (n *DefaultNormalizer) standardize(result *types.ProbeResult) *types.NormalizedEvent {
 	event := &types.NormalizedEvent{
 		Timestamp: result.Timestamp,
@@ -150,10 +150,10 @@ func (n *DefaultNormalizer) standardize(result *types.ProbeResult) *types.Normal
 		Metadata:  make(map[string]interface{}),
 	}
 
-	// Генерация SeriesID
+	// Generate SeriesID
 	event.SeriesID = n.generateSeriesID(result)
 
-	// Установка меток
+	// Set labels
 	event.Labels["protocol"] = string(result.Protocol)
 	event.Labels["target_ip"] = result.TargetIP
 	if result.TargetPort > 0 {
@@ -169,27 +169,27 @@ func (n *DefaultNormalizer) standardize(result *types.ProbeResult) *types.Normal
 		event.Labels["socket_family"] = result.SocketFamily
 	}
 
-	// Установка лейбла status
+	// Set status label
 	if result.Success {
 		event.Labels["status"] = "success"
 	} else {
 		event.Labels["status"] = "failed"
 	}
 
-	// Установка метрик с префиксом vmprober_
-	// RTT метрика - всегда отправляется, для failed будет 0
+	// Set metrics with vmprober_ prefix
+	// RTT metric - always sent, will be 0 for failed
 	event.Metrics["vmprober_probe_rtt_seconds"] = result.RTT.Seconds()
 
-	// Результат пробы - 1.0 для успешных, 1.0 для неудачных (для подсчета)
+	// Probe result - 1.0 for successful, 1.0 for failed (for counting)
 	event.Metrics["vmprober_probe_result"] = 1.0
 
-	// Длительность пробы (общее время выполнения)
+	// Probe duration (total execution time)
 	event.Metrics["vmprober_probe_duration_seconds"] = result.RTT.Seconds()
 
-	// Счетчик попыток
+	// Attempts counter
 	event.Metrics["vmprober_probe_attempts_total"] = float64(result.Attempt)
 
-	// Установка тегов
+	// Set tags
 	event.Tags = append(event.Tags, string(result.Protocol))
 	if result.Success {
 		event.Tags = append(event.Tags, "success")
@@ -197,15 +197,15 @@ func (n *DefaultNormalizer) standardize(result *types.ProbeResult) *types.Normal
 		event.Tags = append(event.Tags, "failure")
 	}
 
-	// Дополнительные метрики
-	// DNS lookup время (если доступно)
+	// Additional metrics
+	// DNS lookup time (if available)
 	if result.DNSResult != nil {
 		event.Metrics["vmprober_probe_dns_lookup_seconds"] = result.DNSResult.LookupTime.Seconds()
-		// Количество разрешенных IP адресов
+		// Number of resolved IP addresses
 		event.Metrics["vmprober_probe_dns_resolved_ips"] = float64(len(result.DNSResult.ResolvedIPs))
 	}
 
-	// Установка метаданных
+	// Set metadata
 	event.Metadata["attempt"] = result.Attempt
 	if result.Error != "" {
 		event.Metadata["error"] = result.Error
@@ -218,7 +218,7 @@ func (n *DefaultNormalizer) standardize(result *types.ProbeResult) *types.Normal
 	return event
 }
 
-// generateSeriesID генерирует уникальный ID для серии метрик
+// generateSeriesID generates unique ID for metric series
 func (n *DefaultNormalizer) generateSeriesID(result *types.ProbeResult) string {
 	key := fmt.Sprintf("%s:%s:%d:%s",
 		result.Protocol,

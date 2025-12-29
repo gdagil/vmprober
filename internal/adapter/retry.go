@@ -7,26 +7,29 @@ import (
 	"time"
 
 	"github.com/sirupsen/logrus"
-	"github.com/vmprober/vmprober/internal/config"
+	"github.com/gdagil/vmprober/internal/config"
 )
 
-// RetryEngine управляет retry логикой
+// RetryEngine manages retry logic
 type RetryEngine struct {
 	config     *config.RetryConfig
 	logger     *logrus.Logger
 	retryQueue chan retryTask
 	mu         sync.RWMutex
 	stats      *RetryStats
+	ctx        context.Context
+	cancel     context.CancelFunc
+	wg         sync.WaitGroup
 }
 
-// RetryStats статистика retry
+// RetryStats represents retry statistics
 type RetryStats struct {
 	TotalRetries      int64 `json:"total_retries"`
 	SuccessfulRetries int64 `json:"successful_retries"`
 	FailedRetries     int64 `json:"failed_retries"`
 }
 
-// retryTask задача для retry
+// retryTask represents a retry task
 type retryTask struct {
 	fn       func() error
 	attempts int
@@ -34,7 +37,7 @@ type retryTask struct {
 	endpoint string
 }
 
-// NewRetryEngine создает новый retry engine
+// NewRetryEngine creates a new retry engine
 func NewRetryEngine(cfg *config.RetryConfig, logger *logrus.Logger) *RetryEngine {
 	if cfg == nil {
 		cfg = &config.RetryConfig{
@@ -46,31 +49,43 @@ func NewRetryEngine(cfg *config.RetryConfig, logger *logrus.Logger) *RetryEngine
 		}
 	}
 
+	ctx, cancel := context.WithCancel(context.Background())
+
 	engine := &RetryEngine{
 		config:     cfg,
 		logger:     logger,
 		retryQueue: make(chan retryTask, 100),
 		stats:      &RetryStats{},
+		ctx:        ctx,
+		cancel:     cancel,
 	}
 
-	// Запуск воркера для обработки retry
-	go engine.retryWorker(context.Background())
+	// Start worker for retry processing
+	engine.wg.Add(1)
+	go engine.retryWorker()
 
 	return engine
 }
 
-// ShouldRetry проверяет нужно ли делать retry
+// Stop stops the retry engine
+func (r *RetryEngine) Stop() {
+	r.cancel()
+	r.wg.Wait()
+	r.logger.Info("RetryEngine stopped")
+}
+
+// ShouldRetry checks if retry should be performed
 func (r *RetryEngine) ShouldRetry(err error) bool {
 	if err == nil {
 		return false
 	}
 
-	// Проверка типа ошибки
-	// В реальной реализации здесь была бы более сложная логика
+	// Check error type
+	// In a real implementation, there would be more complex logic here
 	return true
 }
 
-// ScheduleRetry планирует retry
+// ScheduleRetry schedules a retry
 func (r *RetryEngine) ScheduleRetry(ctx context.Context, endpoint string, fn func() error) {
 	task := retryTask{
 		fn:       fn,
@@ -96,39 +111,59 @@ func (r *RetryEngine) ScheduleRetry(ctx context.Context, endpoint string, fn fun
 	}
 }
 
-// retryWorker воркер для обработки retry
-func (r *RetryEngine) retryWorker(ctx context.Context) {
+// retryWorker is a worker for retry processing
+func (r *RetryEngine) retryWorker() {
+	defer r.wg.Done()
+
 	for {
 		select {
-		case <-ctx.Done():
-			return
-		case task := <-r.retryQueue:
-			// Ожидание задержки
-			time.Sleep(task.delay)
+		case <-r.ctx.Done():
+			// Process remaining tasks in queue before exit
+			for {
+				select {
+				case task := <-r.retryQueue:
+					r.logger.WithField("endpoint", task.endpoint).Warn("Dropping retry task during shutdown")
+				default:
+					return
+				}
+			}
+		case task, ok := <-r.retryQueue:
+			if !ok {
+				return
+			}
 
-			// Выполнение задачи
+			// Wait for delay with context awareness
+			select {
+			case <-r.ctx.Done():
+				return
+			case <-time.After(task.delay):
+			}
+
+			// Execute task
 			task.attempts++
 			r.logger.WithFields(logrus.Fields{
-				"endpoint": task.endpoint,
-				"attempt":  task.attempts,
+				"endpoint":     task.endpoint,
+				"attempt":      task.attempts,
 				"max_attempts": r.config.MaxAttempts,
 			}).Info("Retrying metrics push")
-			
+
 			err := task.fn()
 
 			if err != nil {
 				if task.attempts < r.config.MaxAttempts {
-					// Вычисление новой задержки
+					// Calculate new delay
 					task.delay = r.calculateBackoff(task.attempts)
-					// Повторное добавление в очередь
+					// Re-add to queue
 					select {
 					case r.retryQueue <- task:
 						r.logger.WithFields(logrus.Fields{
-							"endpoint": task.endpoint,
-							"attempt":  task.attempts,
+							"endpoint":     task.endpoint,
+							"attempt":      task.attempts,
 							"next_attempt": task.attempts + 1,
-							"next_delay": task.delay,
+							"next_delay":   task.delay,
 						}).Info("Scheduled next retry attempt")
+					case <-r.ctx.Done():
+						return
 					default:
 						r.mu.Lock()
 						r.stats.FailedRetries++
@@ -140,8 +175,8 @@ func (r *RetryEngine) retryWorker(ctx context.Context) {
 					r.stats.FailedRetries++
 					r.mu.Unlock()
 					r.logger.WithError(err).WithFields(logrus.Fields{
-						"endpoint": task.endpoint,
-						"attempt":  task.attempts,
+						"endpoint":     task.endpoint,
+						"attempt":      task.attempts,
 						"max_attempts": r.config.MaxAttempts,
 					}).Error("Retry failed after max attempts")
 				}
@@ -158,7 +193,7 @@ func (r *RetryEngine) retryWorker(ctx context.Context) {
 	}
 }
 
-// calculateBackoff вычисляет задержку для backoff
+// calculateBackoff calculates delay for backoff
 func (r *RetryEngine) calculateBackoff(attempts int) time.Duration {
 	var delay time.Duration
 

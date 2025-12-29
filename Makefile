@@ -1,4 +1,4 @@
-.PHONY: build test clean run docker-build docker-run help
+.PHONY: build test clean run docker-build docker-run help docs docs-install docs-serve docs-build
 
 # Variables
 BINARY_NAME=vmprober
@@ -32,7 +32,7 @@ clean:
 # Run the application
 run: build
 	@echo "Running ${BINARY_NAME}..."
-	@./bin/${BINARY_NAME} -config ./configs/config.yaml.example
+	@./bin/${BINARY_NAME} -config ./config/vmprober/config.yaml.example
 
 # Format code
 fmt:
@@ -44,21 +44,29 @@ lint:
 	@echo "Linting code..."
 	@golangci-lint run
 
-# Docker build
-docker-build:
-	@echo "Building Docker image..."
-	@docker build -t ${BINARY_NAME}:${VERSION} .
-
-# Docker run
-docker-run: docker-build
-	@echo "Running Docker container..."
-	@docker run --rm -p 8080:8080 ${BINARY_NAME}:${VERSION}
-
 # Install dependencies
 deps:
 	@echo "Installing dependencies..."
 	@go mod download
 	@go mod tidy
+
+# Documentation - install dependencies
+docs-install:
+	@echo "Installing documentation dependencies..."
+	@cd docs && bundle install
+
+# Documentation - serve locally
+docs-serve:
+	@echo "Starting documentation server at http://localhost:4000..."
+	@cd docs && bundle exec jekyll serve --livereload
+
+# Documentation - build static site
+docs-build:
+	@echo "Building documentation..."
+	@cd docs && bundle exec jekyll build
+
+# Documentation - shortcut for serve
+docs: docs-serve
 
 # Help
 help:
@@ -73,6 +81,10 @@ help:
 	@echo "  docker-build   - Build Docker image"
 	@echo "  docker-run     - Build and run Docker container"
 	@echo "  deps           - Install dependencies"
+	@echo "  docs           - Serve documentation locally (alias for docs-serve)"
+	@echo "  docs-install   - Install documentation dependencies (bundle install)"
+	@echo "  docs-serve     - Serve documentation at http://localhost:4000"
+	@echo "  docs-build     - Build static documentation site"
 	@echo "  help           - Show this help message"
 
 

@@ -7,8 +7,8 @@ import (
 	"time"
 
 	"github.com/sirupsen/logrus"
-	"github.com/vmprober/vmprober/internal/config"
-	"github.com/vmprober/vmprober/internal/types"
+	"github.com/gdagil/vmprober/internal/config"
+	"github.com/gdagil/vmprober/internal/types"
 )
 
 func createTestWALConfig() *config.WALConfig {
@@ -31,7 +31,7 @@ func TestNewWALManager(t *testing.T) {
 	cfg.Dir = tmpDir
 
 	logger := logrus.New()
-	logger.SetLevel(logrus.ErrorLevel) // Уменьшаем логирование в тестах
+	logger.SetLevel(logrus.ErrorLevel) // Reduce logging in tests
 
 	manager, err := NewWALManager(cfg, logger)
 	if err != nil {
@@ -98,7 +98,7 @@ func TestWALManager_Read(t *testing.T) {
 
 	ctx := context.Background()
 
-	// Записываем несколько записей
+	// Write several records
 	for i := 0; i < 3; i++ {
 		record := &types.Record{
 			ID:        fmt.Sprintf("test-record-%d", i),
@@ -114,7 +114,7 @@ func TestWALManager_Read(t *testing.T) {
 		}
 	}
 
-	// Читаем все записи
+	// Read all records
 	filter := WALFilter{
 		Limit: 10,
 	}
@@ -161,7 +161,7 @@ func TestWALManager_ReadWithFilter(t *testing.T) {
 	manager.Write(ctx, record1)
 	manager.Write(ctx, record2)
 
-	// Фильтр по типу
+	// Filter by type
 	filter := WALFilter{
 		Type:  "type1",
 		Limit: 10,
@@ -175,7 +175,7 @@ func TestWALManager_ReadWithFilter(t *testing.T) {
 		t.Errorf("Expected 1 record with type1, got %d", len(records))
 	}
 
-	// Фильтр по SeriesID
+	// Filter by SeriesID
 	filter = WALFilter{
 		SeriesID: "series-2",
 		Limit:    10,
@@ -226,7 +226,7 @@ func TestWALManager_Rotate(t *testing.T) {
 	tmpDir := t.TempDir()
 	cfg := createTestWALConfig()
 	cfg.Dir = tmpDir
-	cfg.SegmentSize = "1KB" // Маленький размер для быстрой ротации
+	cfg.SegmentSize = "1KB" // Small size for fast rotation
 
 	logger := logrus.New()
 	logger.SetLevel(logrus.ErrorLevel)
@@ -239,7 +239,7 @@ func TestWALManager_Rotate(t *testing.T) {
 
 	ctx := context.Background()
 
-	// Записываем достаточно данных для ротации
+	// Write enough data for rotation
 	largeData := make(map[string]interface{})
 	for i := 0; i < 100; i++ {
 		largeData[fmt.Sprintf("key%d", i)] = fmt.Sprintf("value%d", i)
@@ -258,7 +258,7 @@ func TestWALManager_Rotate(t *testing.T) {
 		}
 	}
 
-	// Принудительная ротация
+	// Force rotation
 	if err := manager.Rotate(ctx); err != nil {
 		t.Fatalf("Failed to rotate: %v", err)
 	}

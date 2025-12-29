@@ -7,12 +7,12 @@ import (
 	"time"
 
 	"github.com/sirupsen/logrus"
-	"github.com/vmprober/vmprober/internal/types"
+	"github.com/gdagil/vmprober/internal/types"
 )
 
 func TestNewScheduler(t *testing.T) {
 	logger := logrus.New()
-	logger.SetLevel(logrus.ErrorLevel) // Отключаем логи в тестах
+	logger.SetLevel(logrus.ErrorLevel) // Disable logs in tests
 	scheduler := NewScheduler(logger)
 	if scheduler == nil {
 		t.Fatal("NewScheduler returned nil")
@@ -104,7 +104,7 @@ func TestScheduler_StartStop(t *testing.T) {
 		t.Fatalf("Start failed: %v", err)
 	}
 	
-	// Даем время планировщику запуститься
+	// Give time for scheduler to start
 	time.Sleep(100 * time.Millisecond)
 	
 	stopCtx, stopCancel := context.WithTimeout(context.Background(), 1*time.Second)
@@ -128,10 +128,10 @@ func TestScheduler_GetJobChan(t *testing.T) {
 	}
 	defer scheduler.Stop(context.Background())
 	
-	// Планируем задачу, которая должна выполниться сразу
+	// Schedule a task that should execute immediately
 	job := &types.Job{
 		ID:       "test-job-immediate",
-		NextRun:  time.Now().Add(-1 * time.Second), // В прошлом
+		NextRun:  time.Now().Add(-1 * time.Second), // In the past
 		Interval: 30 * time.Second,
 		Priority: 1,
 		Target: types.Target{
@@ -147,7 +147,7 @@ func TestScheduler_GetJobChan(t *testing.T) {
 		t.Fatalf("Schedule failed: %v", err)
 	}
 	
-	// Ждем, пока задача появится в канале
+	// Wait for task to appear in channel
 	jobChan := scheduler.GetJobChan()
 	select {
 	case receivedJob := <-jobChan:
@@ -171,7 +171,7 @@ func TestScheduler_ProcessJobs_Priority(t *testing.T) {
 	}
 	defer scheduler.Stop(context.Background())
 	
-	// Планируем несколько задач с разным временем выполнения
+	// Schedule several tasks with different execution times
 	now := time.Now()
 	jobs := []*types.Job{
 		{
@@ -196,7 +196,7 @@ func TestScheduler_ProcessJobs_Priority(t *testing.T) {
 		},
 		{
 			ID:       "job-3",
-			NextRun:  now.Add(-1 * time.Second), // Должна выполниться первой
+			NextRun:  now.Add(-1 * time.Second), // Should execute first
 			Interval: 30 * time.Second,
 			Priority: 1,
 			Target: types.Target{
@@ -212,7 +212,7 @@ func TestScheduler_ProcessJobs_Priority(t *testing.T) {
 		}
 	}
 	
-	// Первая задача должна быть job-3 (самая ранняя)
+	// First task should be job-3 (earliest)
 	jobChan := scheduler.GetJobChan()
 	select {
 	case firstJob := <-jobChan:

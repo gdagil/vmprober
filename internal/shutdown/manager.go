@@ -10,31 +10,31 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-// ShutdownComponent интерфейс для компонентов с graceful shutdown
+// ShutdownComponent interface for components with graceful shutdown
 type ShutdownComponent interface {
-	// Shutdown выполняет graceful shutdown компонента
+	// Shutdown performs graceful shutdown of the component
 	Shutdown(ctx context.Context) error
 
-	// Name возвращает имя компонента
+	// Name returns the component name
 	Name() string
 
-	// Priority возвращает приоритет shutdown (меньше = выше приоритет)
+	// Priority returns shutdown priority (lower = higher priority)
 	Priority() int
 }
 
-// ShutdownManager управляет graceful shutdown
+// ShutdownManager manages graceful shutdown
 type ShutdownManager interface {
-	// Register регистрирует компонент для shutdown
+	// Register registers a component for shutdown
 	Register(component ShutdownComponent)
 
-	// Shutdown выполняет graceful shutdown всех компонентов
+	// Shutdown performs graceful shutdown of all components
 	Shutdown(ctx context.Context, timeout time.Duration) error
 
-	// GetStatus возвращает статус shutdown
+	// GetStatus returns shutdown status
 	GetStatus() *ShutdownStatus
 }
 
-// ShutdownStatus статус shutdown
+// ShutdownStatus shutdown status
 type ShutdownStatus struct {
 	InProgress   bool                   `json:"in_progress"`
 	Components   map[string]bool         `json:"components"`
@@ -44,7 +44,7 @@ type ShutdownStatus struct {
 	Errors       map[string]string       `json:"errors,omitempty"`
 }
 
-// DefaultShutdownManager реализация shutdown менеджера
+// DefaultShutdownManager shutdown manager implementation
 type DefaultShutdownManager struct {
 	components []ShutdownComponent
 	mu         sync.RWMutex
@@ -52,7 +52,7 @@ type DefaultShutdownManager struct {
 	status     *ShutdownStatus
 }
 
-// NewShutdownManager создает новый shutdown менеджер
+// NewShutdownManager creates a new shutdown manager
 func NewShutdownManager(logger *logrus.Logger) ShutdownManager {
 	return &DefaultShutdownManager{
 		components: make([]ShutdownComponent, 0),
@@ -64,7 +64,7 @@ func NewShutdownManager(logger *logrus.Logger) ShutdownManager {
 	}
 }
 
-// Register регистрирует компонент для shutdown
+// Register registers a component for shutdown
 func (m *DefaultShutdownManager) Register(component ShutdownComponent) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
@@ -73,7 +73,7 @@ func (m *DefaultShutdownManager) Register(component ShutdownComponent) {
 	m.status.Components[component.Name()] = false
 }
 
-// Shutdown выполняет graceful shutdown всех компонентов
+// Shutdown performs graceful shutdown of all components
 func (m *DefaultShutdownManager) Shutdown(ctx context.Context, timeout time.Duration) error {
 	m.mu.Lock()
 	if m.status.InProgress {
@@ -94,22 +94,22 @@ func (m *DefaultShutdownManager) Shutdown(ctx context.Context, timeout time.Dura
 
 	m.logger.Info("Starting graceful shutdown")
 
-	// Создание контекста с timeout
+	// Create context with timeout
 	shutdownCtx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
 
-	// Сортировка компонентов по приоритету
+	// Sort components by priority
 	m.mu.RLock()
 	components := make([]ShutdownComponent, len(m.components))
 	copy(components, m.components)
 	m.mu.RUnlock()
 
-	// Сортировка по приоритету (меньше = выше приоритет)
+	// Sort by priority (lower = higher priority)
 	sort.Slice(components, func(i, j int) bool {
 		return components[i].Priority() < components[j].Priority()
 	})
 
-	// Shutdown компонентов по приоритету
+	// Shutdown components by priority
 	for _, component := range components {
 		m.logger.WithField("component", component.Name()).Info("Shutting down component")
 
@@ -125,7 +125,7 @@ func (m *DefaultShutdownManager) Shutdown(ctx context.Context, timeout time.Dura
 		}
 		m.mu.Unlock()
 
-		// Проверка контекста
+		// Check context
 		if shutdownCtx.Err() != nil {
 			m.logger.Warn("Shutdown timeout exceeded")
 			return shutdownCtx.Err()
@@ -136,7 +136,7 @@ func (m *DefaultShutdownManager) Shutdown(ctx context.Context, timeout time.Dura
 	return nil
 }
 
-// GetStatus возвращает статус shutdown
+// GetStatus returns shutdown status
 func (m *DefaultShutdownManager) GetStatus() *ShutdownStatus {
 	m.mu.RLock()
 	defer m.mu.RUnlock()

@@ -5,24 +5,24 @@ import (
 	"time"
 
 	"github.com/sirupsen/logrus"
-	"github.com/vmprober/vmprober/internal/types"
+	"github.com/gdagil/vmprober/internal/types"
 )
 
-// DataEnricher обогащает события дополнительной информацией
+// DataEnricher enriches events with additional information
 type DataEnricher struct {
 	logger *logrus.Logger
 }
 
-// NewDataEnricher создает новый enricher
+// NewDataEnricher creates a new enricher
 func NewDataEnricher(logger *logrus.Logger) *DataEnricher {
 	return &DataEnricher{
 		logger: logger,
 	}
 }
 
-// Enrich обогащает событие данными
+// Enrich enriches event with data
 func (e *DataEnricher) Enrich(event *types.NormalizedEvent) {
-	// Добавление системных метаданных
+	// Add system metadata
 	if event.Metadata == nil {
 		event.Metadata = make(map[string]interface{})
 	}
@@ -31,12 +31,12 @@ func (e *DataEnricher) Enrich(event *types.NormalizedEvent) {
 	event.Metadata["go_version"] = runtime.Version()
 	event.Metadata["num_goroutines"] = runtime.NumGoroutine()
 
-	// Добавление дополнительных меток
+	// Add additional labels
 	if event.Labels == nil {
 		event.Labels = make(map[string]string)
 	}
 
-	// Добавление временных меток
+	// Add timestamps
 	event.Labels["timestamp"] = event.Timestamp.Format(time.RFC3339)
 }
 
