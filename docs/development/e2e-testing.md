@@ -104,14 +104,12 @@ vmprober/
 
 ### Metrics Flow Diagram
 
-```
-┌─────────┐     ┌──────────┐     ┌───────────────┐
-│ VMProber│────▶│ vminsert │────▶│  vmstorage    │
-└─────────┘     └──────────┘     └───────────────┘
-                                        │
-┌─────────┐     ┌──────────┐           │
-│  Test   │◀────│ vmselect │◀──────────┘
-└─────────┘     └──────────┘
+```mermaid
+flowchart LR
+    VMProber["VMProber"] --> vminsert["vminsert"]
+    vminsert --> vmstorage["vmstorage"]
+    vmstorage --> vmselect["vmselect"]
+    vmselect --> Test["Test"]
 ```
 
 ## Running Tests

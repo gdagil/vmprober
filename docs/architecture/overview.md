@@ -4,52 +4,46 @@ VMProber is a high-performance, reliable network monitoring tool designed for pr
 
 ## High-Level Architecture
 
-```
-┌─────────────────────────────────────────────────────────────┐
-│                      Configuration Layer                      │
-│  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────┐   │
-│  │   YAML   │  │  Files   │  │   HTTP   │  │ Commands │   │
-│  │  Config  │  │  Source  │  │  Source  │  │  Source  │   │
-│  └──────────┘  └──────────┘  └──────────┘  └──────────┘   │
-└─────────────────────────────────────────────────────────────┘
-                            │
-                            ▼
-┌─────────────────────────────────────────────────────────────┐
-│                      Core Engine                              │
-│  ┌──────────────┐         ┌──────────────┐                  │
-│  │  Scheduler   │────────▶│ Worker Pool  │                  │
-│  │              │         │              │                  │
-│  └──────────────┘         └──────────────┘                  │
-│         │                          │                         │
-│         └──────────┬────────────────┘                         │
-│                    ▼                                          │
-│         ┌──────────────────┐                                 │
-│         │   Probe Engine   │                                 │
-│         └──────────────────┘                                 │
-└─────────────────────────────────────────────────────────────┘
-         │              │              │
-         ▼              ▼              ▼
-┌──────────────┐ ┌──────────────┐ ┌──────────────┐
-│  TCP Probe  │ │  UDP Probe   │ │ ICMP Probe   │
-└──────────────┘ └──────────────┘ └──────────────┘
-         │              │              │
-         └──────────────┼──────────────┘
-                        ▼
-         ┌──────────────────────────┐
-         │   Result Normalizer      │
-         └──────────────────────────┘
-         │              │
-         ▼              ▼
-┌──────────────┐ ┌──────────────┐
-│   Metrics    │ │     WAL      │
-│   System     │ │   System     │
-└──────────────┘ └──────────────┘
-         │              │
-         ▼              ▼
-┌──────────────┐ ┌──────────────┐
-│ HTTP Server  │ │VM Adapter    │
-│  (Pull)      │ │  (Push)      │
-└──────────────┘ └──────────────┘
+```mermaid
+flowchart TB
+    subgraph ConfigLayer["Configuration Layer"]
+        YAML["YAML Config"]
+        Files["Files Source"]
+        HTTPSource["HTTP Source"]
+        Commands["Commands Source"]
+    end
+    
+    subgraph CoreEngine["Core Engine"]
+        Scheduler["Scheduler"]
+        WorkerPool["Worker Pool"]
+        ProbeEngine["Probe Engine"]
+        
+        Scheduler --> WorkerPool
+        Scheduler --> ProbeEngine
+        WorkerPool --> ProbeEngine
+    end
+    
+    ConfigLayer --> CoreEngine
+    
+    subgraph ProbeTypes["Probe Types"]
+        TCP["TCP Probe"]
+        UDP["UDP Probe"]
+        ICMP["ICMP Probe"]
+    end
+    
+    ProbeEngine --> TCP
+    ProbeEngine --> UDP
+    ProbeEngine --> ICMP
+    
+    TCP --> Normalizer["Result Normalizer"]
+    UDP --> Normalizer
+    ICMP --> Normalizer
+    
+    Normalizer --> MetricsSystem["Metrics System"]
+    Normalizer --> WAL["WAL System"]
+    
+    MetricsSystem --> HTTPServer["HTTP Server (Pull)"]
+    WAL --> VMAdapter["VM Adapter (Push)"]
 ```
 
 ## Core Components

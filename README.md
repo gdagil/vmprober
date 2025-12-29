@@ -353,39 +353,33 @@ go run ./cmd/vmprober --config=config/vmprober/config.yaml.example
 
 ## Architecture
 
-```
-┌─────────────────────────────────────────────────────────────────────────┐
-│                              VMProber                                    │
-├─────────────────────────────────────────────────────────────────────────┤
-│  ┌────────┐ ┌────────┐ ┌────────┐ ┌────────┐ ┌────────┐ ┌────────┐     │
-│  │  TCP   │ │  UDP   │ │  ICMP  │ │  HTTP  │ │  DNS   │ │  gRPC  │     │
-│  │ Probe  │ │ Probe  │ │ Probe  │ │ Probe  │ │ Probe  │ │ Probe  │     │
-│  └───┬────┘ └───┬────┘ └───┬────┘ └───┬────┘ └───┬────┘ └───┬────┘     │
-│      └──────────┴──────────┴──────────┴──────────┴──────────┘          │
-│                                  │                                      │
-│                           ┌──────▼──────┐                               │
-│                           │  Scheduler  │                               │
-│                           └──────┬──────┘                               │
-│                                  │                                      │
-│                 ┌────────────────┴────────────────┐                     │
-│                 ▼                                 ▼                     │
-│          ┌──────────┐                      ┌──────────┐                 │
-│          │Normalizer│                      │ Metrics  │                 │
-│          │ +Enricher│                      │Collector │                 │
-│          └────┬─────┘                      └────┬─────┘                 │
-│               │                                 │                       │
-│               ▼                                 ▼                       │
-│          ┌──────────┐                      ┌──────────┐                 │
-│          │   WAL    │                      │  /metrics│ ◄── Prometheus  │
-│          │  Buffer  │                      │ endpoint │                 │
-│          └────┬─────┘                      └──────────┘                 │
-│               │                                                         │
-│               ▼                                                         │
-│          ┌──────────┐                                                   │
-│          │  VM      │ ───────────────────────────────► VictoriaMetrics  │
-│          │ Adapter  │                                                   │
-│          └──────────┘                                                   │
-└─────────────────────────────────────────────────────────────────────────┘
+```mermaid
+flowchart TB
+    subgraph VMProber["VMProber"]
+        subgraph Probes["Probe Layer"]
+            TCP["TCP Probe"]
+            UDP["UDP Probe"]
+            ICMP["ICMP Probe"]
+            HTTP["HTTP Probe"]
+            DNS["DNS Probe"]
+            gRPC["gRPC Probe"]
+        end
+        
+        Scheduler["Scheduler"]
+        
+        Probes --> Scheduler
+        
+        Scheduler --> Normalizer["Normalizer + Enricher"]
+        Scheduler --> Metrics["Metrics Collector"]
+        
+        Normalizer --> WAL["WAL Buffer"]
+        Metrics --> MetricsEndpoint["/metrics endpoint"]
+        
+        WAL --> VMAdapter["VM Adapter"]
+    end
+    
+    Prometheus["Prometheus"] -.->|scrape| MetricsEndpoint
+    VMAdapter -->|push| VictoriaMetrics["VictoriaMetrics"]
 ```
 
 ## Documentation

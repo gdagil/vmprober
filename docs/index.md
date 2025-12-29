@@ -99,37 +99,33 @@ Step-by-step tutorials for common tasks:
 
 ## System Architecture
 
-```
-┌─────────────────────────────────────────────────────────────────────────┐
-│                              VMProber                                    │
-├─────────────────────────────────────────────────────────────────────────┤
-│  ┌────────┐ ┌────────┐ ┌────────┐ ┌────────┐ ┌────────┐ ┌────────┐     │
-│  │  TCP   │ │  UDP   │ │  ICMP  │ │  HTTP  │ │  DNS   │ │  gRPC  │     │
-│  │ Probe  │ │ Probe  │ │ Probe  │ │ Probe  │ │ Probe  │ │ Probe  │     │
-│  └───┬────┘ └───┬────┘ └───┬────┘ └───┬────┘ └───┬────┘ └───┬────┘     │
-│      └──────────┴──────────┴──────────┴──────────┴──────────┘          │
-│                                  │                                      │
-│                           ┌──────▼──────┐                               │
-│                           │  Scheduler  │                               │
-│                           └──────┬──────┘                               │
-│                                  │                                      │
-│                 ┌────────────────┴────────────────┐                     │
-│                 ▼                                 ▼                     │
-│          ┌──────────┐                      ┌──────────┐                 │
-│          │Normalizer│                      │ Metrics  │                 │
-│          └────┬─────┘                      │Collector │                 │
-│               │                            └────┬─────┘                 │
-│               ▼                                 │                       │
-│          ┌──────────┐                      ┌────▼─────┐                 │
-│          │   WAL    │                      │ /metrics │ ◄── Prometheus  │
-│          │  Buffer  │                      └──────────┘                 │
-│          └────┬─────┘                                                   │
-│               ▼                                                         │
-│          ┌──────────┐                                                   │
-│          │ VM Push  │ ───────────────────────────────► VictoriaMetrics  │
-│          │ Adapter  │                                                   │
-│          └──────────┘                                                   │
-└─────────────────────────────────────────────────────────────────────────┘
+```mermaid
+flowchart TB
+    subgraph VMProber["VMProber"]
+        subgraph Probes["Probe Layer"]
+            TCP["TCP Probe"]
+            UDP["UDP Probe"]
+            ICMP["ICMP Probe"]
+            HTTP["HTTP Probe"]
+            DNS["DNS Probe"]
+            gRPC["gRPC Probe"]
+        end
+        
+        Scheduler["Scheduler"]
+        
+        Probes --> Scheduler
+        
+        Scheduler --> Normalizer["Normalizer"]
+        Scheduler --> Metrics["Metrics Collector"]
+        
+        Normalizer --> WAL["WAL Buffer"]
+        Metrics --> MetricsEndpoint["/metrics endpoint"]
+        
+        WAL --> VMAdapter["VM Push Adapter"]
+    end
+    
+    Prometheus["Prometheus"] -.->|scrape| MetricsEndpoint
+    VMAdapter -->|push| VictoriaMetrics["VictoriaMetrics"]
 ```
 
 ## Quick Start Example
