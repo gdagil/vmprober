@@ -4,7 +4,7 @@ This guide covers different ways to install and build VMProber.
 
 ## Requirements
 
-- **Go**: Version 1.23 or higher
+- **Go**: Version 1.24 or higher
 - **Operating System**: Linux, macOS, or Windows
 - **For ICMP probes**: Root privileges (Linux) or Administrator (Windows)
 - **Make**: For using Makefile commands (optional)

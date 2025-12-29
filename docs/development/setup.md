@@ -4,7 +4,7 @@ Set up your development environment for VMProber.
 
 ## Requirements
 
-- **Go**: Version 1.23 or higher
+- **Go**: Version 1.24 or higher
 - **Make**: For Makefile commands
 - **Git**: For version control
 - **golangci-lint**: For linting (optional but recommended)

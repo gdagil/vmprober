@@ -7,7 +7,7 @@
 </p>
 
 <p align="center">
-  <a href="https://golang.org"><img src="https://img.shields.io/badge/Go-1.23+-00ADD8?style=flat-square&logo=go&logoColor=white" alt="Go Version"></a>
+  <a href="https://golang.org"><img src="https://img.shields.io/badge/Go-1.24+-00ADD8?style=flat-square&logo=go&logoColor=white" alt="Go Version"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-green?style=flat-square" alt="License"></a>
   <a href="https://github.com/gdagil/vmprober/releases"><img src="https://img.shields.io/badge/Version-1.0.0-blue?style=flat-square" alt="Version"></a>
   <a href="https://github.com/gdagil/vmprober/actions"><img src="https://img.shields.io/badge/Build-Passing-success?style=flat-square" alt="Build Status"></a>
@@ -49,7 +49,7 @@
 
 ### Prerequisites
 
-- Go 1.23 or higher
+- Go 1.24 or higher
 - Docker (optional, for containerized deployment)
 
 ### Build from Source
@@ -311,7 +311,7 @@ sudo systemctl start vmprober
 
 ### Requirements
 
-- Go 1.23+
+- Go 1.24+
 - Make
 - Docker & Docker Compose (for integration tests)
 
