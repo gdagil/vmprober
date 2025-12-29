@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/sirupsen/logrus"
+
 	"github.com/gdagil/vmprober/internal/types"
 )
 
@@ -31,15 +32,15 @@ func TestNormalizer_Normalize(t *testing.T) {
 
 	ctx := context.Background()
 	result := &types.ProbeResult{
-		Success:   true,
-		RTT:       100 * time.Millisecond,
-		Attempt:   1,
-		Timestamp: time.Now(),
-		Protocol:  types.ProbeTypeTCP,
-		TargetIP:  "192.168.1.1",
+		Success:    true,
+		RTT:        100 * time.Millisecond,
+		Attempt:    1,
+		Timestamp:  time.Now(),
+		Protocol:   types.ProbeTypeTCP,
+		TargetIP:   "192.168.1.1",
 		TargetPort: 80,
-		SourceIP:  "192.168.1.2",
-		Role:      "client",
+		SourceIP:   "192.168.1.2",
+		Role:       "client",
 	}
 
 	event, err := normalizer.Normalize(ctx, result)
@@ -76,7 +77,7 @@ func TestNormalizer_Normalize(t *testing.T) {
 	if _, ok := event.Metrics["vmprober_probe_attempts_total"]; !ok {
 		t.Error("vmprober_probe_attempts_total metric not found")
 	}
-	
+
 	// Check presence of status label
 	if status, ok := event.Labels["status"]; !ok {
 		t.Error("status label not found")
@@ -129,11 +130,11 @@ func TestNormalizer_Dedup(t *testing.T) {
 
 	ctx := context.Background()
 	result := &types.ProbeResult{
-		Success:   true,
-		RTT:       100 * time.Millisecond,
-		Timestamp: time.Now(),
-		Protocol:  types.ProbeTypeTCP,
-		TargetIP:  "192.168.1.1",
+		Success:    true,
+		RTT:        100 * time.Millisecond,
+		Timestamp:  time.Now(),
+		Protocol:   types.ProbeTypeTCP,
+		TargetIP:   "192.168.1.1",
 		TargetPort: 80,
 	}
 
@@ -243,23 +244,23 @@ func TestNormalizer_SeriesIDGeneration(t *testing.T) {
 
 	// Create two identical results
 	result1 := &types.ProbeResult{
-		Success:   true,
-		RTT:       100 * time.Millisecond,
-		Timestamp: time.Now(),
-		Protocol:  types.ProbeTypeTCP,
-		TargetIP:  "192.168.1.1",
+		Success:    true,
+		RTT:        100 * time.Millisecond,
+		Timestamp:  time.Now(),
+		Protocol:   types.ProbeTypeTCP,
+		TargetIP:   "192.168.1.1",
 		TargetPort: 80,
-		SourceIP:  "192.168.1.2",
+		SourceIP:   "192.168.1.2",
 	}
 
 	result2 := &types.ProbeResult{
-		Success:   true,
-		RTT:       100 * time.Millisecond,
-		Timestamp: time.Now(),
-		Protocol:  types.ProbeTypeTCP,
-		TargetIP:  "192.168.1.1",
+		Success:    true,
+		RTT:        100 * time.Millisecond,
+		Timestamp:  time.Now(),
+		Protocol:   types.ProbeTypeTCP,
+		TargetIP:   "192.168.1.1",
 		TargetPort: 80,
-		SourceIP:  "192.168.1.2",
+		SourceIP:   "192.168.1.2",
 	}
 
 	event1, _ := normalizer.Normalize(ctx, result1)
@@ -271,13 +272,13 @@ func TestNormalizer_SeriesIDGeneration(t *testing.T) {
 
 	// Different results should generate different SeriesID
 	result3 := &types.ProbeResult{
-		Success:   true,
-		RTT:       100 * time.Millisecond,
-		Timestamp: time.Now(),
-		Protocol:  types.ProbeTypeTCP,
-		TargetIP:  "192.168.1.2", // Different IP
+		Success:    true,
+		RTT:        100 * time.Millisecond,
+		Timestamp:  time.Now(),
+		Protocol:   types.ProbeTypeTCP,
+		TargetIP:   "192.168.1.2", // Different IP
 		TargetPort: 80,
-		SourceIP:  "192.168.1.2",
+		SourceIP:   "192.168.1.2",
 	}
 
 	event3, _ := normalizer.Normalize(ctx, result3)
@@ -285,5 +286,3 @@ func TestNormalizer_SeriesIDGeneration(t *testing.T) {
 		t.Error("Different results should generate different SeriesID")
 	}
 }
-
-

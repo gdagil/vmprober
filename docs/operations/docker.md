@@ -7,7 +7,7 @@ This guide explains how to build Docker images for VMProber with support for mul
 ### Dockerfile (Alpine-based)
 - **Base image**: `alpine:latest`
 - **Size**: ~15-20 MB
-- **Features**: 
+- **Features**:
   - Full shell and utilities (wget, etc.)
   - Healthcheck support
   - CA certificates included
@@ -226,17 +226,17 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
-      
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v2
-      
+
       - name: Login to Registry
         uses: docker/login-action@v2
         with:
           registry: ${{ secrets.REGISTRY }}
           username: ${{ secrets.REGISTRY_USERNAME }}
           password: ${{ secrets.REGISTRY_PASSWORD }}
-      
+
       - name: Build and Push Alpine
         uses: docker/build-push-action@v4
         with:
@@ -251,7 +251,7 @@ jobs:
             VERSION=${{ github.ref_name }}
             BUILD_TIME=${{ github.event.head_commit.timestamp }}
             GIT_COMMIT=${{ github.sha }}
-      
+
       - name: Build and Push Scratch
         uses: docker/build-push-action@v4
         with:
@@ -276,4 +276,3 @@ jobs:
 4. **Build for your target platform** - test on the same architecture
 5. **Mount configs as volumes** - don't bake configs into images
 6. **Use healthchecks** - configure at orchestrator level for scratch images
-

@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/sirupsen/logrus"
+
 	"github.com/gdagil/vmprober/internal/types"
 )
 
@@ -25,14 +26,23 @@ type Scheduler struct {
 	logger  *logrus.Logger
 }
 
-// Stats scheduler statistics
+// Stats scheduler statistics (internal with mutex).
 type Stats struct {
-	TotalJobs     int          `json:"total_jobs"`
-	RunningJobs   int          `json:"running_jobs"`
-	QueuedJobs    int          `json:"queued_jobs"`
-	CompletedJobs int64        `json:"completed_jobs"`
-	FailedJobs    int64        `json:"failed_jobs"`
-	mu            sync.RWMutex `json:"-"` // Do not serialize mutex
+	TotalJobs     int   `json:"total_jobs"`
+	RunningJobs   int   `json:"running_jobs"`
+	QueuedJobs    int   `json:"queued_jobs"`
+	CompletedJobs int64 `json:"completed_jobs"`
+	FailedJobs    int64 `json:"failed_jobs"`
+	mu            sync.RWMutex
+}
+
+// StatsView is a copy of Stats for public API (without mutex).
+type StatsView struct {
+	TotalJobs     int   `json:"total_jobs"`
+	RunningJobs   int   `json:"running_jobs"`
+	QueuedJobs    int   `json:"queued_jobs"`
+	CompletedJobs int64 `json:"completed_jobs"`
+	FailedJobs    int64 `json:"failed_jobs"`
 }
 
 // NewScheduler creates a new scheduler
@@ -163,8 +173,8 @@ func (s *Scheduler) GetJobChan() <-chan *types.Job {
 	return s.jobChan
 }
 
-// GetStats returns statistics
-func (s *Scheduler) GetStats() Stats {
+// GetStats returns statistics.
+func (s *Scheduler) GetStats() StatsView {
 	s.mu.RLock()
 	// Recalculate FailedJobs based on current job state
 	// FailedJobs = number of jobs with "down" status
@@ -178,7 +188,14 @@ func (s *Scheduler) GetStats() Stats {
 
 	s.stats.mu.Lock()
 	s.stats.FailedJobs = failedJobsCount
-	statsCopy := *s.stats
+	// Copy individual fields to StatsView (without mutex)
+	statsCopy := StatsView{
+		TotalJobs:     s.stats.TotalJobs,
+		RunningJobs:   s.stats.RunningJobs,
+		QueuedJobs:    s.stats.QueuedJobs,
+		CompletedJobs: s.stats.CompletedJobs,
+		FailedJobs:    s.stats.FailedJobs,
+	}
 	s.stats.mu.Unlock()
 
 	return statsCopy
@@ -340,10 +357,10 @@ func (s *Scheduler) run(ctx context.Context) {
 	for {
 		select {
 		case <-ctx.Done():
-			s.logger.Debug("Scheduler run loop stopped (context cancelled)")
+			s.logger.Debug("Scheduler run loop stopped (context canceled)")
 			return
 		case <-s.ctx.Done():
-			s.logger.Debug("Scheduler run loop stopped (scheduler context cancelled)")
+			s.logger.Debug("Scheduler run loop stopped (scheduler context canceled)")
 			return
 		case <-ticker.C:
 			s.processJobs()

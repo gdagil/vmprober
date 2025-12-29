@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/sirupsen/logrus"
+
 	"github.com/gdagil/vmprober/internal/config"
 	"github.com/gdagil/vmprober/internal/types"
 )
@@ -31,7 +32,7 @@ type WALSegment struct {
 
 // NewWALSegment creates a new WAL segment
 func NewWALSegment(id, path string, cfg *config.WALConfig, compressor Compressor, logger *logrus.Logger) (*WALSegment, error) {
-	file, err := os.OpenFile(path, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0644)
+	file, err := os.OpenFile(path, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0o644)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create segment file: %w", err)
 	}
@@ -50,7 +51,7 @@ func NewWALSegment(id, path string, cfg *config.WALConfig, compressor Compressor
 
 // OpenWALSegment opens an existing WAL segment
 func OpenWALSegment(id, path string, cfg *config.WALConfig, compressor Compressor, logger *logrus.Logger) (*WALSegment, error) {
-	file, err := os.OpenFile(path, os.O_RDONLY, 0644)
+	file, err := os.OpenFile(path, os.O_RDONLY, 0o644)
 	if err != nil {
 		return nil, fmt.Errorf("failed to open segment file: %w", err)
 	}
@@ -374,7 +375,5 @@ func (s *WALSegment) saveSentIndex() error {
 		return err
 	}
 
-	return os.WriteFile(indexPath, data, 0644)
+	return os.WriteFile(indexPath, data, 0o600)
 }
-
-

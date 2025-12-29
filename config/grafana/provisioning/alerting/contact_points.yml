@@ -98,4 +98,3 @@ contactPoints:
         settings:
           url: "http://localhost:9999/webhook"
         disableResolveMessage: false
-

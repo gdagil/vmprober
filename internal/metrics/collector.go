@@ -11,28 +11,29 @@ import (
 	"time"
 
 	"github.com/VictoriaMetrics/metrics"
+
 	"github.com/gdagil/vmprober/internal/types"
 )
 
 // Collector collects and exports metrics
 type Collector struct {
 	// Probe metrics - use map to store metrics with labels
-	probeSuccess      map[string]*metrics.Counter
-	probeFailure      map[string]*metrics.Counter
-	probeRTT          map[string]*metrics.Histogram
-	probeAttempts     map[string]*metrics.Counter
+	probeSuccess  map[string]*metrics.Counter
+	probeFailure  map[string]*metrics.Counter
+	probeRTT      map[string]*metrics.Histogram
+	probeAttempts map[string]*metrics.Counter
 	// Job metrics
-	jobsTotal         *metrics.Gauge
-	jobsRunning        *metrics.Gauge
-	jobsFailed         *metrics.Gauge
+	jobsTotal   *metrics.Gauge
+	jobsRunning *metrics.Gauge
+	jobsFailed  *metrics.Gauge
 	// Values for job metrics
-	jobsTotalValue    float64
-	jobsRunningValue  float64
-	jobsFailedValue   float64
-	mu                 sync.RWMutex
-	namespace          string
-	enableJobMetrics   bool
-	customLabels       map[string]string  // Custom labels (e.g., job)
+	jobsTotalValue   float64
+	jobsRunningValue float64
+	jobsFailedValue  float64
+	mu               sync.RWMutex
+	namespace        string
+	enableJobMetrics bool
+	customLabels     map[string]string // Custom labels (e.g., job)
 }
 
 // NewCollector creates a new metrics collector
@@ -49,13 +50,13 @@ func NewCollector(namespace string, enableJobMetrics bool, customLabels map[stri
 	}
 
 	collector := &Collector{
-		namespace:            namespace,
-		enableJobMetrics:     enableJobMetrics,
-		customLabels:         labels,
-		probeSuccess:         make(map[string]*metrics.Counter),
-		probeFailure:         make(map[string]*metrics.Counter),
-		probeRTT:             make(map[string]*metrics.Histogram),
-		probeAttempts:        make(map[string]*metrics.Counter),
+		namespace:        namespace,
+		enableJobMetrics: enableJobMetrics,
+		customLabels:     labels,
+		probeSuccess:     make(map[string]*metrics.Counter),
+		probeFailure:     make(map[string]*metrics.Counter),
+		probeRTT:         make(map[string]*metrics.Histogram),
+		probeAttempts:    make(map[string]*metrics.Counter),
 	}
 
 	// Initialize job metrics only if they are enabled
@@ -97,16 +98,16 @@ func (c *Collector) getMetricKey(name string, instance, targetIP, port, protocol
 			instance = targetIP
 		}
 	}
-	
+
 	// Form base labels according to Prometheus standards
-	labels := fmt.Sprintf(`instance="%s",target_ip="%s",port="%s",protocol="%s"`, 
+	labels := fmt.Sprintf(`instance="%s",target_ip="%s",port="%s",protocol="%s"`,
 		instance, targetIP, port, protocol)
-	
+
 	// Add custom labels (e.g., job)
 	for k, v := range c.customLabels {
 		labels += fmt.Sprintf(`,%s="%s"`, k, v)
 	}
-	
+
 	return fmt.Sprintf(`%s_%s{%s}`, c.namespace, name, labels)
 }
 
@@ -160,9 +161,9 @@ func (c *Collector) Record(ctx context.Context, result *types.ProbeResult) error
 	// target_ip = IP address that was actually connected to (e.g., "142.250.109.100")
 	// port = port (e.g., "443")
 	// protocol = protocol (e.g., "tcp")
-	
+
 	hostname := result.TargetHost // hostname from configuration (e.g., "google.com")
-	targetIP := result.TargetIP    // IP address that was connected to (e.g., "142.250.109.100")
+	targetIP := result.TargetIP   // IP address that was connected to (e.g., "142.250.109.100")
 	port := "0"
 	if result.TargetPort > 0 {
 		port = fmt.Sprintf("%d", result.TargetPort)
@@ -174,12 +175,12 @@ func (c *Collector) Record(ctx context.Context, result *types.ProbeResult) error
 	if hostname == "" {
 		hostname = targetIP
 	}
-	
+
 	// If targetIP is empty, use hostname
 	if targetIP == "" {
 		targetIP = "unknown"
 	}
-	
+
 	// instance = hostname:port (standard Prometheus format)
 	instance := hostname
 	if port != "0" && port != "" {
@@ -263,9 +264,9 @@ func (c *Collector) parsePrometheusMetrics(promData string) []types.Metric {
 		valueStr := matches[3]
 
 		// Skip VictoriaMetrics and Go runtime service metrics
-		if strings.HasPrefix(metricName, "vm_") || 
-		   strings.HasPrefix(metricName, "process_") || 
-		   strings.HasPrefix(metricName, "go_") {
+		if strings.HasPrefix(metricName, "vm_") ||
+			strings.HasPrefix(metricName, "process_") ||
+			strings.HasPrefix(metricName, "go_") {
 			continue
 		}
 
@@ -282,7 +283,7 @@ func (c *Collector) parsePrometheusMetrics(promData string) []types.Metric {
 
 		// Parse labels
 		labels := c.parseLabels(labelsStr)
-		
+
 		// Add custom labels if they don't exist
 		for k, v := range c.customLabels {
 			if _, exists := labels[k]; !exists {
@@ -328,10 +329,10 @@ func (c *Collector) parseLabels(labelsStr string) map[string]string {
 		if len(match) >= 3 {
 			key := match[1]
 			value := match[2]
-		// Skip service label le, which is used for Prometheus histogram buckets
-		if key == "le" {
-			continue
-		}
+			// Skip service label le, which is used for Prometheus histogram buckets
+			if key == "le" {
+				continue
+			}
 			labels[key] = value
 		}
 	}

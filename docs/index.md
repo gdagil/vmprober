@@ -110,20 +110,20 @@ flowchart TB
             DNS["DNS Probe"]
             gRPC["gRPC Probe"]
         end
-        
+
         Scheduler["Scheduler"]
-        
+
         Probes --> Scheduler
-        
+
         Scheduler --> Normalizer["Normalizer"]
         Scheduler --> Metrics["Metrics Collector"]
-        
+
         Normalizer --> WAL["WAL Buffer"]
         Metrics --> MetricsEndpoint["/metrics endpoint"]
-        
+
         WAL --> VMAdapter["VM Push Adapter"]
     end
-    
+
     Prometheus["Prometheus"] -.->|scrape| MetricsEndpoint
     VMAdapter -->|push| VictoriaMetrics["VictoriaMetrics"]
 ```
@@ -151,7 +151,7 @@ targets:
       port: 443
       proto: tcp
       interval: 30s
-    
+
     # HTTPS health check
     - host: "api.example.com"
       port: 443
@@ -161,7 +161,7 @@ targets:
         method: GET
         path: /health
         expected_status_code: 200
-    
+
     # DNS check
     - host: "8.8.8.8"
       port: 53
@@ -169,7 +169,7 @@ targets:
       dns:
         query_name: "google.com"
         query_type: A
-    
+
     # gRPC health check
     - host: "grpc.example.com"
       port: 50051

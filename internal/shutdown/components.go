@@ -129,13 +129,13 @@ func (c *NormalizerComponent) Priority() int {
 	return 5
 }
 
-// ObservabilityComponent wrapper for observability manager
+// ObservabilityComponent wrapper for observability manager.
 type ObservabilityComponent struct {
-	obs observability.ObservabilityManager
+	obs observability.Manager
 }
 
-// NewObservabilityComponent creates a new observability wrapper
-func NewObservabilityComponent(o observability.ObservabilityManager) ShutdownComponent {
+// NewObservabilityComponent creates a new observability wrapper.
+func NewObservabilityComponent(o observability.Manager) ShutdownComponent {
 	return &ObservabilityComponent{obs: o}
 }
 
@@ -150,4 +150,3 @@ func (c *ObservabilityComponent) Name() string {
 func (c *ObservabilityComponent) Priority() int {
 	return 6 // Low priority - stop last
 }
-

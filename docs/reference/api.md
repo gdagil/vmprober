@@ -100,5 +100,3 @@ curl https://localhost:8429/health
 
 - [Metrics Reference](metrics.md) - All exported metrics
 - [Operations: Monitoring](../operations/monitoring.md) - Setting up monitoring
-
-

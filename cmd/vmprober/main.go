@@ -10,6 +10,8 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/sirupsen/logrus"
+
 	"github.com/gdagil/vmprober/internal/adapter"
 	"github.com/gdagil/vmprober/internal/config"
 	internalmetrics "github.com/gdagil/vmprober/internal/metrics"
@@ -22,7 +24,6 @@ import (
 	"github.com/gdagil/vmprober/internal/types"
 	"github.com/gdagil/vmprober/internal/wal"
 	"github.com/gdagil/vmprober/pkg/interfaces"
-	"github.com/sirupsen/logrus"
 )
 
 var (
@@ -31,7 +32,7 @@ var (
 	GitCommit = "unknown"
 )
 
-// setupLogger configures the logger based on configuration
+// setupLogger configures the logger based on configuration.
 func setupLogger(cfg *config.Config, cmdLogLevel string) *logrus.Logger {
 	logger := logrus.New()
 
@@ -74,13 +75,9 @@ func setupLogger(cfg *config.Config, cmdLogLevel string) *logrus.Logger {
 	case "stderr":
 		logger.SetOutput(os.Stderr)
 	case "file":
-		if cfg.Logging.File.Path != "" {
-			// TODO: Implement file output with rotation
-			// For simplicity, using standard output for now
-			logger.SetOutput(os.Stdout)
-		} else {
-			logger.SetOutput(os.Stdout)
-		}
+		// TODO: Implement file output with rotation
+		// For simplicity, using standard output for now
+		logger.SetOutput(os.Stdout)
 	default:
 		// Default to stdout
 		logger.SetOutput(os.Stdout)
@@ -166,7 +163,7 @@ func main() {
 	}
 
 	// Create observability manager
-	obsManager := observability.NewObservabilityManager(&cfg.Observability, logger)
+	obsManager := observability.NewManager(&cfg.Observability, logger)
 	if err := obsManager.Start(context.Background()); err != nil {
 		logger.WithError(err).Warn("Failed to start observability manager")
 	}
@@ -277,7 +274,7 @@ func main() {
 					go func(j *types.Job) {
 						defer func() { <-probeSemaphore }() // Release slot after completion
 						taskScheduler.MarkJobStarted(j.ID)
-						executeProbe(ctx, j, probeFactory, metricsCollector, resultNormalizer, walManager, vmAdapter, logger, taskScheduler, cfg.Probes, cfg.Scheduler, cfg)
+						executeProbe(ctx, j, probeFactory, metricsCollector, resultNormalizer, walManager, vmAdapter, logger, taskScheduler, &cfg.Probes, &cfg.Scheduler, cfg)
 					}(job)
 				case <-ctx.Done():
 					return
@@ -389,7 +386,7 @@ func main() {
 	logger.Info("VMProber stopped")
 }
 
-// replayWALRecords replays unsent records from WAL at application startup
+// replayWALRecords replays unsent records from WAL at application startup.
 func replayWALRecords(ctx context.Context, walManager wal.WALManager, vmAdapter adapter.VictoriaMetricsAdapter, logger *logrus.Logger, cfg *config.Config) {
 	logger.Info("Starting WAL replay to send unsent records...")
 
@@ -415,7 +412,7 @@ func replayWALRecords(ctx context.Context, walManager wal.WALManager, vmAdapter 
 	for _, record := range unsentRecords {
 		select {
 		case <-ctx.Done():
-			logger.Warn("WAL replay cancelled due to context cancellation")
+			logger.Warn("WAL replay canceled due to context cancellation")
 			return
 		default:
 		}
@@ -525,8 +522,8 @@ func replayWALRecords(ctx context.Context, walManager wal.WALManager, vmAdapter 
 	}
 }
 
-// buildProbeConfig creates probe configuration from global configuration
-func buildProbeConfig(probeType types.ProbeType, probesConfig config.ProbesConfig, schedulerConfig config.SchedulerConfig) interface{} {
+// buildProbeConfig creates probe configuration from global configuration.
+func buildProbeConfig(probeType types.ProbeType, probesConfig *config.ProbesConfig, schedulerConfig *config.SchedulerConfig) interface{} {
 	switch probeType {
 	case types.ProbeTypeTCP:
 		connectTimeout := probesConfig.TCP.ConnectTimeout
@@ -583,7 +580,7 @@ func buildProbeConfig(probeType types.ProbeType, probesConfig config.ProbesConfi
 	}
 }
 
-// executeProbe executes probe and reschedules task
+// executeProbe executes probe and reschedules task.
 func executeProbe(
 	ctx context.Context,
 	job *types.Job,
@@ -594,8 +591,8 @@ func executeProbe(
 	vmAdapter adapter.VictoriaMetricsAdapter,
 	logger *logrus.Logger,
 	sched *scheduler.Scheduler,
-	probesConfig config.ProbesConfig,
-	schedulerConfig config.SchedulerConfig,
+	probesConfig *config.ProbesConfig,
+	schedulerConfig *config.SchedulerConfig,
 	cfg *config.Config,
 ) {
 	// Create probe configuration

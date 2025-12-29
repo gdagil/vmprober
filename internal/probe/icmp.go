@@ -8,11 +8,12 @@ import (
 	"sync"
 	"time"
 
-	"github.com/gdagil/vmprober/internal/types"
-	"github.com/gdagil/vmprober/pkg/interfaces"
 	"golang.org/x/net/icmp"
 	"golang.org/x/net/ipv4"
 	"golang.org/x/net/ipv6"
+
+	"github.com/gdagil/vmprober/internal/types"
+	"github.com/gdagil/vmprober/pkg/interfaces"
 )
 
 // ICMPProbe implements ICMP probes
@@ -57,11 +58,8 @@ func NewICMPProbe(config *ICMPConfig) interfaces.Probe {
 	conn, err = icmp.ListenPacket("ip4:icmp", "0.0.0.0")
 	if err != nil {
 		// If that failed, try IPv6
-		conn, err = icmp.ListenPacket("ip6:ipv6-icmp", "::")
-		if err != nil {
-			// If that also failed, return probe without socket
-			// Socket will be created on first execution
-		}
+		// If that also fails, probe will work without pre-created socket
+		conn, _ = icmp.ListenPacket("ip6:ipv6-icmp", "::")
 	}
 
 	return &ICMPProbe{
@@ -367,4 +365,3 @@ func (p *ICMPProbe) Close() error {
 	}
 	return nil
 }
-

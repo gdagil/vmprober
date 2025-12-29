@@ -242,5 +242,3 @@ curl http://localhost:8429/metrics | grep vmprober_probe_success_total
 - [Configuration Guide](configuration.md) - Complete configuration reference
 - [Operations: Deployment](../operations/deployment.md) - Production deployment
 - [Guides: Monitoring Setup](../guides/monitoring-setup.md) - Set up Grafana
-
-

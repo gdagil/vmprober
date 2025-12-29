@@ -126,4 +126,3 @@ func TestE2E_DNSProbes_Latency(t *testing.T) {
 		t.Log("No RTT metrics found - DNS probes may not have completed successfully yet")
 	}
 }
-

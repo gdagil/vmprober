@@ -35,4 +35,3 @@ SyslogIdentifier=vmprober
 
 [Install]
 WantedBy=multi-user.target
-

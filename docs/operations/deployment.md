@@ -175,5 +175,3 @@ sudo systemctl start vmprober
 - [Configuration Management](configuration.md) - Managing configs in production
 - [Monitoring](monitoring.md) - Setting up monitoring
 - [Guides: Deployment Guide](../guides/deployment-guide.md) - Complete walkthrough
-
-

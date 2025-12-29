@@ -5,22 +5,21 @@
       <stop offset="100%" style="stop-color:#009B77"/>
     </linearGradient>
   </defs>
-  
+
   <!-- Mini probe icon -->
   <g transform="translate(5, 5)">
     <!-- Probe arrow -->
     <path d="M 0 8 L 22 20 L 0 32 L 0 26 L 14 20 L 0 14 Z" fill="url(#probeGrad)"/>
-    
+
     <!-- Signal waves -->
     <path d="M 28 12 Q 34 15, 34 20 Q 34 25, 28 28" fill="none" stroke="#00D4AA" stroke-width="2" stroke-linecap="round" opacity="0.6"/>
     <path d="M 32 8 Q 40 13, 40 20 Q 40 27, 32 32" fill="none" stroke="#00D4AA" stroke-width="2" stroke-linecap="round" opacity="0.4"/>
-    
+
     <!-- Connection dot -->
     <circle cx="26" cy="20" r="3" fill="#00D4AA"/>
   </g>
-  
+
   <!-- Text -->
   <text x="55" y="33" font-family="'Segoe UI', Roboto, sans-serif" font-size="22" font-weight="600" fill="#00D4AA">vm</text>
   <text x="87" y="33" font-family="'Segoe UI', Roboto, sans-serif" font-size="22" font-weight="600" fill="#2d3748">prober</text>
 </svg>
-

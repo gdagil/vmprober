@@ -111,8 +111,8 @@ func TestPrometheusFormatter_Format_Summary(t *testing.T) {
 			Count:     5,
 			Sum:       50.0,
 			Quantiles: map[float64]float64{
-				0.5: 10.0,
-				0.9: 20.0,
+				0.5:  10.0,
+				0.9:  20.0,
 				0.99: 30.0,
 			},
 		},
@@ -180,4 +180,3 @@ func TestPrometheusFormatter_Format_EmptyMetrics(t *testing.T) {
 	}
 	// Empty byte slice is valid for empty metrics
 }
-

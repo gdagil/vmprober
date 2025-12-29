@@ -84,7 +84,7 @@ targets:
       port: 80
       protocols: ["tcp"]
       interval: 30s
-    
+
     # UDP and TCP probes for DNS
     - host: "8.8.8.8"
       port: 53
@@ -92,14 +92,14 @@ targets:
       interval: 60s
       labels:
         service: "dns"
-    
+
     # ICMP ping
     - host: "1.1.1.1"
       protocols: ["icmp"]
       interval: 30s
       labels:
         service: "ping"
-    
+
     # HTTP health check
     - host: "api.example.com"
       port: 443
@@ -109,7 +109,7 @@ targets:
         method: "GET"
         path: "/health"
         expected_status_code: 200
-    
+
     # DNS resolution check
     - host: "8.8.8.8"
       port: 53
@@ -118,7 +118,7 @@ targets:
       dns:
         query_name: "google.com"
         query_type: "A"
-    
+
     # gRPC health check
     - host: "grpc.example.com"
       port: 50051
@@ -239,5 +239,3 @@ scheduler:
 - [Basic Usage](basic-usage.md) - Common usage patterns
 - [Operations: Deployment](../operations/deployment.md) - Deploy to production
 - [Guides: Monitoring Setup](../guides/monitoring-setup.md) - Set up Grafana dashboards
-
-

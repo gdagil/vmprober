@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/sirupsen/logrus"
+
 	"github.com/gdagil/vmprober/internal/config"
 	"github.com/gdagil/vmprober/internal/types"
 )
@@ -54,12 +55,12 @@ type WALFilter struct {
 
 // WALStats represents WAL statistics
 type WALStats struct {
-	TotalRecords    int64         `json:"total_records"`
-	TotalSize       int64         `json:"total_size"`
-	SegmentCount    int           `json:"segment_count"`
-	ActiveSegmentID string        `json:"active_segment_id"`
-	LastWriteTime   time.Time     `json:"last_write_time"`
-	LastRotateTime  time.Time     `json:"last_rotate_time"`
+	TotalRecords    int64     `json:"total_records"`
+	TotalSize       int64     `json:"total_size"`
+	SegmentCount    int       `json:"segment_count"`
+	ActiveSegmentID string    `json:"active_segment_id"`
+	LastWriteTime   time.Time `json:"last_write_time"`
+	LastRotateTime  time.Time `json:"last_rotate_time"`
 }
 
 // DefaultWALManager is the WAL manager implementation
@@ -90,7 +91,7 @@ func NewWALManager(cfg *config.WALConfig, logger *logrus.Logger) (WALManager, er
 	}
 
 	// Create directory if needed
-	if err := os.MkdirAll(dir, 0755); err != nil {
+	if err := os.MkdirAll(dir, 0o755); err != nil {
 		return nil, fmt.Errorf("failed to create WAL directory: %w", err)
 	}
 
@@ -260,7 +261,7 @@ func (w *DefaultWALManager) Close(ctx context.Context) error {
 	case <-done:
 		// Goroutines finished
 	case <-ctx.Done():
-		// Context cancelled, but continue closing
+		// Context canceled, but continue closing
 	case <-time.After(5 * time.Second):
 		// Waiting timeout
 		w.logger.Warn("Timeout waiting for background goroutines to finish")
@@ -440,7 +441,7 @@ func parseSize(s string) int64 {
 	var size int64
 	var unit string
 
-	fmt.Sscanf(s, "%d%s", &size, &unit)
+	_, _ = fmt.Sscanf(s, "%d%s", &size, &unit)
 
 	switch unit {
 	case "KB", "kb":
@@ -555,4 +556,3 @@ func (w *DefaultWALManager) DeleteSentRecords(ctx context.Context, olderThan tim
 
 	return nil
 }
-

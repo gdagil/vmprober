@@ -330,4 +330,3 @@ Docker Compose services require:
 - [Configuration](../getting-started/configuration.md) - Configuration reference
 - [Troubleshooting](../operations/troubleshooting.md) - Troubleshooting guide
 - [Metrics Reference](../reference/metrics.md) - Metrics documentation
-

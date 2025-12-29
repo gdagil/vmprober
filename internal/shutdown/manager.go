@@ -36,12 +36,12 @@ type ShutdownManager interface {
 
 // ShutdownStatus shutdown status
 type ShutdownStatus struct {
-	InProgress   bool                   `json:"in_progress"`
-	Components   map[string]bool         `json:"components"`
-	StartTime    time.Time               `json:"start_time,omitempty"`
-	EndTime      time.Time               `json:"end_time,omitempty"`
-	Duration     time.Duration           `json:"duration,omitempty"`
-	Errors       map[string]string       `json:"errors,omitempty"`
+	InProgress bool              `json:"in_progress"`
+	Components map[string]bool   `json:"components"`
+	StartTime  time.Time         `json:"start_time,omitempty"`
+	EndTime    time.Time         `json:"end_time,omitempty"`
+	Duration   time.Duration     `json:"duration,omitempty"`
+	Errors     map[string]string `json:"errors,omitempty"`
 }
 
 // DefaultShutdownManager shutdown manager implementation
@@ -153,4 +153,3 @@ func (m *DefaultShutdownManager) GetStatus() *ShutdownStatus {
 
 	return &status
 }
-

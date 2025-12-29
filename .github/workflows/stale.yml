@@ -14,13 +14,13 @@ jobs:
   stale:
     name: Mark Stale Issues and PRs
     runs-on: ubuntu-latest
-    
+
     steps:
       - name: Mark stale issues and pull requests
         uses: actions/stale@v9
         with:
           repo-token: ${{ secrets.GITHUB_TOKEN }}
-          
+
           # Issue settings
           days-before-issue-stale: 60
           days-before-issue-close: 14
@@ -28,22 +28,22 @@ jobs:
           stale-issue-message: |
             This issue has been automatically marked as stale because it has not had recent activity.
             It will be closed in 14 days if no further activity occurs.
-            
+
             If this issue is still relevant:
             - Add a comment with an update
             - Remove the `stale` label
-            
+
             Thank you for your contributions! 🙏
           close-issue-message: |
             This issue has been automatically closed due to inactivity.
-            
+
             If you believe this issue should be reopened, please:
             1. Add a comment explaining why
             2. Open a new issue if needed
-            
+
             Thank you!
           exempt-issue-labels: 'pinned,security,bug,enhancement,good first issue,help wanted'
-          
+
           # PR settings
           days-before-pr-stale: 30
           days-before-pr-close: 7
@@ -51,23 +51,22 @@ jobs:
           stale-pr-message: |
             This pull request has been automatically marked as stale because it has not had recent activity.
             It will be closed in 7 days if no further activity occurs.
-            
+
             If you're still working on this:
             - Push new commits
             - Add a comment
             - Remove the `stale` label
-            
+
             If you need help, feel free to ask! 💬
           close-pr-message: |
             This pull request has been automatically closed due to inactivity.
-            
+
             Feel free to reopen it when you're ready to continue working on it.
-            
+
             Thank you for your contribution! 🙏
           exempt-pr-labels: 'pinned,security,work-in-progress'
-          
+
           # Operations settings
           operations-per-run: 100
           ascending: true
           remove-stale-when-updated: true
-

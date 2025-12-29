@@ -67,4 +67,3 @@ dependencies:
 grafana:
   - changed-files:
       - any-glob-to-any-file: 'config/grafana/**'
-

@@ -9,9 +9,10 @@ import (
 	"sync"
 	"time"
 
+	"github.com/sirupsen/logrus"
+
 	"github.com/gdagil/vmprober/internal/config"
 	"github.com/gdagil/vmprober/internal/types"
-	"github.com/sirupsen/logrus"
 )
 
 // VictoriaMetricsAdapter is an adapter for sending metrics to VictoriaMetrics
@@ -28,12 +29,12 @@ type VictoriaMetricsAdapter interface {
 	// Flush forcefully sends all buffered metrics
 	Flush(ctx context.Context) error
 
-	// GetStats returns adapter statistics
-	GetStats() *AdapterStats
+	// GetStats returns adapter statistics.
+	GetStats() *Stats
 }
 
-// AdapterStats represents adapter statistics
-type AdapterStats struct {
+// Stats represents adapter statistics.
+type Stats struct {
 	TotalPushed  int64         `json:"total_pushed"`
 	TotalFailed  int64         `json:"total_failed"`
 	RetryCount   int64         `json:"retry_count"`
@@ -51,7 +52,7 @@ type DefaultVictoriaMetricsAdapter struct {
 	batchQueue  chan []types.Metric
 	mu          sync.RWMutex
 	logger      *logrus.Logger
-	stats       *AdapterStats
+	stats       *Stats
 	ctx         context.Context
 	cancel      context.CancelFunc
 	wg          sync.WaitGroup
@@ -99,7 +100,7 @@ func NewVictoriaMetricsAdapter(cfg *config.PushConfig, logger *logrus.Logger) (V
 		client:      client,
 		batchQueue:  make(chan []types.Metric, cfg.Batch.Size),
 		logger:      logger,
-		stats:       &AdapterStats{},
+		stats:       &Stats{},
 		ctx:         ctx,
 		cancel:      cancel,
 		formatter:   NewJSONLineFormatter(), // Use JSON line format for vminsert (/api/v1/import)
@@ -128,8 +129,8 @@ func (a *DefaultVictoriaMetricsAdapter) Start(ctx context.Context) error {
 	return nil
 }
 
-// Stop stops the adapter
-func (a *DefaultVictoriaMetricsAdapter) Stop(ctx context.Context) error {
+// Stop stops the adapter.
+func (a *DefaultVictoriaMetricsAdapter) Stop(_ context.Context) error {
 	a.cancel()
 	close(a.batchQueue)
 	a.wg.Wait()
@@ -183,8 +184,8 @@ func (a *DefaultVictoriaMetricsAdapter) Flush(ctx context.Context) error {
 	}
 }
 
-// GetStats returns adapter statistics
-func (a *DefaultVictoriaMetricsAdapter) GetStats() *AdapterStats {
+// GetStats returns adapter statistics.
+func (a *DefaultVictoriaMetricsAdapter) GetStats() *Stats {
 	a.mu.RLock()
 	defer a.mu.RUnlock()
 
@@ -346,7 +347,10 @@ func (a *DefaultVictoriaMetricsAdapter) sendToEndpoint(ctx context.Context, endp
 	defer resp.Body.Close()
 
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		body, _ := io.ReadAll(resp.Body)
+		body, err := io.ReadAll(resp.Body)
+		if err != nil {
+			return fmt.Errorf("unexpected status code: %d, failed to read body: %w", resp.StatusCode, err)
+		}
 		return fmt.Errorf("unexpected status code: %d, body: %s", resp.StatusCode, string(body))
 	}
 

@@ -20,12 +20,12 @@ templates:
       *Instance:* {{ .Labels.instance }}
       {{ if .Labels.target_ip }}*Target IP:* {{ .Labels.target_ip }}{{ end }}
       {{ if .Labels.protocol }}*Protocol:* {{ .Labels.protocol }}{{ end }}
-      
+
       *Summary:* {{ .Annotations.summary }}
-      
+
       *Description:*
       {{ .Annotations.description }}
-      
+
       *Started:* {{ .StartsAt.Format "2006-01-02 15:04:05 MST" }}
       {{ if .GeneratorURL }}*Dashboard:* {{ .GeneratorURL }}{{ end }}
       {{ end }}
@@ -38,9 +38,9 @@ templates:
       *Alert:* {{ .Labels.alertname }}
       *Instance:* {{ .Labels.instance }}
       {{ if .Labels.target_ip }}*Target IP:* {{ .Labels.target_ip }}{{ end }}
-      
+
       *Summary:* {{ .Annotations.summary }}
-      
+
       *Resolved:* {{ .EndsAt.Format "2006-01-02 15:04:05 MST" }}
       *Duration:* {{ (.EndsAt.Sub .StartsAt).Round 1000000000 }}
       {{ end }}
@@ -188,4 +188,3 @@ templates:
       </body>
       </html>
       {{ end }}
-

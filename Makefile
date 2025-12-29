@@ -1,4 +1,5 @@
-.PHONY: build test clean run docker-build docker-run help docs docs-install docs-serve docs-build
+.PHONY: build test clean run docker-build docker-run help docs docs-install docs-serve docs-build \
+        pre-commit pre-commit-install pre-commit-run tools validate
 
 # Variables
 BINARY_NAME=vmprober
@@ -68,24 +69,48 @@ docs-build:
 # Documentation - shortcut for serve
 docs: docs-serve
 
+# Install development tools (golangci-lint, pre-commit, etc.)
+tools:
+	@echo "Installing development tools..."
+	@chmod +x scripts/install-tools.sh
+	@./scripts/install-tools.sh
+
+# Install pre-commit hooks
+pre-commit-install:
+	@echo "Installing pre-commit hooks..."
+	@pre-commit install
+
+# Run pre-commit on all files
+pre-commit-run:
+	@echo "Running pre-commit on all files..."
+	@pre-commit run --all-files
+
+# Alias for pre-commit-run
+pre-commit: pre-commit-run
+
+# Validate all (lint + test) - useful before commit
+validate: fmt lint test
+	@echo "All validations passed!"
+
 # Help
 help:
 	@echo "Available targets:"
-	@echo "  build          - Build the application"
-	@echo "  test           - Run tests"
-	@echo "  test-coverage  - Run tests with coverage"
-	@echo "  clean          - Clean build artifacts"
-	@echo "  run            - Build and run the application"
-	@echo "  fmt            - Format code"
-	@echo "  lint           - Lint code"
-	@echo "  docker-build   - Build Docker image"
-	@echo "  docker-run     - Build and run Docker container"
-	@echo "  deps           - Install dependencies"
-	@echo "  docs           - Serve documentation locally (alias for docs-serve)"
-	@echo "  docs-install   - Install documentation dependencies (bundle install)"
-	@echo "  docs-serve     - Serve documentation at http://localhost:4000"
-	@echo "  docs-build     - Build static documentation site"
-	@echo "  help           - Show this help message"
-
-
-
+	@echo "  build            - Build the application"
+	@echo "  test             - Run tests"
+	@echo "  test-coverage    - Run tests with coverage"
+	@echo "  clean            - Clean build artifacts"
+	@echo "  run              - Build and run the application"
+	@echo "  fmt              - Format code"
+	@echo "  lint             - Lint code"
+	@echo "  docker-build     - Build Docker image"
+	@echo "  docker-run       - Build and run Docker container"
+	@echo "  deps             - Install dependencies"
+	@echo "  tools            - Install development tools (golangci-lint, pre-commit)"
+	@echo "  pre-commit       - Run pre-commit on all files"
+	@echo "  pre-commit-install - Install pre-commit hooks"
+	@echo "  validate         - Run fmt, lint and test"
+	@echo "  docs             - Serve documentation locally (alias for docs-serve)"
+	@echo "  docs-install     - Install documentation dependencies (bundle install)"
+	@echo "  docs-serve       - Serve documentation at http://localhost:4000"
+	@echo "  docs-build       - Build static documentation site"
+	@echo "  help             - Show this help message"

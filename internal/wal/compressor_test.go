@@ -11,7 +11,7 @@ func TestGzipCompressor_CompressDecompress(t *testing.T) {
 	}
 
 	originalData := []byte("test data for compression")
-	
+
 	compressed, err := compressor.Compress(originalData)
 	if err != nil {
 		t.Fatalf("Failed to compress: %v", err)
@@ -27,7 +27,7 @@ func TestGzipCompressor_CompressDecompress(t *testing.T) {
 	}
 
 	if string(decompressed) != string(originalData) {
-		t.Errorf("Decompressed data doesn't match original. Expected: %s, Got: %s", 
+		t.Errorf("Decompressed data doesn't match original. Expected: %s, Got: %s",
 			string(originalData), string(decompressed))
 	}
 }
@@ -55,7 +55,7 @@ func TestGzipCompressor_LargeData(t *testing.T) {
 	}
 
 	if len(decompressed) != len(originalData) {
-		t.Errorf("Decompressed size doesn't match. Expected: %d, Got: %d", 
+		t.Errorf("Decompressed size doesn't match. Expected: %d, Got: %d",
 			len(originalData), len(decompressed))
 	}
 
@@ -80,5 +80,3 @@ func TestNewCompressor_EmptyType(t *testing.T) {
 		t.Error("Expected nil compressor for empty type")
 	}
 }
-
-

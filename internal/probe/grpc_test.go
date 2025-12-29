@@ -340,4 +340,3 @@ func TestGRPCProbe_TLSConfig(t *testing.T) {
 		t.Errorf("Expected server name secure.example.com, got %s", probe.config.ServerName)
 	}
 }
-

@@ -8,18 +8,18 @@ import (
 
 // Config is the main VMProber configuration
 type Config struct {
-	Listen       ListenConfig       `yaml:"listen" json:"listen"`
-	Pull         PullConfig         `yaml:"pull" json:"pull"`
-	Push         PushConfig         `yaml:"push" json:"push"`
-	Scheduler    SchedulerConfig    `yaml:"scheduler" json:"scheduler"`
-	Targets      TargetsConfig      `yaml:"targets" json:"targets"`
-	Probes       ProbesConfig       `yaml:"probes" json:"probes"`
-	Metrics      MetricsConfig      `yaml:"metrics" json:"metrics"`
-	WAL          WALConfig          `yaml:"wal" json:"wal"`
-	Logging      LoggingConfig      `yaml:"logging" json:"logging"`
-	TLS          TLSConfig          `yaml:"tls" json:"tls"`
+	Listen        ListenConfig        `yaml:"listen" json:"listen"`
+	Pull          PullConfig          `yaml:"pull" json:"pull"`
+	Push          PushConfig          `yaml:"push" json:"push"`
+	Scheduler     SchedulerConfig     `yaml:"scheduler" json:"scheduler"`
+	Targets       TargetsConfig       `yaml:"targets" json:"targets"`
+	Probes        ProbesConfig        `yaml:"probes" json:"probes"`
+	Metrics       MetricsConfig       `yaml:"metrics" json:"metrics"`
+	WAL           WALConfig           `yaml:"wal" json:"wal"`
+	Logging       LoggingConfig       `yaml:"logging" json:"logging"`
+	TLS           TLSConfig           `yaml:"tls" json:"tls"`
 	Observability ObservabilityConfig `yaml:"observability" json:"observability"`
-	
+
 	// Metadata
 	Version   string    `yaml:"-" json:"version,omitempty"`
 	Source    string    `yaml:"-" json:"source,omitempty"`
@@ -77,7 +77,7 @@ type AuthConfig struct {
 // RetryConfig is the retry configuration
 type RetryConfig struct {
 	MaxAttempts  int           `yaml:"max_attempts" json:"max_attempts"`
-	Backoff     string        `yaml:"backoff" json:"backoff"`
+	Backoff      string        `yaml:"backoff" json:"backoff"`
 	InitialDelay time.Duration `yaml:"initial_delay" json:"initial_delay"`
 	MaxDelay     time.Duration `yaml:"max_delay" json:"max_delay"`
 	Multiplier   float64       `yaml:"multiplier" json:"multiplier"`
@@ -116,12 +116,12 @@ type SchedulerConfig struct {
 
 // TargetsConfig is the targets configuration
 type TargetsConfig struct {
-	Static         []TargetConfig    `yaml:"static" json:"static"`
-	Files          []FileConfig      `yaml:"files" json:"files"`
-	URLs           []URLConfig       `yaml:"urls" json:"urls"`
-	Commands       []CommandConfig   `yaml:"commands" json:"commands"`
-	ReloadInterval time.Duration     `yaml:"reload_interval" json:"reload_interval"`
-	HotReload      bool              `yaml:"hot_reload" json:"hot_reload"`
+	Static         []TargetConfig  `yaml:"static" json:"static"`
+	Files          []FileConfig    `yaml:"files" json:"files"`
+	URLs           []URLConfig     `yaml:"urls" json:"urls"`
+	Commands       []CommandConfig `yaml:"commands" json:"commands"`
+	ReloadInterval time.Duration   `yaml:"reload_interval" json:"reload_interval"`
+	HotReload      bool            `yaml:"hot_reload" json:"hot_reload"`
 }
 
 // TargetConfig is the target configuration
@@ -130,8 +130,8 @@ type TargetConfig struct {
 	Port      int               `yaml:"port" json:"port"`
 	Protocols []string          `yaml:"protocols" json:"protocols"` // List of protocols as strings
 	Interval  time.Duration     `yaml:"interval" json:"interval"`
-	Timeout  time.Duration     `yaml:"timeout" json:"timeout"`
-	Labels   map[string]string `yaml:"labels" json:"labels"`
+	Timeout   time.Duration     `yaml:"timeout" json:"timeout"`
+	Labels    map[string]string `yaml:"labels" json:"labels"`
 }
 
 // UnmarshalYAML custom parser for correct handling of protocols array and proto field
@@ -182,16 +182,16 @@ func (tc *TargetConfig) GetProtocols() []types.ProbeType {
 
 // FileConfig is the file source configuration
 type FileConfig struct {
-	Path          string        `yaml:"path" json:"path"`
+	Path           string        `yaml:"path" json:"path"`
 	ReloadInterval time.Duration `yaml:"reload_interval" json:"reload_interval"`
-	Watch         bool          `yaml:"watch" json:"watch"`
+	Watch          bool          `yaml:"watch" json:"watch"`
 }
 
 // URLConfig is the HTTP source configuration
 type URLConfig struct {
-	URL           string            `yaml:"url" json:"url"`
+	URL            string            `yaml:"url" json:"url"`
 	ReloadInterval time.Duration     `yaml:"reload_interval" json:"reload_interval"`
-	Headers       map[string]string `yaml:"headers" json:"headers"`
+	Headers        map[string]string `yaml:"headers" json:"headers"`
 }
 
 // CommandConfig is the command source configuration
@@ -215,9 +215,9 @@ type ProbesConfig struct {
 
 // TCPProbeConfig is the TCP probes configuration
 type TCPProbeConfig struct {
-	ConnectTimeout time.Duration     `yaml:"connect_timeout" json:"connect_timeout"`
-	TLS            types.TLSConfig   `yaml:"tls" json:"tls"`
-	KeepAlive      KeepAliveConfig   `yaml:"keep_alive" json:"keep_alive"`
+	ConnectTimeout time.Duration   `yaml:"connect_timeout" json:"connect_timeout"`
+	TLS            types.TLSConfig `yaml:"tls" json:"tls"`
+	KeepAlive      KeepAliveConfig `yaml:"keep_alive" json:"keep_alive"`
 }
 
 // KeepAliveConfig is the keep-alive configuration
@@ -300,25 +300,25 @@ type MetricsConfig struct {
 
 // WALConfig is the WAL configuration
 type WALConfig struct {
-	Dir             string        `yaml:"dir" json:"dir"`
-	MaxSize         string        `yaml:"max_size" json:"max_size"`
-	MaxAge          time.Duration `yaml:"max_age" json:"max_age"`
-	Retention       time.Duration `yaml:"retention" json:"retention"`
-	Compression     string        `yaml:"compression" json:"compression"`
-	SyncInterval    time.Duration `yaml:"sync_interval" json:"sync_interval"`
-	BufferSize      string        `yaml:"buffer_size" json:"buffer_size"`
-	SegmentSize     string        `yaml:"segment_size" json:"segment_size"`
-	IndexCacheSize  int           `yaml:"index_cache_size" json:"index_cache_size"`
+	Dir            string        `yaml:"dir" json:"dir"`
+	MaxSize        string        `yaml:"max_size" json:"max_size"`
+	MaxAge         time.Duration `yaml:"max_age" json:"max_age"`
+	Retention      time.Duration `yaml:"retention" json:"retention"`
+	Compression    string        `yaml:"compression" json:"compression"`
+	SyncInterval   time.Duration `yaml:"sync_interval" json:"sync_interval"`
+	BufferSize     string        `yaml:"buffer_size" json:"buffer_size"`
+	SegmentSize    string        `yaml:"segment_size" json:"segment_size"`
+	IndexCacheSize int           `yaml:"index_cache_size" json:"index_cache_size"`
 }
 
 // LoggingConfig is the logging configuration
 type LoggingConfig struct {
-	Level        string            `yaml:"level" json:"level"`
-	Format       string            `yaml:"format" json:"format"`
-	Output       string            `yaml:"output" json:"output"`
-	File         FileLoggingConfig `yaml:"file" json:"file"`
-	Structured   bool              `yaml:"structured" json:"structured"`
-	IncludeSource bool             `yaml:"include_source" json:"include_source"`
+	Level         string            `yaml:"level" json:"level"`
+	Format        string            `yaml:"format" json:"format"`
+	Output        string            `yaml:"output" json:"output"`
+	File          FileLoggingConfig `yaml:"file" json:"file"`
+	Structured    bool              `yaml:"structured" json:"structured"`
+	IncludeSource bool              `yaml:"include_source" json:"include_source"`
 }
 
 // FileLoggingConfig is the file logging configuration
@@ -332,12 +332,12 @@ type FileLoggingConfig struct {
 
 // TLSConfig is the TLS configuration
 type TLSConfig struct {
-	ClientCerts       ClientCertsConfig `yaml:"client_certs" json:"client_certs"`
-	ServerCerts       ServerCertsConfig `yaml:"server_certs" json:"server_certs"`
-	InsecureSkipVerify bool             `yaml:"insecure_skip_verify" json:"insecure_skip_verify"`
-	MinVersion         string           `yaml:"min_version" json:"min_version"`
-	MaxVersion         string           `yaml:"max_version" json:"max_version"`
-	CipherSuites       []string         `yaml:"cipher_suites" json:"cipher_suites"`
+	ClientCerts        ClientCertsConfig `yaml:"client_certs" json:"client_certs"`
+	ServerCerts        ServerCertsConfig `yaml:"server_certs" json:"server_certs"`
+	InsecureSkipVerify bool              `yaml:"insecure_skip_verify" json:"insecure_skip_verify"`
+	MinVersion         string            `yaml:"min_version" json:"min_version"`
+	MaxVersion         string            `yaml:"max_version" json:"max_version"`
+	CipherSuites       []string          `yaml:"cipher_suites" json:"cipher_suites"`
 }
 
 // ClientCertsConfig is the client certificates configuration
@@ -358,9 +358,9 @@ type ServerCertsConfig struct {
 
 // ObservabilityConfig is the observability configuration
 type ObservabilityConfig struct {
-	Pprof      PprofConfig      `yaml:"pprof" json:"pprof"`
-	OpenCensus OpenCensusConfig `yaml:"opencensus" json:"opencensus"`
-	Prometheus PrometheusConfig `yaml:"prometheus" json:"prometheus"`
+	Pprof       PprofConfig       `yaml:"pprof" json:"pprof"`
+	OpenCensus  OpenCensusConfig  `yaml:"opencensus" json:"opencensus"`
+	Prometheus  PrometheusConfig  `yaml:"prometheus" json:"prometheus"`
 	HealthCheck HealthCheckConfig `yaml:"health_check" json:"health_check"`
 }
 
@@ -373,8 +373,8 @@ type PprofConfig struct {
 
 // OpenCensusConfig is the OpenCensus configuration
 type OpenCensusConfig struct {
-	Enabled      bool                      `yaml:"enabled" json:"enabled"`
-	SamplingRate float64                   `yaml:"sampling_rate" json:"sampling_rate"`
+	Enabled      bool                       `yaml:"enabled" json:"enabled"`
+	SamplingRate float64                    `yaml:"sampling_rate" json:"sampling_rate"`
 	Exporters    []OpenCensusExporterConfig `yaml:"exporters" json:"exporters"`
 }
 
@@ -398,4 +398,3 @@ type HealthCheckConfig struct {
 	Timeout  time.Duration `yaml:"timeout" json:"timeout"`
 	Interval time.Duration `yaml:"interval" json:"interval"`
 }
-

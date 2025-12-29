@@ -79,7 +79,7 @@ rate(vmprober_probe_failure_total[5m]) / rate(vmprober_probe_attempts_total[5m])
 ```yaml
 - alert: HighProbeFailureRate
   expr: |
-    rate(vmprober_probe_failure_total[5m]) / 
+    rate(vmprober_probe_failure_total[5m]) /
     rate(vmprober_probe_attempts_total[5m]) > 0.1
   for: 5m
   annotations:
@@ -91,7 +91,7 @@ rate(vmprober_probe_failure_total[5m]) / rate(vmprober_probe_attempts_total[5m])
 ```yaml
 - alert: HighProbeLatency
   expr: |
-    histogram_quantile(0.95, 
+    histogram_quantile(0.95,
       rate(vmprober_probe_rtt_seconds_bucket[5m])
     ) > 1
   for: 5m
@@ -122,5 +122,3 @@ spec:
 
 - [Operations: Monitoring](../operations/monitoring.md) - Advanced monitoring
 - [Reference: Metrics](../reference/metrics.md) - All available metrics
-
-

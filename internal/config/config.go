@@ -11,18 +11,19 @@ import (
 	"time"
 
 	"github.com/sirupsen/logrus"
-	"github.com/gdagil/vmprober/internal/types"
 	"gopkg.in/yaml.v3"
+
+	"github.com/gdagil/vmprober/internal/types"
 )
 
 // Manager manages VMProber configuration
 type Manager struct {
-	config     *Config
-	configPath string
-	mu         sync.RWMutex
-	logger     *logrus.Logger
+	config      *Config
+	configPath  string
+	mu          sync.RWMutex
+	logger      *logrus.Logger
 	subscribers []chan types.ConfigUpdate
-	watcher    *watcher
+	watcher     *watcher
 }
 
 // NewManager creates a new configuration manager
@@ -83,8 +84,8 @@ func (m *Manager) Load(ctx context.Context) (*Config, error) {
 	}
 
 	m.logger.WithFields(logrus.Fields{
-		"path":  m.configPath,
-		"hash":  cfg.Hash[:8],
+		"path": m.configPath,
+		"hash": cfg.Hash[:8],
 	}).Info("Configuration loaded successfully")
 
 	return &cfg, nil
@@ -233,4 +234,3 @@ func (w *watcher) watch(ctx context.Context, reload func()) {
 		}
 	}
 }
-

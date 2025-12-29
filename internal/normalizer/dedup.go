@@ -8,17 +8,17 @@ import (
 
 // DedupCache cache for deduplication
 type DedupCache struct {
-	cache      map[string]time.Time
-	window     time.Duration
-	mu         sync.RWMutex
+	cache         map[string]time.Time
+	window        time.Duration
+	mu            sync.RWMutex
 	cleanupTicker *time.Ticker
 }
 
 // NewDedupCache creates a new deduplication cache
 func NewDedupCache(window time.Duration) *DedupCache {
 	cache := &DedupCache{
-		cache:      make(map[string]time.Time),
-		window:     window,
+		cache:         make(map[string]time.Time),
+		window:        window,
 		cleanupTicker: time.NewTicker(1 * time.Minute),
 	}
 
@@ -74,5 +74,3 @@ func (d *DedupCache) cleanupLoop(ctx context.Context) {
 		}
 	}
 }
-
-

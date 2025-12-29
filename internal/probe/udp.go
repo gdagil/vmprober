@@ -140,6 +140,3 @@ func (p *UDPProbe) Validate(config interface{}) error {
 func (p *UDPProbe) Close() error {
 	return nil
 }
-
-
-

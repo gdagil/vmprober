@@ -83,4 +83,3 @@ updates:
       - "documentation"
     commit-message:
       prefix: "deps(docs)"
-

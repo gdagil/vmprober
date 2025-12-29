@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/miekg/dns"
+
 	"github.com/gdagil/vmprober/internal/types"
 	"github.com/gdagil/vmprober/pkg/interfaces"
 )
@@ -291,4 +292,3 @@ func BuildDNSConfigFromTarget(target types.Target) *DNSConfig {
 
 	return config
 }
-

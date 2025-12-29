@@ -110,5 +110,3 @@ go tool pprof http://localhost:6060/debug/pprof/profile
 - [Project Structure](project-structure.md) - Codebase organization
 - [Contributing](contributing.md) - How to contribute
 - [Testing](testing.md) - Testing strategies
-
-

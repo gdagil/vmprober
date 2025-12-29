@@ -126,4 +126,3 @@ func TestE2E_HTTPProbes_Latency(t *testing.T) {
 		t.Log("No RTT metrics found - may need more time or HTTP probes may not record RTT")
 	}
 }
-

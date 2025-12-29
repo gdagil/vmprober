@@ -17,7 +17,7 @@ Your question here.
 
 ## Environment
 
-- **VMProber Version**: 
+- **VMProber Version**:
 - **Deployment**: binary / Docker / Docker Compose
 
 ## Configuration

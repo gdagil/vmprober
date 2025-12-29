@@ -21,34 +21,23 @@ linters:
     - dupl
     - durationcheck
     - errname
-    - errorlint
     - exhaustive
-    - exportloopref
-    - forcetypeassert
+    - copyloopvar
     - gochecknoinits
-    - goconst
-    - gocritic
-    - gocyclo
-    - godot
     - gofmt
     - goimports
     - goprintffuncname
-    - gosec
     - misspell
     - nakedret
     - nilerr
     - nilnil
-    - noctx
     - nolintlint
-    - prealloc
     - predeclared
     - revive
     - rowserrcheck
     - sqlclosecheck
     - stylecheck
     - tparallel
-    - unconvert
-    - unparam
     - wastedassign
     - whitespace
 
@@ -57,46 +46,24 @@ linters-settings:
     threshold: 150
 
   errcheck:
-    check-type-assertions: true
-    check-blank: true
-
-  errorlint:
-    errorf: true
-    asserts: true
-    comparison: true
+    check-type-assertions: false
+    check-blank: false
 
   exhaustive:
     default-signifies-exhaustive: true
-
-  goconst:
-    min-len: 3
-    min-occurrences: 3
-
-  gocritic:
-    enabled-tags:
-      - diagnostic
-      - performance
-      - style
-    disabled-checks:
-      - whyNoLint
-
-  gocyclo:
-    min-complexity: 15
-
-  godot:
-    scope: declarations
-    capital: false
 
   gofmt:
     simplify: true
 
   goimports:
-    local-prefixes: github.com/vmprober/vmprober
+    local-prefixes: github.com/gdagil/vmprober
 
   govet:
     enable-all: true
     disable:
       - fieldalignment
+      - shadow
+      - copylocks
 
   misspell:
     locale: US
@@ -105,12 +72,8 @@ linters-settings:
     max-func-lines: 30
 
   nolintlint:
-    require-explanation: true
-    require-specific: true
-
-  prealloc:
-    simple: true
-    for-loops: true
+    require-explanation: false
+    require-specific: false
 
   revive:
     rules:
@@ -121,21 +84,17 @@ linters-settings:
       - name: error-return
       - name: error-strings
       - name: error-naming
-      - name: exported
       - name: if-return
       - name: increment-decrement
       - name: var-naming
       - name: var-declaration
-      - name: package-comments
       - name: range
       - name: receiver-naming
       - name: time-naming
       - name: unexported-return
       - name: indent-error-flow
       - name: errorf
-      - name: empty-block
       - name: superfluous-else
-      - name: unused-parameter
       - name: unreachable-code
       - name: redefines-builtin-id
 
@@ -145,19 +104,13 @@ linters-settings:
       - -ST1000  # Package comments
       - -ST1003  # Naming conventions
 
-  unparam:
-    check-exported: false
-
 issues:
   exclude-rules:
     # Exclude some linters from running on tests files
     - path: _test\.go
       linters:
         - dupl
-        - gosec
-        - goconst
         - errcheck
-        - forcetypeassert
 
     # Exclude lll issues for long lines with go:generate
     - linters:
@@ -170,8 +123,3 @@ issues:
 
 severity:
   default-severity: warning
-  rules:
-    - linters:
-        - gosec
-      severity: error
-

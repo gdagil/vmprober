@@ -128,4 +128,3 @@ func TestE2E_MetricsNamespace(t *testing.T) {
 	require.Greater(t, vmproberMetricsFound, 0, "No vmprober-namespaced metrics found")
 	t.Logf("Found %d metrics with vmprober namespace", vmproberMetricsFound)
 }
-

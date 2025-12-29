@@ -674,4 +674,3 @@ func getPortFromURL(urlStr string) int {
 	}
 	return 80
 }
-

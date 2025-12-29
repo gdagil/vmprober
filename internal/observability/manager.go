@@ -8,11 +8,12 @@ import (
 	"time"
 
 	"github.com/sirupsen/logrus"
+
 	"github.com/gdagil/vmprober/internal/config"
 )
 
-// ObservabilityManager manages the observability system
-type ObservabilityManager interface {
+// Manager manages the observability system.
+type Manager interface {
 	// Start starts observability components
 	Start(ctx context.Context) error
 
@@ -44,10 +45,10 @@ type HealthCheck struct {
 
 // SystemMetrics system metrics
 type SystemMetrics struct {
-	Timestamp   time.Time `json:"timestamp"`
-	Uptime      time.Duration `json:"uptime"`
-	Goroutines  int       `json:"goroutines"`
-	Memory      MemoryMetrics `json:"memory"`
+	Timestamp  time.Time     `json:"timestamp"`
+	Uptime     time.Duration `json:"uptime"`
+	Goroutines int           `json:"goroutines"`
+	Memory     MemoryMetrics `json:"memory"`
 }
 
 // MemoryMetrics memory metrics
@@ -61,17 +62,17 @@ type MemoryMetrics struct {
 
 // DefaultObservabilityManager observability manager implementation
 type DefaultObservabilityManager struct {
-	config     *config.ObservabilityConfig
-	logger     *logrus.Logger
+	config      *config.ObservabilityConfig
+	logger      *logrus.Logger
 	pprofServer *http.Server
-	startTime  time.Time
-	mu         sync.RWMutex
-	health     *HealthStatus
-	metrics    *SystemMetrics
+	startTime   time.Time
+	mu          sync.RWMutex
+	health      *HealthStatus
+	metrics     *SystemMetrics
 }
 
-// NewObservabilityManager creates a new observability manager
-func NewObservabilityManager(cfg *config.ObservabilityConfig, logger *logrus.Logger) ObservabilityManager {
+// NewManager creates a new observability manager.
+func NewManager(cfg *config.ObservabilityConfig, logger *logrus.Logger) Manager {
 	return &DefaultObservabilityManager{
 		config:    cfg,
 		logger:    logger,
@@ -148,20 +149,21 @@ func (o *DefaultObservabilityManager) GetMetrics() *SystemMetrics {
 	return &metrics
 }
 
-// startPprof starts pprof server
-func (o *DefaultObservabilityManager) startPprof(ctx context.Context) error {
+// startPprof starts pprof server.
+func (o *DefaultObservabilityManager) startPprof(_ context.Context) error {
 	addr := fmt.Sprintf("%s:%d", o.config.Pprof.Host, o.config.Pprof.Port)
-	
+
 	mux := http.NewServeMux()
-	mux.HandleFunc("/debug/pprof/", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("/debug/pprof/", func(w http.ResponseWriter, _ *http.Request) {
 		// In a real implementation, net/http/pprof would be imported here
 		w.WriteHeader(http.StatusNotImplemented)
-		w.Write([]byte("pprof endpoint (requires net/http/pprof import)"))
+		_, _ = w.Write([]byte("pprof endpoint (requires net/http/pprof import)"))
 	})
 
 	o.pprofServer = &http.Server{
-		Addr:    addr,
-		Handler: mux,
+		Addr:              addr,
+		Handler:           mux,
+		ReadHeaderTimeout: 10 * time.Second,
 	}
 
 	go func() {
@@ -234,5 +236,3 @@ func (o *DefaultObservabilityManager) updateMetrics() {
 	// o.metrics.Memory.Alloc = m.Alloc
 	// etc.
 }
-
-

@@ -11,6 +11,7 @@ import (
 
 	"github.com/VictoriaMetrics/metrics"
 	"github.com/sirupsen/logrus"
+
 	"github.com/gdagil/vmprober/internal/scheduler"
 )
 
@@ -19,10 +20,10 @@ var staticFiles embed.FS
 
 // Server HTTP server for metrics and health checks
 type Server struct {
-	httpServer      *http.Server
-	logger          *logrus.Logger
-	startTime       time.Time
-	scheduler       *scheduler.Scheduler
+	httpServer *http.Server
+	logger     *logrus.Logger
+	startTime  time.Time
+	scheduler  *scheduler.Scheduler
 }
 
 // NewServer creates a new HTTP server
@@ -40,7 +41,10 @@ func NewServer(host string, port int, logger *logrus.Logger) *Server {
 	}
 
 	// Create sub-filesystem for static files
-	staticFS, _ := fs.Sub(staticFiles, "static")
+	staticFS, err := fs.Sub(staticFiles, "static")
+	if err != nil {
+		logger.WithError(err).Fatal("Failed to create static sub-filesystem")
+	}
 
 	// Register handlers
 	mux.HandleFunc("/health", server.healthHandler)
@@ -109,7 +113,9 @@ func (s *Server) jobsHandler(w http.ResponseWriter, r *http.Request) {
 
 	jobs := s.scheduler.GetAllJobs()
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(jobs)
+	if err := json.NewEncoder(w).Encode(jobs); err != nil {
+		s.logger.WithError(err).Error("Failed to encode jobs response")
+	}
 }
 
 // statsHandler handles /api/v1/stats endpoint
@@ -121,16 +127,18 @@ func (s *Server) statsHandler(w http.ResponseWriter, r *http.Request) {
 
 	stats := s.scheduler.GetStats()
 	response := map[string]interface{}{
-		"scheduler": stats,
-		"uptime":    time.Since(s.startTime).String(),
+		"scheduler":  stats,
+		"uptime":     time.Since(s.startTime).String(),
 		"start_time": s.startTime.Format(time.RFC3339),
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(response)
+	if err := json.NewEncoder(w).Encode(response); err != nil {
+		s.logger.WithError(err).Error("Failed to encode stats response")
+	}
 }
 
-// targetsHandler handles /api/v1/targets endpoint
+// targetsHandler handles /api/v1/targets endpoint.
 func (s *Server) targetsHandler(w http.ResponseWriter, r *http.Request) {
 	if s.scheduler == nil {
 		http.Error(w, "Scheduler not initialized", http.StatusInternalServerError)
@@ -139,7 +147,7 @@ func (s *Server) targetsHandler(w http.ResponseWriter, r *http.Request) {
 
 	jobs := s.scheduler.GetAllJobs()
 	targets := make([]map[string]interface{}, 0, len(jobs))
-	
+
 	for _, job := range jobs {
 		status := "down"
 		if job.LastStatus == "up" {
@@ -147,35 +155,37 @@ func (s *Server) targetsHandler(w http.ResponseWriter, r *http.Request) {
 		} else if job.LastStatus == "" {
 			status = "unknown"
 		}
-		
+
 		targets = append(targets, map[string]interface{}{
-			"id":            job.ID,
-			"host":          job.Target.Host,
-			"port":          job.Target.Port,
-			"protocol":      job.Target.Protocol,
-			"interval":      job.Interval.String(),
-			"timeout":       job.Target.Timeout.String(),
-			"labels":        job.Target.Labels,
-			"enabled":       job.Target.Enabled,
-			"next_run":      job.NextRun.Format(time.RFC3339),
-			"status":        status,
-			"success_count": job.SuccessCount,
-			"failed_count":  job.FailedCount,
+			"id":              job.ID,
+			"host":            job.Target.Host,
+			"port":            job.Target.Port,
+			"protocol":        job.Target.Protocol,
+			"interval":        job.Interval.String(),
+			"timeout":         job.Target.Timeout.String(),
+			"labels":          job.Target.Labels,
+			"enabled":         job.Target.Enabled,
+			"next_run":        job.NextRun.Format(time.RFC3339),
+			"status":          status,
+			"success_count":   job.SuccessCount,
+			"failed_count":    job.FailedCount,
 			"last_probe_time": job.LastProbeTime.Format(time.RFC3339),
 		})
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(targets)
+	if err := json.NewEncoder(w).Encode(targets); err != nil {
+		s.logger.WithError(err).Error("Failed to encode targets response")
+	}
 }
 
-// uiHandler handles the main UI page
+// uiHandler handles the main UI page.
 func (s *Server) uiHandler(w http.ResponseWriter, r *http.Request) {
 	if r.URL.Path != "/" {
 		http.NotFound(w, r)
 		return
 	}
-	
+
 	// Read HTML from embedded file
 	htmlContent, err := staticFiles.ReadFile("static/index.html")
 	if err != nil {
@@ -183,9 +193,9 @@ func (s *Server) uiHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 		return
 	}
-	
+
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	w.Write(htmlContent)
+	if _, err = w.Write(htmlContent); err != nil {
+		s.logger.WithError(err).Error("Failed to write HTML content")
+	}
 }
-
-

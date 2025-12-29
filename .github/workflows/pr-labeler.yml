@@ -12,7 +12,7 @@ jobs:
   labeler:
     name: Label PR
     runs-on: ubuntu-latest
-    
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -26,7 +26,7 @@ jobs:
   size-label:
     name: Size Label
     runs-on: ubuntu-latest
-    
+
     steps:
       - name: Label PR by size
         uses: codelytv/pr-size-labeler@v1
@@ -49,4 +49,3 @@ jobs:
             "*.lock"
             "*.svg"
             "*.json"
-

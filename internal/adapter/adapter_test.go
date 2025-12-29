@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/sirupsen/logrus"
+
 	"github.com/gdagil/vmprober/internal/config"
 	"github.com/gdagil/vmprober/internal/types"
 )
@@ -23,7 +24,7 @@ func createTestPushConfig() *config.PushConfig {
 		},
 		Retry: config.RetryConfig{
 			MaxAttempts:  3,
-			Backoff:     "exponential",
+			Backoff:      "exponential",
 			InitialDelay: 1 * time.Second,
 			MaxDelay:     30 * time.Second,
 			Multiplier:   2.0,
@@ -190,5 +191,3 @@ func TestNewVictoriaMetricsAdapter_NoEndpoints(t *testing.T) {
 		t.Error("Expected error when no endpoints configured")
 	}
 }
-
-

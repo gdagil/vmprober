@@ -76,5 +76,3 @@ defaults:
     values:
       layout: default
       permalink: /:categories/:title/
-
-

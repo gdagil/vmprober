@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/sirupsen/logrus"
+
 	"github.com/gdagil/vmprober/internal/config"
 )
 
@@ -42,7 +43,7 @@ func NewRetryEngine(cfg *config.RetryConfig, logger *logrus.Logger) *RetryEngine
 	if cfg == nil {
 		cfg = &config.RetryConfig{
 			MaxAttempts:  3,
-			Backoff:     "exponential",
+			Backoff:      "exponential",
 			InitialDelay: 1 * time.Second,
 			MaxDelay:     30 * time.Second,
 			Multiplier:   2.0,
@@ -214,4 +215,3 @@ func (r *RetryEngine) calculateBackoff(attempts int) time.Duration {
 
 	return delay
 }
-

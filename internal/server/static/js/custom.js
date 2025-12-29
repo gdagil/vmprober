@@ -38,7 +38,7 @@ function filterTable(searchPhrase, tableSelector = '.vm-table') {
 function handleSearch() {
     const searchBox = document.getElementById('search');
     if (!searchBox) return;
-    
+
     const searchPhrase = searchBox.value.toLowerCase();
     filterTable(searchPhrase);
     setParamURL('search', searchPhrase);
@@ -47,10 +47,10 @@ function handleSearch() {
 // Initialize on DOM ready
 document.addEventListener('DOMContentLoaded', () => {
     const searchBox = document.getElementById('search');
-    
+
     if (searchBox) {
         searchBox.addEventListener('input', debounce(handleSearch, 200));
-        
+
         // Restore search from URL
         const savedSearch = getParamURL('search');
         if (savedSearch) {
@@ -59,4 +59,3 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 });
-

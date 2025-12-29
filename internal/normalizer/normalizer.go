@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/sirupsen/logrus"
+
 	"github.com/gdagil/vmprober/internal/types"
 )
 
@@ -35,19 +36,19 @@ type Normalizer interface {
 
 // NormalizerStats normalizer statistics
 type NormalizerStats struct {
-	TotalNormalized int64         `json:"total_normalized"`
-	TotalDeduped    int64         `json:"total_deduped"`
-	TotalEnriched   int64         `json:"total_enriched"`
+	TotalNormalized  int64         `json:"total_normalized"`
+	TotalDeduped     int64         `json:"total_deduped"`
+	TotalEnriched    int64         `json:"total_enriched"`
 	AvgNormalizeTime time.Duration `json:"avg_normalize_time"`
 }
 
 // DefaultNormalizer normalizer implementation
 type DefaultNormalizer struct {
-	dedupCache  *DedupCache
-	enricher    *DataEnricher
-	mu          sync.RWMutex
-	logger      *logrus.Logger
-	stats       *NormalizerStats
+	dedupCache *DedupCache
+	enricher   *DataEnricher
+	mu         sync.RWMutex
+	logger     *logrus.Logger
+	stats      *NormalizerStats
 }
 
 // NewNormalizer creates a new normalizer
@@ -230,5 +231,3 @@ func (n *DefaultNormalizer) generateSeriesID(result *types.ProbeResult) string {
 	hash := sha256.Sum256([]byte(key))
 	return hex.EncodeToString(hash[:])[:16]
 }
-
-

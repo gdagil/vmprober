@@ -12,36 +12,36 @@ flowchart TB
         HTTPSource["HTTP Source"]
         Commands["Commands Source"]
     end
-    
+
     subgraph CoreEngine["Core Engine"]
         Scheduler["Scheduler"]
         WorkerPool["Worker Pool"]
         ProbeEngine["Probe Engine"]
-        
+
         Scheduler --> WorkerPool
         Scheduler --> ProbeEngine
         WorkerPool --> ProbeEngine
     end
-    
+
     ConfigLayer --> CoreEngine
-    
+
     subgraph ProbeTypes["Probe Types"]
         TCP["TCP Probe"]
         UDP["UDP Probe"]
         ICMP["ICMP Probe"]
     end
-    
+
     ProbeEngine --> TCP
     ProbeEngine --> UDP
     ProbeEngine --> ICMP
-    
+
     TCP --> Normalizer["Result Normalizer"]
     UDP --> Normalizer
     ICMP --> Normalizer
-    
+
     Normalizer --> MetricsSystem["Metrics System"]
     Normalizer --> WAL["WAL System"]
-    
+
     MetricsSystem --> HTTPServer["HTTP Server (Pull)"]
     WAL --> VMAdapter["VM Adapter (Push)"]
 ```
@@ -124,5 +124,3 @@ flowchart TB
 - [Design Principles](design-principles.md) - Architectural decisions
 - [Component Architecture](components.md) - Detailed component design
 - [Data Flow](data-flow.md) - How data moves through the system
-
-

@@ -13,7 +13,7 @@ import (
 func TestNewManager(t *testing.T) {
 	logger := logrus.New()
 	logger.SetLevel(logrus.ErrorLevel)
-	
+
 	manager := NewManager("test.yaml", logger)
 	if manager == nil {
 		t.Fatal("NewManager returned nil")
@@ -27,7 +27,7 @@ func TestLoad_ValidConfig(t *testing.T) {
 	// Create temporary config file
 	tmpDir := t.TempDir()
 	configPath := filepath.Join(tmpDir, "config.yaml")
-	
+
 	configContent := `
 listen:
   port: 8429
@@ -47,12 +47,12 @@ metrics:
 	logger := logrus.New()
 	logger.SetLevel(logrus.ErrorLevel)
 	manager := NewManager(configPath, logger)
-	
+
 	cfg, err := manager.Load(context.Background())
 	if err != nil {
 		t.Fatalf("Load failed: %v", err)
 	}
-	
+
 	if cfg == nil {
 		t.Fatal("Config is nil")
 	}
@@ -74,7 +74,7 @@ func TestLoad_InvalidFile(t *testing.T) {
 	logger := logrus.New()
 	logger.SetLevel(logrus.ErrorLevel)
 	manager := NewManager("nonexistent.yaml", logger)
-	
+
 	_, err := manager.Load(context.Background())
 	if err == nil {
 		t.Fatal("Expected error for nonexistent file")
@@ -84,7 +84,7 @@ func TestLoad_InvalidFile(t *testing.T) {
 func TestLoad_InvalidYAML(t *testing.T) {
 	tmpDir := t.TempDir()
 	configPath := filepath.Join(tmpDir, "config.yaml")
-	
+
 	configContent := `invalid: yaml: content: [`
 	if err := os.WriteFile(configPath, []byte(configContent), 0644); err != nil {
 		t.Fatalf("Failed to write config file: %v", err)
@@ -93,7 +93,7 @@ func TestLoad_InvalidYAML(t *testing.T) {
 	logger := logrus.New()
 	logger.SetLevel(logrus.ErrorLevel)
 	manager := NewManager(configPath, logger)
-	
+
 	_, err := manager.Load(context.Background())
 	if err == nil {
 		t.Fatal("Expected error for invalid YAML")
@@ -145,7 +145,7 @@ scheduler:
 		t.Run(tt.name, func(t *testing.T) {
 			tmpDir := t.TempDir()
 			configPath := filepath.Join(tmpDir, "config.yaml")
-			
+
 			if err := os.WriteFile(configPath, []byte(tt.config), 0644); err != nil {
 				t.Fatalf("Failed to write config file: %v", err)
 			}
@@ -153,7 +153,7 @@ scheduler:
 			logger := logrus.New()
 			logger.SetLevel(logrus.ErrorLevel)
 			manager := NewManager(configPath, logger)
-			
+
 			_, err := manager.Load(context.Background())
 			if (err != nil) != tt.wantErr {
 				t.Errorf("Load() error = %v, wantErr %v", err, tt.wantErr)
@@ -165,7 +165,7 @@ scheduler:
 func TestLoad_ApplyDefaults(t *testing.T) {
 	tmpDir := t.TempDir()
 	configPath := filepath.Join(tmpDir, "config.yaml")
-	
+
 	configContent := `
 listen:
   port: 8429
@@ -180,12 +180,12 @@ scheduler:
 	logger := logrus.New()
 	logger.SetLevel(logrus.ErrorLevel)
 	manager := NewManager(configPath, logger)
-	
+
 	cfg, err := manager.Load(context.Background())
 	if err != nil {
 		t.Fatalf("Load failed: %v", err)
 	}
-	
+
 	// Check default values
 	if cfg.Listen.Host == "" {
 		t.Error("Expected default host to be set")
@@ -204,7 +204,7 @@ scheduler:
 func TestGet(t *testing.T) {
 	tmpDir := t.TempDir()
 	configPath := filepath.Join(tmpDir, "config.yaml")
-	
+
 	configContent := `
 listen:
   port: 8429
@@ -219,18 +219,18 @@ scheduler:
 	logger := logrus.New()
 	logger.SetLevel(logrus.ErrorLevel)
 	manager := NewManager(configPath, logger)
-	
+
 	// Before loading should return nil
 	if cfg := manager.Get(); cfg != nil {
 		t.Error("Expected nil config before Load")
 	}
-	
+
 	// After loading should return configuration
 	_, err := manager.Load(context.Background())
 	if err != nil {
 		t.Fatalf("Load failed: %v", err)
 	}
-	
+
 	cfg := manager.Get()
 	if cfg == nil {
 		t.Fatal("Expected config after Load")
@@ -243,7 +243,7 @@ scheduler:
 func TestWatch(t *testing.T) {
 	tmpDir := t.TempDir()
 	configPath := filepath.Join(tmpDir, "config.yaml")
-	
+
 	configContent := `
 listen:
   port: 8429
@@ -258,21 +258,21 @@ scheduler:
 	logger := logrus.New()
 	logger.SetLevel(logrus.ErrorLevel)
 	manager := NewManager(configPath, logger)
-	
+
 	// Load initial configuration
 	_, err := manager.Load(context.Background())
 	if err != nil {
 		t.Fatalf("Load failed: %v", err)
 	}
-	
+
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	
+
 	updateChan, err := manager.Watch(ctx)
 	if err != nil {
 		t.Fatalf("Watch failed: %v", err)
 	}
-	
+
 	// Modify config file
 	newConfigContent := `
 listen:
@@ -282,11 +282,11 @@ scheduler:
   rps_limit: 100
 `
 	time.Sleep(100 * time.Millisecond) // Give time for watcher to initialize
-	
+
 	if err := os.WriteFile(configPath, []byte(newConfigContent), 0644); err != nil {
 		t.Fatalf("Failed to write new config file: %v", err)
 	}
-	
+
 	// Wait for update (watcher checks every 5 seconds, but for test we can wait)
 	select {
 	case update := <-updateChan:
@@ -302,15 +302,15 @@ func TestComputeHash(t *testing.T) {
 	logger := logrus.New()
 	logger.SetLevel(logrus.ErrorLevel)
 	manager := NewManager("test.yaml", logger)
-	
+
 	data1 := []byte("test data")
 	data2 := []byte("test data")
 	data3 := []byte("different data")
-	
+
 	hash1 := manager.computeHash(data1)
 	hash2 := manager.computeHash(data2)
 	hash3 := manager.computeHash(data3)
-	
+
 	if hash1 != hash2 {
 		t.Error("Same data should produce same hash")
 	}
@@ -321,4 +321,3 @@ func TestComputeHash(t *testing.T) {
 		t.Error("Hash should not be empty")
 	}
 }
-

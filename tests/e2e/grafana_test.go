@@ -231,4 +231,3 @@ func listGrafanaDatasources(ctx context.Context) ([]map[string]interface{}, erro
 
 	return datasources, nil
 }
-

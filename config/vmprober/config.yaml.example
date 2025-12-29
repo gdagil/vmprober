@@ -66,7 +66,7 @@ targets:
       labels:
         region: "us-east"
         type: "tcp"
-    
+
     - host: "google.com"
       port: 443
       proto: "tcp"
@@ -75,7 +75,7 @@ targets:
       labels:
         region: "us-east"
         type: "tcp-tls"
-    
+
     # ===== UDP probes =====
     - host: "8.8.8.8"
       port: 53
@@ -84,7 +84,7 @@ targets:
       timeout: 3s
       labels:
         service: "dns-udp"
-    
+
     # ===== ICMP probes (ping) =====
     - host: "8.8.8.8"
       proto: "icmp"
@@ -93,7 +93,7 @@ targets:
       labels:
         service: "google-dns"
         type: "icmp"
-    
+
     # ===== HTTP probes =====
     - host: "httpbin.org"
       port: 80
@@ -111,7 +111,7 @@ targets:
         headers:
           Accept: "application/json"
           X-Custom-Header: "vmprober"
-    
+
     # HTTP with POST request
     - host: "httpbin.org"
       port: 80
@@ -128,7 +128,7 @@ targets:
         expected_status_code: 200
         headers:
           Content-Type: "application/json"
-    
+
     # ===== HTTPS probes =====
     - host: "github.com"
       port: 443
@@ -144,7 +144,7 @@ targets:
         expected_status_code: 200
         validate_cert: true
         follow_redirects: true
-    
+
     # HTTPS with Basic Auth
     - host: "api.example.com"
       port: 443
@@ -162,7 +162,7 @@ targets:
         basic_auth:
           username: "admin"
           password: "secret"
-    
+
     # HTTPS with Bearer Token
     - host: "api.example.com"
       port: 443
@@ -177,7 +177,7 @@ targets:
         path: "/api/protected"
         expected_status_code: 200
         bearer_token: "${API_TOKEN}"  # Environment variable
-    
+
     # HTTPS via proxy
     - host: "internal-service.corp"
       port: 443
@@ -192,7 +192,7 @@ targets:
         path: "/health"
         validate_cert: false  # For internal services with self-signed certs
         proxy: "http://proxy.corp:8080"
-    
+
     # ===== DNS probes =====
     # Simple DNS A record check
     - host: "8.8.8.8"
@@ -209,7 +209,7 @@ targets:
         protocol: "udp"
         validate_answer: true
         recursion: true
-    
+
     # DNS AAAA record check (IPv6)
     - host: "8.8.8.8"
       port: 53
@@ -223,7 +223,7 @@ targets:
         query_name: "google.com"
         query_type: "AAAA"
         protocol: "udp"
-    
+
     # DNS MX record check
     - host: "8.8.8.8"
       port: 53
@@ -237,7 +237,7 @@ targets:
         query_name: "gmail.com"
         query_type: "MX"
         expected_records: ["gmail-smtp-in.l.google.com"]
-    
+
     # DNS TXT record check (SPF, DKIM)
     - host: "1.1.1.1"
       port: 53
@@ -250,7 +250,7 @@ targets:
       dns:
         query_name: "example.com"
         query_type: "TXT"
-    
+
     # DNS over TCP
     - host: "8.8.8.8"
       port: 53
@@ -263,7 +263,7 @@ targets:
         query_name: "google.com"
         query_type: "A"
         protocol: "tcp"
-    
+
     # DNS-over-TLS (DoT)
     - host: "1.1.1.1"
       port: 853
@@ -277,7 +277,7 @@ targets:
         query_name: "cloudflare.com"
         query_type: "A"
         protocol: "tcp-tls"
-    
+
     # ===== gRPC probes =====
     # Simple gRPC health check
     - host: "grpc-service.local"
@@ -291,7 +291,7 @@ targets:
       grpc:
         service: ""  # Empty string = overall health check
         expected_status: "SERVING"
-    
+
     # gRPC health check for specific service
     - host: "grpc-api.local"
       port: 50051
@@ -304,7 +304,7 @@ targets:
       grpc:
         service: "user.UserService"
         expected_status: "SERVING"
-    
+
     # gRPC with TLS
     - host: "grpc-secure.example.com"
       port: 443
@@ -320,7 +320,7 @@ targets:
         tls_skip_verify: false
         server_name: "grpc-secure.example.com"
         expected_status: "SERVING"
-    
+
     # gRPC with metadata (headers)
     - host: "grpc-auth.local"
       port: 50051
@@ -336,7 +336,7 @@ targets:
         metadata:
           authorization: "Bearer ${GRPC_TOKEN}"
           x-request-id: "vmprober-health-check"
-    
+
     # ===== Multiple protocols for single target =====
     - host: "multi-protocol.example.com"
       port: 443
@@ -364,7 +364,7 @@ probes:
     interval: 30s
     timeout: 5s
     payload_size: 64
-  
+
   # TCP probes
   tcp:
     connect_timeout: 5s
@@ -373,20 +373,20 @@ probes:
     keep_alive:
       enabled: true
       period: 30s
-  
+
   # UDP probes
   udp:
     payload_type: "random"
     payload_size: 64
     response_timeout: 2s
     max_packet_size: 1024
-  
+
   # ICMP probes (ping)
   icmp:
     library: "systicmp"
     sequence_start: 1
     ttl: 64
-  
+
   # HTTP/HTTPS probes
   http:
     method: "GET"
@@ -398,7 +398,7 @@ probes:
     timeout: 10s
     headers:
       User-Agent: "vmprober/1.0"
-  
+
   # DNS probes
   dns:
     query_type: "A"         # A, AAAA, CNAME, MX, TXT, NS, SOA, SRV, PTR
@@ -406,7 +406,7 @@ probes:
     validate_answer: true
     recursion: true
     timeout: 5s
-  
+
   # gRPC probes
   grpc:
     service: ""             # Empty string = overall check (grpc.health.v1.Health)
@@ -486,4 +486,3 @@ observability:
     enabled: true
     timeout: 5s
     interval: 30s
-

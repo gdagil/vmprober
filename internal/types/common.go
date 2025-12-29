@@ -35,9 +35,9 @@ type ProbeResult struct {
 	Attempt      int           `json:"attempt"`
 	Timestamp    time.Time     `json:"timestamp"`
 	SourceIP     string        `json:"source_ip,omitempty"`
-	TargetHost   string        `json:"target_host,omitempty"`   // Hostname (e.g., "google.com")
-	TargetIP     string        `json:"target_ip,omitempty"`     // IP address (e.g., "142.250.109.100")
-	TargetPort   int           `json:"target_port,omitempty"`   // Port (e.g., 443)
+	TargetHost   string        `json:"target_host,omitempty"` // Hostname (e.g., "google.com")
+	TargetIP     string        `json:"target_ip,omitempty"`   // IP address (e.g., "142.250.109.100")
+	TargetPort   int           `json:"target_port,omitempty"` // Port (e.g., 443)
 	TLS          bool          `json:"tls,omitempty"`
 	Protocol     ProbeType     `json:"protocol"`
 	Role         string        `json:"role,omitempty"` // client/server
@@ -49,10 +49,10 @@ type ProbeResult struct {
 
 // DNSResult DNS resolution result
 type DNSResult struct {
-	ResolvedIPs []string       `json:"resolved_ips"`
-	LookupTime  time.Duration  `json:"lookup_time"`
-	TTL         time.Duration  `json:"ttl,omitempty"`
-	Error       string         `json:"error,omitempty"`
+	ResolvedIPs []string      `json:"resolved_ips"`
+	LookupTime  time.Duration `json:"lookup_time"`
+	TTL         time.Duration `json:"ttl,omitempty"`
+	Error       string        `json:"error,omitempty"`
 }
 
 // Target represents a probe target
@@ -110,18 +110,18 @@ type ICMPConfig struct {
 
 // HTTPConfig HTTP/HTTPS probe configuration
 type HTTPConfig struct {
-	Method             string            `json:"method" yaml:"method"`                           // GET, POST, HEAD, PUT, etc.
-	Path               string            `json:"path" yaml:"path"`                               // URL path (e.g., "/health")
-	Headers            map[string]string `json:"headers" yaml:"headers"`                         // Custom headers
-	Body               string            `json:"body" yaml:"body"`                               // Request body
+	Method             string            `json:"method" yaml:"method"`                             // GET, POST, HEAD, PUT, etc.
+	Path               string            `json:"path" yaml:"path"`                                 // URL path (e.g., "/health")
+	Headers            map[string]string `json:"headers" yaml:"headers"`                           // Custom headers
+	Body               string            `json:"body" yaml:"body"`                                 // Request body
 	ExpectedStatusCode int               `json:"expected_status_code" yaml:"expected_status_code"` // Expected HTTP status (default: 200)
-	ExpectedBody       string            `json:"expected_body" yaml:"expected_body"`             // Expected response body substring
-	FollowRedirects    bool              `json:"follow_redirects" yaml:"follow_redirects"`       // Follow HTTP redirects
-	MaxRedirects       int               `json:"max_redirects" yaml:"max_redirects"`             // Maximum redirects to follow
-	ValidateCert       bool              `json:"validate_cert" yaml:"validate_cert"`             // Validate TLS certificate
-	BasicAuth          *BasicAuth        `json:"basic_auth,omitempty" yaml:"basic_auth"`         // Basic authentication
-	BearerToken        string            `json:"bearer_token,omitempty" yaml:"bearer_token"`     // Bearer token
-	Proxy              string            `json:"proxy,omitempty" yaml:"proxy"`                   // HTTP proxy URL
+	ExpectedBody       string            `json:"expected_body" yaml:"expected_body"`               // Expected response body substring
+	FollowRedirects    bool              `json:"follow_redirects" yaml:"follow_redirects"`         // Follow HTTP redirects
+	MaxRedirects       int               `json:"max_redirects" yaml:"max_redirects"`               // Maximum redirects to follow
+	ValidateCert       bool              `json:"validate_cert" yaml:"validate_cert"`               // Validate TLS certificate
+	BasicAuth          *BasicAuth        `json:"basic_auth,omitempty" yaml:"basic_auth"`           // Basic authentication
+	BearerToken        string            `json:"bearer_token,omitempty" yaml:"bearer_token"`       // Bearer token
+	Proxy              string            `json:"proxy,omitempty" yaml:"proxy"`                     // HTTP proxy URL
 }
 
 // BasicAuth HTTP Basic Auth configuration
@@ -143,57 +143,57 @@ type DNSConfig struct {
 
 // GRPCConfig gRPC probe configuration
 type GRPCConfig struct {
-	Service          string            `json:"service" yaml:"service"`                     // Service name for health check
-	TLS              bool              `json:"tls" yaml:"tls"`                             // Use TLS
-	TLSSkipVerify    bool              `json:"tls_skip_verify" yaml:"tls_skip_verify"`     // Skip TLS verification
-	ServerName       string            `json:"server_name" yaml:"server_name"`             // TLS server name
-	Metadata         map[string]string `json:"metadata" yaml:"metadata"`                   // gRPC metadata (headers)
-	ExpectedStatus   string            `json:"expected_status" yaml:"expected_status"`     // Expected health status (SERVING, NOT_SERVING, UNKNOWN)
-	ReflectionProbe  bool              `json:"reflection_probe" yaml:"reflection_probe"`   // Use gRPC reflection instead of health check
+	Service         string            `json:"service" yaml:"service"`                   // Service name for health check
+	TLS             bool              `json:"tls" yaml:"tls"`                           // Use TLS
+	TLSSkipVerify   bool              `json:"tls_skip_verify" yaml:"tls_skip_verify"`   // Skip TLS verification
+	ServerName      string            `json:"server_name" yaml:"server_name"`           // TLS server name
+	Metadata        map[string]string `json:"metadata" yaml:"metadata"`                 // gRPC metadata (headers)
+	ExpectedStatus  string            `json:"expected_status" yaml:"expected_status"`   // Expected health status (SERVING, NOT_SERVING, UNKNOWN)
+	ReflectionProbe bool              `json:"reflection_probe" yaml:"reflection_probe"` // Use gRPC reflection instead of health check
 }
 
 // Job represents a task for probe execution
 type Job struct {
-	ID          string        `json:"id"`
-	Target      Target        `json:"target"`
-	NextRun     time.Time     `json:"next_run"`
-	Interval    time.Duration `json:"interval"`
-	Jitter      float64       `json:"jitter"`
-	RetryCount  int           `json:"retry_count"`
-	MaxRetries  int           `json:"max_retries"`
-	Priority    int           `json:"priority"`
-	CreatedAt   time.Time     `json:"created_at"`
-	Attempt     int           `json:"attempt"`
+	ID         string        `json:"id"`
+	Target     Target        `json:"target"`
+	NextRun    time.Time     `json:"next_run"`
+	Interval   time.Duration `json:"interval"`
+	Jitter     float64       `json:"jitter"`
+	RetryCount int           `json:"retry_count"`
+	MaxRetries int           `json:"max_retries"`
+	Priority   int           `json:"priority"`
+	CreatedAt  time.Time     `json:"created_at"`
+	Attempt    int           `json:"attempt"`
 	// Probe statistics
-	SuccessCount int64     `json:"success_count"`
-	FailedCount  int64     `json:"failed_count"`
-	LastStatus   string    `json:"last_status"` // "up" or "down"
+	SuccessCount  int64     `json:"success_count"`
+	FailedCount   int64     `json:"failed_count"`
+	LastStatus    string    `json:"last_status"` // "up" or "down"
 	LastProbeTime time.Time `json:"last_probe_time"`
 }
 
 // NormalizedEvent normalized event
 type NormalizedEvent struct {
-	Timestamp   time.Time              `json:"timestamp"`
-	SeriesID    string                 `json:"series_id"`
-	Metrics     map[string]float64     `json:"metrics"`
-	Labels      map[string]string      `json:"labels"`
-	Tags        []string               `json:"tags"`
-	Metadata    map[string]interface{} `json:"metadata"`
-	Source      string                 `json:"source,omitempty"`
+	Timestamp time.Time              `json:"timestamp"`
+	SeriesID  string                 `json:"series_id"`
+	Metrics   map[string]float64     `json:"metrics"`
+	Labels    map[string]string      `json:"labels"`
+	Tags      []string               `json:"tags"`
+	Metadata  map[string]interface{} `json:"metadata"`
+	Source    string                 `json:"source,omitempty"`
 }
 
 // Metric represents a metric
 type Metric struct {
-	Name        string            `json:"name"`
-	Value       float64           `json:"value"`
-	Timestamp   time.Time         `json:"timestamp"`
-	Labels      map[string]string `json:"labels"`
-	Type        MetricType        `json:"type"`
-	Help        string            `json:"help,omitempty"`
-	Buckets     []float64         `json:"buckets,omitempty"`
-	Sum         float64           `json:"sum,omitempty"`
-	Count       uint64            `json:"count,omitempty"`
-	Quantiles   map[float64]float64 `json:"quantiles,omitempty"`
+	Name      string              `json:"name"`
+	Value     float64             `json:"value"`
+	Timestamp time.Time           `json:"timestamp"`
+	Labels    map[string]string   `json:"labels"`
+	Type      MetricType          `json:"type"`
+	Help      string              `json:"help,omitempty"`
+	Buckets   []float64           `json:"buckets,omitempty"`
+	Sum       float64             `json:"sum,omitempty"`
+	Count     uint64              `json:"count,omitempty"`
+	Quantiles map[float64]float64 `json:"quantiles,omitempty"`
 }
 
 // MetricType metric type
@@ -216,7 +216,7 @@ type Record struct {
 	SeriesID    string                 `json:"series_id"`
 	Compression string                 `json:"compression,omitempty"`
 	Size        int64                  `json:"size,omitempty"`
-	Sent        bool                   `json:"sent"`           // Successful send flag
+	Sent        bool                   `json:"sent"`              // Successful send flag
 	SentAt      time.Time              `json:"sent_at,omitempty"` // Send time
 	Retries     int                    `json:"retries,omitempty"` // Number of send attempts
 }
@@ -224,12 +224,12 @@ type Record struct {
 // ConfigUpdate configuration update event
 // Config is defined in internal/config/types.go
 type ConfigUpdate struct {
-	Type        UpdateType    `json:"type"`
-	OldConfig   interface{}   `json:"old_config,omitempty"`
-	NewConfig   interface{}   `json:"new_config,omitempty"`
-	Timestamp   time.Time     `json:"timestamp"`
-	Source      string        `json:"source"`
-	Changes     []ConfigChange `json:"changes,omitempty"`
+	Type      UpdateType     `json:"type"`
+	OldConfig interface{}    `json:"old_config,omitempty"`
+	NewConfig interface{}    `json:"new_config,omitempty"`
+	Timestamp time.Time      `json:"timestamp"`
+	Source    string         `json:"source"`
+	Changes   []ConfigChange `json:"changes,omitempty"`
 }
 
 // UpdateType update type
@@ -243,10 +243,10 @@ const (
 
 // ConfigChange change in configuration
 type ConfigChange struct {
-	Path    string      `json:"path"`
+	Path     string      `json:"path"`
 	OldValue interface{} `json:"old_value"`
 	NewValue interface{} `json:"new_value"`
-	Op      ChangeOp    `json:"op"`
+	Op       ChangeOp    `json:"op"`
 }
 
 // ChangeOp change operation
@@ -260,12 +260,12 @@ const (
 
 // HealthStatus system health status
 type HealthStatus struct {
-	Status      string                 `json:"status"`
-	Timestamp   time.Time              `json:"timestamp"`
-	Uptime      time.Duration          `json:"uptime"`
-	Version     string                 `json:"version"`
-	Checks      map[string]HealthCheck `json:"checks"`
-	Metadata    map[string]interface{} `json:"metadata,omitempty"`
+	Status    string                 `json:"status"`
+	Timestamp time.Time              `json:"timestamp"`
+	Uptime    time.Duration          `json:"uptime"`
+	Version   string                 `json:"version"`
+	Checks    map[string]HealthCheck `json:"checks"`
+	Metadata  map[string]interface{} `json:"metadata,omitempty"`
 }
 
 // HealthCheck component health check
@@ -328,52 +328,52 @@ const (
 
 // ProbeStats probe statistics
 type ProbeStats struct {
-	TotalProbes     int64         `json:"total_probes"`
-	SuccessfulProbes int64        `json:"successful_probes"`
-	FailedProbes    int64         `json:"failed_probes"`
-	AvgRTT          time.Duration `json:"avg_rtt"`
-	MinRTT          time.Duration `json:"min_rtt"`
-	MaxRTT          time.Duration `json:"max_rtt"`
-	SuccessRate     float64       `json:"success_rate"`
-	CurrentRPS      float64       `json:"current_rps"`
-	PeakRPS         float64       `json:"peak_rps"`
+	TotalProbes      int64         `json:"total_probes"`
+	SuccessfulProbes int64         `json:"successful_probes"`
+	FailedProbes     int64         `json:"failed_probes"`
+	AvgRTT           time.Duration `json:"avg_rtt"`
+	MinRTT           time.Duration `json:"min_rtt"`
+	MaxRTT           time.Duration `json:"max_rtt"`
+	SuccessRate      float64       `json:"success_rate"`
+	CurrentRPS       float64       `json:"current_rps"`
+	PeakRPS          float64       `json:"peak_rps"`
 }
 
 // SystemStats system statistics
 type SystemStats struct {
-	Timestamp    time.Time       `json:"timestamp"`
-	Uptime       time.Duration   `json:"uptime"`
-	Memory       MemoryStats     `json:"memory"`
-	CPU          CPUStats        `json:"cpu"`
-	Network      NetworkStats    `json:"network"`
-	Disk         DiskStats       `json:"disk"`
-	Goroutines   int             `json:"goroutines"`
-	GC           GCStats         `json:"gc"`
-	Connections  ConnectionStats `json:"connections"`
+	Timestamp   time.Time       `json:"timestamp"`
+	Uptime      time.Duration   `json:"uptime"`
+	Memory      MemoryStats     `json:"memory"`
+	CPU         CPUStats        `json:"cpu"`
+	Network     NetworkStats    `json:"network"`
+	Disk        DiskStats       `json:"disk"`
+	Goroutines  int             `json:"goroutines"`
+	GC          GCStats         `json:"gc"`
+	Connections ConnectionStats `json:"connections"`
 }
 
 // MemoryStats memory statistics
 type MemoryStats struct {
-	Alloc       uint64 `json:"alloc"`
-	TotalAlloc  uint64 `json:"total_alloc"`
-	Sys         uint64 `json:"sys"`
-	Lookups     uint64 `json:"lookups"`
-	Mallocs     uint64 `json:"mallocs"`
-	Frees       uint64 `json:"frees"`
-	HeapAlloc   uint64 `json:"heap_alloc"`
-	HeapSys     uint64 `json:"heap_sys"`
-	HeapIdle    uint64 `json:"heap_idle"`
-	HeapInuse   uint64 `json:"heap_inuse"`
+	Alloc        uint64 `json:"alloc"`
+	TotalAlloc   uint64 `json:"total_alloc"`
+	Sys          uint64 `json:"sys"`
+	Lookups      uint64 `json:"lookups"`
+	Mallocs      uint64 `json:"mallocs"`
+	Frees        uint64 `json:"frees"`
+	HeapAlloc    uint64 `json:"heap_alloc"`
+	HeapSys      uint64 `json:"heap_sys"`
+	HeapIdle     uint64 `json:"heap_idle"`
+	HeapInuse    uint64 `json:"heap_inuse"`
 	HeapReleased uint64 `json:"heap_released"`
-	StackInuse  uint64 `json:"stack_inuse"`
-	StackSys    uint64 `json:"stack_sys"`
-	MSpanInuse  uint64 `json:"mspan_inuse"`
-	MSpanSys    uint64 `json:"mspan_sys"`
-	MCacheInuse uint64 `json:"mcache_inuse"`
-	MCacheSys   uint64 `json:"mcache_sys"`
-	BuckHashSys uint64 `json:"buck_hash_sys"`
-	GCSys       uint64 `json:"gc_sys"`
-	OtherSys    uint64 `json:"other_sys"`
+	StackInuse   uint64 `json:"stack_inuse"`
+	StackSys     uint64 `json:"stack_sys"`
+	MSpanInuse   uint64 `json:"mspan_inuse"`
+	MSpanSys     uint64 `json:"mspan_sys"`
+	MCacheInuse  uint64 `json:"mcache_inuse"`
+	MCacheSys    uint64 `json:"mcache_sys"`
+	BuckHashSys  uint64 `json:"buck_hash_sys"`
+	GCSys        uint64 `json:"gc_sys"`
+	OtherSys     uint64 `json:"other_sys"`
 }
 
 // CPUStats CPU statistics
@@ -390,26 +390,26 @@ type CPUStats struct {
 
 // NetworkStats network statistics
 type NetworkStats struct {
-	BytesSent     uint64 `json:"bytes_sent"`
-	BytesRecv     uint64 `json:"bytes_recv"`
-	PacketsSent   uint64 `json:"packets_sent"`
-	PacketsRecv   uint64 `json:"packets_recv"`
-	ErrorsIn      uint64 `json:"errors_in"`
-	ErrorsOut     uint64 `json:"errors_out"`
-	DropIn        uint64 `json:"drop_in"`
-	DropOut       uint64 `json:"drop_out"`
+	BytesSent   uint64 `json:"bytes_sent"`
+	BytesRecv   uint64 `json:"bytes_recv"`
+	PacketsSent uint64 `json:"packets_sent"`
+	PacketsRecv uint64 `json:"packets_recv"`
+	ErrorsIn    uint64 `json:"errors_in"`
+	ErrorsOut   uint64 `json:"errors_out"`
+	DropIn      uint64 `json:"drop_in"`
+	DropOut     uint64 `json:"drop_out"`
 }
 
 // DiskStats disk statistics
 type DiskStats struct {
-	ReadBytes    uint64         `json:"read_bytes"`
-	WriteBytes   uint64         `json:"write_bytes"`
-	ReadCount    uint64         `json:"read_count"`
-	WriteCount   uint64         `json:"write_count"`
-	ReadTime     time.Duration  `json:"read_time"`
-	WriteTime    time.Duration  `json:"write_time"`
-	IOInProgress int64          `json:"io_in_progress"`
-	IOTime       time.Duration  `json:"io_time"`
+	ReadBytes    uint64        `json:"read_bytes"`
+	WriteBytes   uint64        `json:"write_bytes"`
+	ReadCount    uint64        `json:"read_count"`
+	WriteCount   uint64        `json:"write_count"`
+	ReadTime     time.Duration `json:"read_time"`
+	WriteTime    time.Duration `json:"write_time"`
+	IOInProgress int64         `json:"io_in_progress"`
+	IOTime       time.Duration `json:"io_time"`
 }
 
 // GCStats garbage collector statistics
@@ -454,10 +454,10 @@ type VersionInfo struct {
 
 // ConfigHash configuration hash for change detection
 type ConfigHash struct {
-	Hash       string    `json:"hash"`
-	Timestamp  time.Time `json:"timestamp"`
-	Source     string    `json:"source"`
-	Size       int64     `json:"size"`
+	Hash      string    `json:"hash"`
+	Timestamp time.Time `json:"timestamp"`
+	Source    string    `json:"source"`
+	Size      int64     `json:"size"`
 }
 
 // EventType event type
@@ -479,13 +479,13 @@ const (
 
 // Event system event
 type Event struct {
-	ID        string     `json:"id"`
-	Type      EventType  `json:"type"`
-	Timestamp time.Time  `json:"timestamp"`
-	Source    string     `json:"source"`
-	Data      interface{} `json:"data,omitempty"`
+	ID        string            `json:"id"`
+	Type      EventType         `json:"type"`
+	Timestamp time.Time         `json:"timestamp"`
+	Source    string            `json:"source"`
+	Data      interface{}       `json:"data,omitempty"`
 	Labels    map[string]string `json:"labels,omitempty"`
-	Level     LogLevel   `json:"level,omitempty"`
+	Level     LogLevel          `json:"level,omitempty"`
 }
 
 // LogLevel logging level

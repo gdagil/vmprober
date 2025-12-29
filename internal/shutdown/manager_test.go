@@ -267,5 +267,3 @@ func TestShutdownManager_Shutdown_AlreadyInProgress(t *testing.T) {
 		t.Logf("One shutdown returned error (expected): %v, %v", err1, err2)
 	}
 }
-
-

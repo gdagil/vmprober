@@ -105,5 +105,3 @@ func (f *Factory) GetSupportedTypes() []types.ProbeType {
 	}
 	return types
 }
-
-

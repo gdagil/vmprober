@@ -358,7 +358,7 @@ targets:
       timeout: 3s
       labels:
         service: "dns"
-    
+
     - host: "api.example.com"
       port: 443
       protocols: ["tcp", "https"]  # Check both TCP and HTTP
@@ -435,5 +435,3 @@ See [Development: Contributing](../development/contributing.md) for details.
 - [Scheduler](scheduler.md) - How probes are scheduled
 - [Metrics](metrics.md) - How probe results become metrics
 - [Development: Contributing](../development/contributing.md) - Adding new probe types
-
-

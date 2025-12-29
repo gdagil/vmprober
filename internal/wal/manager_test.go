@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/sirupsen/logrus"
+
 	"github.com/gdagil/vmprober/internal/config"
 	"github.com/gdagil/vmprober/internal/types"
 )
@@ -311,4 +312,3 @@ func TestWALManager_Close(t *testing.T) {
 		t.Fatalf("Failed to close WAL manager: %v", err)
 	}
 }
-

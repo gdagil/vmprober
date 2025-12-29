@@ -9,28 +9,29 @@ import (
 	"github.com/gdagil/vmprober/internal/types"
 )
 
-// Formatter interface for formatting metrics
+// Formatter interface for formatting metrics.
 type Formatter interface {
 	Format(metrics []types.Metric) ([]byte, error)
 }
 
-// PrometheusFormatter formats metrics in Prometheus text format
+// PrometheusFormatter formats metrics in Prometheus text format.
 type PrometheusFormatter struct{}
 
-// NewPrometheusFormatter creates a new Prometheus formatter
+// NewPrometheusFormatter creates a new Prometheus formatter.
 func NewPrometheusFormatter() Formatter {
 	return &PrometheusFormatter{}
 }
 
-// Format formats metrics in Prometheus text format
+// Format formats metrics in Prometheus text format.
 func (f *PrometheusFormatter) Format(metrics []types.Metric) ([]byte, error) {
 	var builder strings.Builder
 
-	for _, metric := range metrics {
+	for i := range metrics {
+		metric := &metrics[i]
 		// Format label
 		labels := make([]string, 0, len(metric.Labels))
 		for k, v := range metric.Labels {
-			labels = append(labels, fmt.Sprintf(`%s="%s"`, escapeLabel(k), escapeLabel(v)))
+			labels = append(labels, fmt.Sprintf("%s=%q", escapeLabel(k), escapeLabel(v)))
 		}
 
 		labelStr := ""
@@ -110,15 +111,16 @@ func NewJSONLineFormatter() Formatter {
 // Format: {"metric":{"__name__":"metric_name","label1":"value1"},"values":[1.0],"timestamps":[1549891472010]}
 func (f *JSONLineFormatter) Format(metrics []types.Metric) ([]byte, error) {
 	var builder strings.Builder
-	
-	for _, metric := range metrics {
+
+	for i := range metrics {
+		metric := &metrics[i]
 		// Format labels for JSON format
 		metricLabels := make(map[string]string)
 		metricLabels["__name__"] = metric.Name
 		for k, v := range metric.Labels {
 			metricLabels[k] = v
 		}
-		
+
 		// Convert timestamp to milliseconds
 		var timestamp int64
 		if metric.Timestamp.IsZero() {
@@ -127,25 +129,23 @@ func (f *JSONLineFormatter) Format(metrics []types.Metric) ([]byte, error) {
 		} else {
 			timestamp = metric.Timestamp.UnixMilli()
 		}
-		
+
 		// Format JSON object
 		jsonObj := map[string]interface{}{
-			"metric":    metricLabels,
-			"values":    []float64{metric.Value},
+			"metric":     metricLabels,
+			"values":     []float64{metric.Value},
 			"timestamps": []int64{timestamp},
 		}
-		
+
 		// Serialize to JSON
 		jsonBytes, err := json.Marshal(jsonObj)
 		if err != nil {
 			return nil, fmt.Errorf("failed to marshal metric to JSON: %w", err)
 		}
-		
+
 		builder.Write(jsonBytes)
 		builder.WriteString("\n")
 	}
-	
+
 	return []byte(builder.String()), nil
 }
-
-

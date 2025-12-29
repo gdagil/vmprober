@@ -13,12 +13,12 @@ func TestNewTCPProbe(t *testing.T) {
 	config := &TCPConfig{
 		ConnectTimeout: 5 * time.Second,
 	}
-	
+
 	probe := NewTCPProbe(config)
 	if probe == nil {
 		t.Fatal("NewTCPProbe returned nil")
 	}
-	
+
 	if probe.Type() != types.ProbeTypeTCP {
 		t.Errorf("Expected type TCP, got %s", probe.Type())
 	}
@@ -31,7 +31,7 @@ func TestTCPProbe_Execute_Success(t *testing.T) {
 		t.Fatalf("Failed to start test server: %v", err)
 	}
 	defer ln.Close()
-	
+
 	go func() {
 		for {
 			conn, err := ln.Accept()
@@ -41,30 +41,30 @@ func TestTCPProbe_Execute_Success(t *testing.T) {
 			conn.Close()
 		}
 	}()
-	
+
 	addr := ln.Addr().(*net.TCPAddr)
-	
+
 	config := &TCPConfig{
 		ConnectTimeout: 5 * time.Second,
 	}
 	probe := NewTCPProbe(config)
 	defer probe.Close()
-	
+
 	target := types.Target{
 		Host:     addr.IP.String(),
 		Port:     addr.Port,
 		Protocol: types.ProbeTypeTCP,
 		Timeout:  5 * time.Second,
 	}
-	
+
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
-	
+
 	result, err := probe.Execute(ctx, target)
 	if err != nil {
 		t.Fatalf("Execute failed: %v", err)
 	}
-	
+
 	if result == nil {
 		t.Fatal("Result is nil")
 	}
@@ -91,7 +91,7 @@ func TestTCPProbe_Execute_ConnectionRefused(t *testing.T) {
 	}
 	probe := NewTCPProbe(config)
 	defer probe.Close()
-	
+
 	// Use a port that is definitely not listening
 	target := types.Target{
 		Host:     "127.0.0.1",
@@ -99,10 +99,10 @@ func TestTCPProbe_Execute_ConnectionRefused(t *testing.T) {
 		Protocol: types.ProbeTypeTCP,
 		Timeout:  1 * time.Second,
 	}
-	
+
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
-	
+
 	result, err := probe.Execute(ctx, target)
 	if err == nil {
 		t.Error("Expected error for connection refused")
@@ -121,7 +121,7 @@ func TestTCPProbe_Execute_Timeout(t *testing.T) {
 	}
 	probe := NewTCPProbe(config)
 	defer probe.Close()
-	
+
 	// Use a non-existent host that will cause a timeout
 	target := types.Target{
 		Host:     "192.0.2.1", // Test IP from RFC 5737
@@ -129,10 +129,10 @@ func TestTCPProbe_Execute_Timeout(t *testing.T) {
 		Protocol: types.ProbeTypeTCP,
 		Timeout:  100 * time.Millisecond,
 	}
-	
+
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 	defer cancel()
-	
+
 	result, err := probe.Execute(ctx, target)
 	// May be error or timeout
 	if result != nil && result.Success {
@@ -149,17 +149,17 @@ func TestTCPProbe_Execute_InvalidHost(t *testing.T) {
 	}
 	probe := NewTCPProbe(config)
 	defer probe.Close()
-	
+
 	target := types.Target{
 		Host:     "invalid-host-name-that-does-not-exist.local",
 		Port:     80,
 		Protocol: types.ProbeTypeTCP,
 		Timeout:  1 * time.Second,
 	}
-	
+
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
-	
+
 	result, err := probe.Execute(ctx, target)
 	if err == nil && (result == nil || result.Error == "") {
 		t.Error("Expected error for invalid host")
@@ -169,7 +169,7 @@ func TestTCPProbe_Execute_InvalidHost(t *testing.T) {
 func TestTCPProbe_Type(t *testing.T) {
 	config := &TCPConfig{}
 	probe := NewTCPProbe(config)
-	
+
 	if probe.Type() != types.ProbeTypeTCP {
 		t.Errorf("Expected type TCP, got %s", probe.Type())
 	}
@@ -192,7 +192,7 @@ func TestTCPProbe_Validate(t *testing.T) {
 			wantErr: true,
 		},
 	}
-	
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			var probe *TCPProbe
@@ -201,7 +201,7 @@ func TestTCPProbe_Validate(t *testing.T) {
 			} else {
 				probe = &TCPProbe{config: nil}
 			}
-			
+
 			err := probe.Validate(tt.config)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("Validate() error = %v, wantErr %v", err, tt.wantErr)
@@ -213,11 +213,8 @@ func TestTCPProbe_Validate(t *testing.T) {
 func TestTCPProbe_Close(t *testing.T) {
 	config := &TCPConfig{}
 	probe := NewTCPProbe(config)
-	
+
 	if err := probe.Close(); err != nil {
 		t.Errorf("Close() error = %v", err)
 	}
 }
-
-
-

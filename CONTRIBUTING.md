@@ -56,10 +56,10 @@ If you found a bug:
 [What actually happened]
 
 ## Environment
-- VMProber Version: 
-- Go Version: 
-- OS: 
-- Docker Version (if applicable): 
+- VMProber Version:
+- Go Version:
+- OS:
+- Docker Version (if applicable):
 
 ## Logs
 ```
@@ -162,10 +162,10 @@ We use `golangci-lint` with the following enabled linters:
   ```bash
   # Unit tests
   make test
-  
+
   # Tests with coverage
   make test-coverage
-  
+
   # E2E tests (requires Docker)
   make e2e-test
   ```

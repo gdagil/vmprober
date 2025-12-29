@@ -1,0 +1,70 @@
+# Pre-commit hooks configuration
+# Install: pre-commit install
+# Run manually: pre-commit run --all-files
+
+repos:
+  # Go formatting and imports
+  - repo: https://github.com/tekwizely/pre-commit-golang
+    rev: v1.0.0-rc.1
+    hooks:
+      - id: go-fmt
+        name: go fmt
+        description: Run go fmt on files
+
+      - id: go-imports
+        name: goimports
+        description: Run goimports on files
+
+      - id: go-mod-tidy
+        name: go mod tidy
+        description: Run go mod tidy
+
+  # Local hooks (runs from project directory)
+  - repo: local
+    hooks:
+      - id: go-vet
+        name: go vet
+        description: Run go vet on all packages
+        entry: go vet ./...
+        language: system
+        pass_filenames: false
+        types: [go]
+
+      - id: go-build
+        name: go build
+        description: Check that code compiles
+        entry: go build ./...
+        language: system
+        pass_filenames: false
+        types: [go]
+
+      - id: go-test
+        name: go test
+        description: Run unit tests
+        entry: go test -short ./internal/...
+        language: system
+        pass_filenames: false
+        types: [go]
+
+      - id: golangci-lint
+        name: golangci-lint
+        description: Run golangci-lint
+        entry: golangci-lint run
+        language: system
+        pass_filenames: false
+        types: [go]
+
+  # General file checks
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: trailing-whitespace
+        args: [--markdown-linebreak-ext=md]
+      - id: end-of-file-fixer
+      - id: check-yaml
+        args: [--allow-multiple-documents]
+      - id: check-json
+      - id: check-added-large-files
+        args: ['--maxkb=1000']
+      - id: check-merge-conflict
+      - id: detect-private-key

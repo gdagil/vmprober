@@ -156,4 +156,3 @@ func TestICMPProbe_SequenceIncrement(t *testing.T) {
 		}
 	}
 }
-

@@ -111,4 +111,3 @@ docker-push:
 		--push \
 		.
 	@echo "All images pushed successfully!"
-

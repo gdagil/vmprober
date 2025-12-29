@@ -84,7 +84,7 @@ targets:
       timeout: 5s
       labels:
         service: "web"
-    
+
     # Multiple protocols for the same target
     - host: "8.8.8.8"
       port: 53
@@ -93,7 +93,7 @@ targets:
       timeout: 3s
       labels:
         service: "dns"
-    
+
     # HTTP/HTTPS probe
     - host: "api.example.com"
       port: 443
@@ -106,7 +106,7 @@ targets:
         validate_cert: true
         headers:
           Accept: "application/json"
-    
+
     # DNS probe
     - host: "8.8.8.8"
       port: 53
@@ -116,7 +116,7 @@ targets:
         query_name: "google.com"
         query_type: "A"
         protocol: "udp"
-    
+
     # gRPC probe
     - host: "grpc.example.com"
       port: 50051
@@ -125,18 +125,18 @@ targets:
       grpc:
         service: "user.UserService"
         expected_status: "SERVING"
-  
+
   # File-based targets
   files:
     - path: "/etc/vmprober/targets.yaml"
       reload_interval: 1m
       watch: true
-  
+
   # HTTP-based targets
   urls:
     - url: "http://discovery:8429/targets"
       reload_interval: 5m
-  
+
   # Command-based targets
   commands:
     - command: "/usr/bin/get-targets.sh"
@@ -185,7 +185,7 @@ probes:
     count: 3
     interval: 30s
     timeout: 5s
-  
+
   # TCP probe defaults
   tcp:
     connect_timeout: 5s
@@ -194,20 +194,20 @@ probes:
     keep_alive:
       enabled: true
       period: 30s
-  
+
   # UDP probe defaults
   udp:
     payload_type: "random"
     payload_size: 64
     response_timeout: 2s
     max_packet_size: 1024
-  
+
   # ICMP probe defaults
   icmp:
     library: "systicmp"
     sequence_start: 1
     ttl: 64
-  
+
   # HTTP/HTTPS probe defaults
   http:
     method: "GET"
@@ -219,7 +219,7 @@ probes:
     timeout: 10s
     headers:
       User-Agent: "vmprober/1.0"
-  
+
   # DNS probe defaults
   dns:
     query_type: "A"         # A, AAAA, CNAME, MX, TXT, NS, SOA, SRV, PTR
@@ -227,7 +227,7 @@ probes:
     validate_answer: true
     recursion: true
     timeout: 5s
-  
+
   # gRPC probe defaults
   grpc:
     service: ""             # Empty = overall health check
@@ -341,5 +341,3 @@ See `config.yaml.example` in the project root for a complete configuration examp
 
 - [Reference: Configuration Reference](../reference/configuration-reference.md) - Complete configuration options
 - [Operations: Configuration Management](../operations/configuration.md) - Managing configs in production
-
-

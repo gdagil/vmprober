@@ -91,6 +91,3 @@ func (p *TCPProbe) Validate(config interface{}) error {
 func (p *TCPProbe) Close() error {
 	return nil
 }
-
-
-

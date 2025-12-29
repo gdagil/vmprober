@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/sirupsen/logrus"
+
 	"github.com/gdagil/vmprober/internal/types"
 )
 
@@ -17,7 +18,7 @@ func TestNewScheduler(t *testing.T) {
 	if scheduler == nil {
 		t.Fatal("NewScheduler returned nil")
 	}
-	
+
 	stats := scheduler.GetStats()
 	if stats.TotalJobs != 0 {
 		t.Errorf("Expected 0 total jobs, got %d", stats.TotalJobs)
@@ -28,7 +29,7 @@ func TestScheduler_Schedule(t *testing.T) {
 	logger := logrus.New()
 	logger.SetLevel(logrus.ErrorLevel)
 	scheduler := NewScheduler(logger)
-	
+
 	job := &types.Job{
 		ID:       "test-job-1",
 		NextRun:  time.Now().Add(1 * time.Second),
@@ -42,13 +43,13 @@ func TestScheduler_Schedule(t *testing.T) {
 		},
 		CreatedAt: time.Now(),
 	}
-	
+
 	ctx := context.Background()
 	err := scheduler.Schedule(ctx, job)
 	if err != nil {
 		t.Fatalf("Schedule failed: %v", err)
 	}
-	
+
 	stats := scheduler.GetStats()
 	if stats.TotalJobs != 1 {
 		t.Errorf("Expected 1 total job, got %d", stats.TotalJobs)
@@ -62,7 +63,7 @@ func TestScheduler_Schedule_MultipleJobs(t *testing.T) {
 	logger := logrus.New()
 	logger.SetLevel(logrus.ErrorLevel)
 	scheduler := NewScheduler(logger)
-	
+
 	ctx := context.Background()
 	for i := 0; i < 5; i++ {
 		job := &types.Job{
@@ -78,12 +79,12 @@ func TestScheduler_Schedule_MultipleJobs(t *testing.T) {
 			},
 			CreatedAt: time.Now(),
 		}
-		
+
 		if err := scheduler.Schedule(ctx, job); err != nil {
 			t.Fatalf("Schedule failed: %v", err)
 		}
 	}
-	
+
 	stats := scheduler.GetStats()
 	if stats.TotalJobs != 5 {
 		t.Errorf("Expected 5 total jobs, got %d", stats.TotalJobs)
@@ -94,22 +95,24 @@ func TestScheduler_Schedule_MultipleJobs(t *testing.T) {
 }
 
 func TestScheduler_StartStop(t *testing.T) {
-	logger := logrus.New(); logger.SetLevel(logrus.ErrorLevel); scheduler := NewScheduler(logger)
-	
+	logger := logrus.New()
+	logger.SetLevel(logrus.ErrorLevel)
+	scheduler := NewScheduler(logger)
+
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 	defer cancel()
-	
+
 	err := scheduler.Start(ctx)
 	if err != nil {
 		t.Fatalf("Start failed: %v", err)
 	}
-	
+
 	// Give time for scheduler to start
 	time.Sleep(100 * time.Millisecond)
-	
+
 	stopCtx, stopCancel := context.WithTimeout(context.Background(), 1*time.Second)
 	defer stopCancel()
-	
+
 	err = scheduler.Stop(stopCtx)
 	if err != nil {
 		t.Fatalf("Stop failed: %v", err)
@@ -117,17 +120,19 @@ func TestScheduler_StartStop(t *testing.T) {
 }
 
 func TestScheduler_GetJobChan(t *testing.T) {
-	logger := logrus.New(); logger.SetLevel(logrus.ErrorLevel); scheduler := NewScheduler(logger)
-	
+	logger := logrus.New()
+	logger.SetLevel(logrus.ErrorLevel)
+	scheduler := NewScheduler(logger)
+
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
-	
+
 	err := scheduler.Start(ctx)
 	if err != nil {
 		t.Fatalf("Start failed: %v", err)
 	}
 	defer scheduler.Stop(context.Background())
-	
+
 	// Schedule a task that should execute immediately
 	job := &types.Job{
 		ID:       "test-job-immediate",
@@ -142,11 +147,11 @@ func TestScheduler_GetJobChan(t *testing.T) {
 		},
 		CreatedAt: time.Now(),
 	}
-	
+
 	if err := scheduler.Schedule(ctx, job); err != nil {
 		t.Fatalf("Schedule failed: %v", err)
 	}
-	
+
 	// Wait for task to appear in channel
 	jobChan := scheduler.GetJobChan()
 	select {
@@ -160,17 +165,19 @@ func TestScheduler_GetJobChan(t *testing.T) {
 }
 
 func TestScheduler_ProcessJobs_Priority(t *testing.T) {
-	logger := logrus.New(); logger.SetLevel(logrus.ErrorLevel); scheduler := NewScheduler(logger)
-	
+	logger := logrus.New()
+	logger.SetLevel(logrus.ErrorLevel)
+	scheduler := NewScheduler(logger)
+
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
-	
+
 	err := scheduler.Start(ctx)
 	if err != nil {
 		t.Fatalf("Start failed: %v", err)
 	}
 	defer scheduler.Stop(context.Background())
-	
+
 	// Schedule several tasks with different execution times
 	now := time.Now()
 	jobs := []*types.Job{
@@ -205,13 +212,13 @@ func TestScheduler_ProcessJobs_Priority(t *testing.T) {
 			CreatedAt: time.Now(),
 		},
 	}
-	
+
 	for _, job := range jobs {
 		if err := scheduler.Schedule(ctx, job); err != nil {
 			t.Fatalf("Schedule failed: %v", err)
 		}
 	}
-	
+
 	// First task should be job-3 (earliest)
 	jobChan := scheduler.GetJobChan()
 	select {
@@ -225,13 +232,15 @@ func TestScheduler_ProcessJobs_Priority(t *testing.T) {
 }
 
 func TestScheduler_GetStats(t *testing.T) {
-	logger := logrus.New(); logger.SetLevel(logrus.ErrorLevel); scheduler := NewScheduler(logger)
-	
+	logger := logrus.New()
+	logger.SetLevel(logrus.ErrorLevel)
+	scheduler := NewScheduler(logger)
+
 	stats := scheduler.GetStats()
 	if stats.TotalJobs != 0 {
 		t.Errorf("Expected 0 total jobs initially, got %d", stats.TotalJobs)
 	}
-	
+
 	ctx := context.Background()
 	job := &types.Job{
 		ID:       "test-job",
@@ -243,9 +252,9 @@ func TestScheduler_GetStats(t *testing.T) {
 		},
 		CreatedAt: time.Now(),
 	}
-	
+
 	scheduler.Schedule(ctx, job)
-	
+
 	stats = scheduler.GetStats()
 	if stats.TotalJobs != 1 {
 		t.Errorf("Expected 1 total job, got %d", stats.TotalJobs)
@@ -254,4 +263,3 @@ func TestScheduler_GetStats(t *testing.T) {
 		t.Errorf("Expected 1 queued job, got %d", stats.QueuedJobs)
 	}
 }
-

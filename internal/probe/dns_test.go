@@ -61,7 +61,7 @@ func TestDNSProbe_Execute_Success(t *testing.T) {
 	defer cancel()
 
 	result, err := probe.Execute(ctx, target)
-	
+
 	// This test requires network access, so it may not work in isolated environments
 	if err != nil {
 		t.Skipf("Skipping test due to network error: %v", err)
@@ -266,7 +266,7 @@ func TestDNSProbe_Execute_ExpectedRecords_NotFound(t *testing.T) {
 	defer cancel()
 
 	result, _ := probe.Execute(ctx, target)
-	
+
 	// If query succeeded, check that expected record is not found
 	if result != nil && result.Success {
 		t.Error("Expected failed probe due to expected record not found")
@@ -321,7 +321,7 @@ func TestDNSProbe_Execute_NXDomain(t *testing.T) {
 	defer cancel()
 
 	result, _ := probe.Execute(ctx, target)
-	
+
 	// With ValidateAnswer=true, NXDOMAIN should result in error
 	if result != nil && result.Success {
 		t.Error("Expected failed probe for NXDOMAIN")
@@ -510,4 +510,3 @@ func TestBuildDNSConfigFromTarget_Defaults(t *testing.T) {
 		t.Error("Expected default recursion to be true")
 	}
 }
-

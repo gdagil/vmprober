@@ -88,10 +88,10 @@ func (e *TestEnvironment) Teardown() {
 	e.cancel()
 }
 
-// StartVMProber starts vmprober with the given configuration
-func (e *TestEnvironment) StartVMProber(config string, logLevel string) error {
+// StartVMProber starts vmprober with the given configuration.
+func (e *TestEnvironment) StartVMProber(config, logLevel string) error {
 	configPath := filepath.Join(os.TempDir(), fmt.Sprintf("vmprober_test_%d.yaml", time.Now().UnixNano()))
-	if err := os.WriteFile(configPath, []byte(config), 0644); err != nil {
+	if err := os.WriteFile(configPath, []byte(config), 0o644); err != nil {
 		return fmt.Errorf("failed to write config: %w", err)
 	}
 	e.configPath = configPath
@@ -331,4 +331,3 @@ func VerifyMetricHasLabels(ctx context.Context, metricName string, expectedLabel
 func RequireSetup(t *testing.T, env *TestEnvironment) {
 	require.NoError(t, env.Setup(), "Failed to setup test environment")
 }
-

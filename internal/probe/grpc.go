@@ -8,8 +8,6 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/gdagil/vmprober/internal/types"
-	"github.com/gdagil/vmprober/pkg/interfaces"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/credentials"
@@ -17,6 +15,9 @@ import (
 	"google.golang.org/grpc/health/grpc_health_v1"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
+
+	"github.com/gdagil/vmprober/internal/types"
+	"github.com/gdagil/vmprober/pkg/interfaces"
 )
 
 // GRPCProbe implements gRPC probes
@@ -94,6 +95,7 @@ func (p *GRPCProbe) Execute(ctx context.Context, target types.Target) (*types.Pr
 	defer dialCancel()
 
 	// Connect
+	//nolint:staticcheck // grpc.DialContext is deprecated but NewClient has different semantics
 	conn, err := grpc.DialContext(dialCtx, addr, opts...)
 	if err != nil {
 		result.Error = fmt.Sprintf("failed to connect: %v", err)

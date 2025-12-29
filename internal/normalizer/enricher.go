@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/sirupsen/logrus"
+
 	"github.com/gdagil/vmprober/internal/types"
 )
 
@@ -39,4 +40,3 @@ func (e *DataEnricher) Enrich(event *types.NormalizedEvent) {
 	// Add timestamps
 	event.Labels["timestamp"] = event.Timestamp.Format(time.RFC3339)
 }
-

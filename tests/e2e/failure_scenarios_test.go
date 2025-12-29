@@ -184,4 +184,3 @@ targets:
 
 	t.Logf("vmprober handled timeouts gracefully, found %d metric series", len(result.Data.Result))
 }
-

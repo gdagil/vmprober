@@ -137,5 +137,3 @@ vmprober_probe_success_total{instance="grpc.example.com:50051",protocol="grpc",s
 
 - [API Reference](api.md) - HTTP API endpoints
 - [Operations: Monitoring](../operations/monitoring.md) - Setting up monitoring
-
-

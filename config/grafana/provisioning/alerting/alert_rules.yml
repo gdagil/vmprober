@@ -798,4 +798,3 @@ groups:
         labels:
           severity: critical
           team: infrastructure
-

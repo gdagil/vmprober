@@ -347,4 +347,3 @@ func FormatHTTPTarget(target types.Target) string {
 
 	return fmt.Sprintf("%s://%s:%s%s", scheme, target.Host, strconv.Itoa(port), path)
 }
-
