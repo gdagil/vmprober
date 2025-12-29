@@ -1,0 +1,65 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <defs>
+    <linearGradient id="probeGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#00D4AA;stop-opacity:1" />
+      <stop offset="50%" style="stop-color:#00B894;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#009B77;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="waveGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#00B894;stop-opacity:0.3" />
+      <stop offset="50%" style="stop-color:#00B894;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#00B894;stop-opacity:0.3" />
+    </linearGradient>
+  </defs>
+
+  <!-- Outer rose/pink background for light theme -->
+  <rect width="512" height="512" fill="#fff1f2" rx="24"/>
+
+  <!-- Subtle border lines -->
+  <line x1="24" y1="24" x2="24" y2="488" stroke="#fda4af" stroke-width="1" opacity="0.5"/>
+  <line x1="488" y1="24" x2="488" y2="488" stroke="#fda4af" stroke-width="1" opacity="0.5"/>
+  <line x1="24" y1="24" x2="488" y2="24" stroke="#fda4af" stroke-width="1" opacity="0.5"/>
+  <line x1="24" y1="488" x2="488" y2="488" stroke="#fda4af" stroke-width="1" opacity="0.5"/>
+
+  <!-- Inner white content area -->
+  <rect x="24" y="24" width="464" height="464" fill="#ffffff" rx="16"/>
+
+  <!-- Centered logo group -->
+  <g transform="translate(256, 256)">
+    <!-- Network signal waves -->
+    <g opacity="0.7">
+      <path d="M 65 -50 Q 100 -25, 100 0 Q 100 25, 65 50" fill="none" stroke="url(#waveGradient)" stroke-width="6" stroke-linecap="round"/>
+      <path d="M 45 -35 Q 70 -17, 70 0 Q 70 17, 45 35" fill="none" stroke="url(#waveGradient)" stroke-width="6" stroke-linecap="round"/>
+      <path d="M 25 -20 Q 40 -10, 40 0 Q 40 10, 25 20" fill="none" stroke="url(#waveGradient)" stroke-width="6" stroke-linecap="round"/>
+    </g>
+
+    <!-- Main probe body -->
+    <path d="M -130 -90
+             L 0 0
+             L -130 90
+             L -130 55
+             L -55 0
+             L -130 -55
+             Z"
+          fill="url(#probeGradient)"/>
+
+    <!-- Accent line -->
+    <path d="M -117 -60 L -117 60" stroke="#ffffff" stroke-width="4" stroke-linecap="round" opacity="0.45"/>
+
+    <!-- Connection nodes -->
+    <circle cx="15" cy="0" r="14" fill="#00B894"/>
+    <circle cx="15" cy="0" r="7" fill="#ffffff"/>
+
+    <!-- Target nodes -->
+    <circle cx="125" cy="-75" r="10" fill="#00B894" opacity="0.6"/>
+    <circle cx="145" cy="0" r="12" fill="#00B894"/>
+    <circle cx="125" cy="75" r="10" fill="#00B894" opacity="0.6"/>
+
+    <!-- Connection lines -->
+    <g stroke="#00B894" stroke-width="2" stroke-dasharray="5,4" opacity="0.4">
+      <line x1="29" y1="-6" x2="115" y2="-70"/>
+      <line x1="29" y1="0" x2="133" y2="0"/>
+      <line x1="29" y1="6" x2="115" y2="70"/>
+    </g>
+  </g>
+</svg>

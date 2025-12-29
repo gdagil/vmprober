@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="assets/logo.svg" alt="VMProber Logo" width="120">
+  <img src="docs/assets/logo.svg" alt="VMProber Logo" width="120">
 </p>
 
 <h1 align="center">Contributing to VMProber</h1>
@@ -123,8 +123,7 @@ vmprober/
 │   └── wal/               # Write-Ahead Log
 ├── pkg/interfaces/        # Public interfaces
 ├── config/                # Configuration files
-├── docs/                  # Documentation
-└── assets/                # Brand assets
+└── docs/                  # Documentation & assets
 ```
 
 ### Formatting
@@ -445,5 +444,5 @@ If you have questions:
 </p>
 
 <p align="center">
-  <img src="assets/logo-inline.svg" alt="VMProber" width="120">
+  <img src="docs/assets/logo-inline.svg" alt="VMProber" width="120">
 </p>

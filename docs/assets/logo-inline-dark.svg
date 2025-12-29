@@ -1,0 +1,47 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 280 70">
+  <defs>
+    <linearGradient id="probeGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#00D4AA"/>
+      <stop offset="100%" style="stop-color:#009B77"/>
+    </linearGradient>
+    <linearGradient id="waveGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#00D4AA;stop-opacity:0.3"/>
+      <stop offset="50%" style="stop-color:#00D4AA;stop-opacity:1"/>
+      <stop offset="100%" style="stop-color:#00D4AA;stop-opacity:0.3"/>
+    </linearGradient>
+    <filter id="glow">
+      <feGaussianBlur stdDeviation="1" result="coloredBlur"/>
+      <feMerge>
+        <feMergeNode in="coloredBlur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+
+  <!-- Dark background -->
+  <rect width="280" height="70" fill="#0a0a0f" rx="8"/>
+
+  <!-- Inner content area -->
+  <rect x="4" y="4" width="272" height="62" fill="#12121a" rx="6"/>
+
+  <!-- Border accent -->
+  <line x1="4" y1="4" x2="276" y2="4" stroke="#00D4AA" stroke-width="0.5" opacity="0.2"/>
+  <line x1="4" y1="66" x2="276" y2="66" stroke="#00D4AA" stroke-width="0.5" opacity="0.2"/>
+
+  <!-- Mini probe icon -->
+  <g transform="translate(14, 12)" filter="url(#glow)">
+    <!-- Probe arrow -->
+    <path d="M 0 10 L 28 23 L 0 36 L 0 29 L 17 23 L 0 17 Z" fill="url(#probeGrad)"/>
+
+    <!-- Signal waves -->
+    <path d="M 34 15 Q 42 19, 42 23 Q 42 27, 34 31" fill="none" stroke="url(#waveGrad)" stroke-width="2.5" stroke-linecap="round" opacity="0.8"/>
+    <path d="M 40 10 Q 50 16, 50 23 Q 50 30, 40 36" fill="none" stroke="url(#waveGrad)" stroke-width="2.5" stroke-linecap="round" opacity="0.6"/>
+
+    <!-- Connection dot -->
+    <circle cx="32" cy="23" r="4" fill="#ffffff"/>
+    <circle cx="32" cy="23" r="2" fill="#00D4AA"/>
+  </g>
+
+  <!-- VMProber Text -->
+  <text x="80" y="44" font-family="'SF Pro Display', 'Segoe UI', system-ui, -apple-system, sans-serif" font-size="28" font-weight="700" fill="#ffffff">VMProber</text>
+</svg>

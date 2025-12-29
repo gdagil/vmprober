@@ -1,25 +1,36 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 50">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 280 70">
   <defs>
     <linearGradient id="probeGrad" x1="0%" y1="0%" x2="100%" y2="100%">
       <stop offset="0%" style="stop-color:#00D4AA"/>
       <stop offset="100%" style="stop-color:#009B77"/>
     </linearGradient>
+    <linearGradient id="waveGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#00D4AA;stop-opacity:0.3"/>
+      <stop offset="50%" style="stop-color:#00D4AA;stop-opacity:1"/>
+      <stop offset="100%" style="stop-color:#00D4AA;stop-opacity:0.3"/>
+    </linearGradient>
   </defs>
 
+  <!-- Subtle rose background -->
+  <rect width="280" height="70" fill="#fff1f2" rx="8"/>
+
+  <!-- Inner content area -->
+  <rect x="4" y="4" width="272" height="62" fill="#fefefe" rx="6"/>
+
   <!-- Mini probe icon -->
-  <g transform="translate(5, 5)">
+  <g transform="translate(14, 12)">
     <!-- Probe arrow -->
-    <path d="M 0 8 L 22 20 L 0 32 L 0 26 L 14 20 L 0 14 Z" fill="url(#probeGrad)"/>
+    <path d="M 0 10 L 28 23 L 0 36 L 0 29 L 17 23 L 0 17 Z" fill="url(#probeGrad)"/>
 
     <!-- Signal waves -->
-    <path d="M 28 12 Q 34 15, 34 20 Q 34 25, 28 28" fill="none" stroke="#00D4AA" stroke-width="2" stroke-linecap="round" opacity="0.6"/>
-    <path d="M 32 8 Q 40 13, 40 20 Q 40 27, 32 32" fill="none" stroke="#00D4AA" stroke-width="2" stroke-linecap="round" opacity="0.4"/>
+    <path d="M 34 15 Q 42 19, 42 23 Q 42 27, 34 31" fill="none" stroke="url(#waveGrad)" stroke-width="2.5" stroke-linecap="round" opacity="0.7"/>
+    <path d="M 40 10 Q 50 16, 50 23 Q 50 30, 40 36" fill="none" stroke="url(#waveGrad)" stroke-width="2.5" stroke-linecap="round" opacity="0.5"/>
 
     <!-- Connection dot -->
-    <circle cx="26" cy="20" r="3" fill="#00D4AA"/>
+    <circle cx="32" cy="23" r="4" fill="#ffffff" stroke="#00D4AA" stroke-width="2"/>
+    <circle cx="32" cy="23" r="2" fill="#00D4AA"/>
   </g>
 
-  <!-- Text -->
-  <text x="55" y="33" font-family="'Segoe UI', Roboto, sans-serif" font-size="22" font-weight="600" fill="#00D4AA">vm</text>
-  <text x="87" y="33" font-family="'Segoe UI', Roboto, sans-serif" font-size="22" font-weight="600" fill="#2d3748">prober</text>
+  <!-- VMProber Text -->
+  <text x="80" y="44" font-family="'SF Pro Display', 'Segoe UI', system-ui, -apple-system, sans-serif" font-size="28" font-weight="700" fill="#1a1a2e">VMProber</text>
 </svg>

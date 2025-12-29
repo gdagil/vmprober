@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="assets/banner.svg" alt="VMProber Banner" width="700">
+  <img src="docs/assets/banner-dark.svg" alt="VMProber Banner" width="700">
 </p>
 
 <p align="center">
@@ -29,7 +29,7 @@
 **VMProber** is a standalone Go application designed for comprehensive network and service monitoring. It supports TCP, UDP, ICMP, HTTP/HTTPS, DNS, and gRPC probes for testing connectivity, availability, and health of your infrastructure. VMProber works with both pull (Prometheus scrape) and push (VictoriaMetrics remote write) models for exporting metrics, making it flexible for various monitoring architectures.
 
 <p align="center">
-  <img src="assets/logo.svg" alt="VMProber Logo" width="200">
+  <img src="docs/assets/logo-dark.svg" alt="VMProber Logo" width="200">
 </p>
 
 ## Features
@@ -109,8 +109,7 @@ vmprober/
 │   └── wal/               # Write-Ahead Log system
 ├── pkg/interfaces/        # Public interfaces
 ├── config/                # Configuration examples
-├── docs/                  # Documentation (GitHub Pages)
-└── assets/                # Logo and brand assets
+└── docs/                  # Documentation & assets (GitHub Pages)
 ```
 
 ## Configuration
@@ -420,7 +419,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 ---
 
 <p align="center">
-  <img src="assets/logo-inline.svg" alt="VMProber" width="150">
+  <img src="docs/assets/logo-inline-dark.svg" alt="VMProber" width="150">
   <br>
   <sub>Made with ❤️ by gdagil and llms</sub>
 </p>

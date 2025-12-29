@@ -10,22 +10,29 @@
       <stop offset="50%" style="stop-color:#00D4AA;stop-opacity:1" />
       <stop offset="100%" style="stop-color:#00D4AA;stop-opacity:0.3" />
     </linearGradient>
+    <filter id="glow">
+      <feGaussianBlur stdDeviation="2" result="coloredBlur"/>
+      <feMerge>
+        <feMergeNode in="coloredBlur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
   </defs>
 
-  <!-- Outer rose/pink background -->
-  <rect width="512" height="512" fill="#ffe4e6" rx="24"/>
+  <!-- Outer dark background -->
+  <rect width="512" height="512" fill="#0a0a0f" rx="24"/>
 
-  <!-- Border lines (proportional 40pt style) -->
-  <line x1="24" y1="24" x2="24" y2="488" stroke="#e11d48" stroke-width="1" opacity="0.25"/>
-  <line x1="488" y1="24" x2="488" y2="488" stroke="#e11d48" stroke-width="1" opacity="0.25"/>
-  <line x1="24" y1="24" x2="488" y2="24" stroke="#e11d48" stroke-width="1" opacity="0.25"/>
-  <line x1="24" y1="488" x2="488" y2="488" stroke="#e11d48" stroke-width="1" opacity="0.25"/>
+  <!-- Border lines -->
+  <line x1="24" y1="24" x2="24" y2="488" stroke="#00D4AA" stroke-width="1" opacity="0.15"/>
+  <line x1="488" y1="24" x2="488" y2="488" stroke="#00D4AA" stroke-width="1" opacity="0.15"/>
+  <line x1="24" y1="24" x2="488" y2="24" stroke="#00D4AA" stroke-width="1" opacity="0.15"/>
+  <line x1="24" y1="488" x2="488" y2="488" stroke="#00D4AA" stroke-width="1" opacity="0.15"/>
 
-  <!-- Inner white content area -->
-  <rect x="24" y="24" width="464" height="464" fill="#fefefe" rx="16"/>
+  <!-- Inner dark content area -->
+  <rect x="24" y="24" width="464" height="464" fill="#12121a" rx="16"/>
 
   <!-- Centered logo group -->
-  <g transform="translate(256, 256)">
+  <g transform="translate(256, 256)" filter="url(#glow)">
     <!-- Network signal waves -->
     <g opacity="0.8">
       <path d="M 65 -50 Q 100 -25, 100 0 Q 100 25, 65 50" fill="none" stroke="url(#waveGradient)" stroke-width="6" stroke-linecap="round"/>
@@ -33,7 +40,7 @@
       <path d="M 25 -20 Q 40 -10, 40 0 Q 40 10, 25 20" fill="none" stroke="url(#waveGradient)" stroke-width="6" stroke-linecap="round"/>
     </g>
 
-    <!-- Main probe body - V shape pointing right -->
+    <!-- Main probe body -->
     <path d="M -130 -90
              L 0 0
              L -130 90
@@ -43,23 +50,33 @@
              Z"
           fill="url(#probeGradient)"/>
 
-    <!-- Accent line on probe -->
-    <path d="M -117 -60 L -117 60" stroke="#ffffff" stroke-width="4" stroke-linecap="round" opacity="0.35"/>
+    <!-- Accent line -->
+    <path d="M -117 -60 L -117 60" stroke="#ffffff" stroke-width="4" stroke-linecap="round" opacity="0.3"/>
 
     <!-- Connection nodes -->
-    <circle cx="15" cy="0" r="14" fill="#ffffff" stroke="#00D4AA" stroke-width="4"/>
+    <circle cx="15" cy="0" r="14" fill="#ffffff"/>
     <circle cx="15" cy="0" r="7" fill="#00D4AA"/>
 
     <!-- Target nodes -->
-    <circle cx="125" cy="-75" r="10" fill="#00D4AA" opacity="0.7"/>
+    <circle cx="125" cy="-75" r="10" fill="#00D4AA" opacity="0.8"/>
     <circle cx="145" cy="0" r="12" fill="#00D4AA"/>
-    <circle cx="125" cy="75" r="10" fill="#00D4AA" opacity="0.7"/>
+    <circle cx="125" cy="75" r="10" fill="#00D4AA" opacity="0.8"/>
 
-    <!-- Connection lines to targets -->
-    <g stroke="#00D4AA" stroke-width="2" stroke-dasharray="5,4" opacity="0.45">
+    <!-- Connection lines -->
+    <g stroke="#00D4AA" stroke-width="2" stroke-dasharray="5,4" opacity="0.5">
       <line x1="29" y1="-6" x2="115" y2="-70"/>
       <line x1="29" y1="0" x2="133" y2="0"/>
       <line x1="29" y1="6" x2="115" y2="70"/>
     </g>
+  </g>
+
+  <!-- Corner decorations -->
+  <g fill="#00D4AA" opacity="0.12">
+    <circle cx="44" cy="44" r="3"/>
+    <circle cx="60" cy="44" r="3"/>
+    <circle cx="44" cy="60" r="3"/>
+    <circle cx="468" cy="44" r="3"/>
+    <circle cx="452" cy="44" r="3"/>
+    <circle cx="468" cy="60" r="3"/>
   </g>
 </svg>
