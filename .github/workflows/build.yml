@@ -332,7 +332,7 @@ jobs:
         uses: aquasecurity/trivy-action@master
         continue-on-error: true
         with:
-          image-ref: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.meta-alpine.outputs.version }}-alpine
+          image-ref: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}@${{ steps.build-alpine.outputs.digest }}
           format: 'sarif'
           output: 'trivy-alpine-results.sarif'
           severity: 'CRITICAL,HIGH'
@@ -341,7 +341,7 @@ jobs:
         uses: aquasecurity/trivy-action@master
         continue-on-error: true
         with:
-          image-ref: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.meta-scratch.outputs.version }}-scratch
+          image-ref: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}@${{ steps.build-scratch.outputs.digest }}
           format: 'sarif'
           output: 'trivy-scratch-results.sarif'
           severity: 'CRITICAL,HIGH'
