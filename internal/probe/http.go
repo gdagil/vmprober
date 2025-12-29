@@ -69,6 +69,7 @@ func NewHTTPProbe(config *HTTPConfig) interfaces.Probe {
 	// Create TLS config
 	tlsConfig := &tls.Config{
 		InsecureSkipVerify: !config.ValidateCert,
+		MinVersion:         tls.VersionTLS12,
 	}
 
 	// Create transport

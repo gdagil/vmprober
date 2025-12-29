@@ -81,6 +81,7 @@ func (p *GRPCProbe) Execute(ctx context.Context, target types.Target) (*types.Pr
 	if p.config.TLS {
 		tlsConfig := &tls.Config{
 			InsecureSkipVerify: p.config.TLSSkipVerify,
+			MinVersion:         tls.VersionTLS12,
 		}
 		if p.config.ServerName != "" {
 			tlsConfig.ServerName = p.config.ServerName

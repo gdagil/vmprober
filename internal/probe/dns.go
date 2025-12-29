@@ -116,6 +116,7 @@ func (p *DNSProbe) Execute(ctx context.Context, target types.Target) (*types.Pro
 		client.Net = "tcp-tls"
 		client.TLSConfig = &tls.Config{
 			InsecureSkipVerify: false,
+			MinVersion:         tls.VersionTLS12,
 		}
 		if port == 53 {
 			// DoT typically uses port 853

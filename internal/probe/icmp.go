@@ -62,10 +62,15 @@ func NewICMPProbe(config *ICMPConfig) interfaces.Probe {
 		conn, _ = icmp.ListenPacket("ip6:ipv6-icmp", "::")
 	}
 
+	// Validate SequenceStart to prevent integer overflow
+	seqStart := config.SequenceStart
+	if seqStart < 0 || seqStart > 65535 {
+		seqStart = 1 // Default to safe value
+	}
 	return &ICMPProbe{
 		config:   config,
 		socket:   conn,
-		sequence: uint16(config.SequenceStart),
+		sequence: uint16(seqStart),
 	}
 }
 
@@ -157,7 +162,12 @@ func (p *ICMPProbe) Execute(ctx context.Context, target types.Target) (*types.Pr
 	p.mu.Lock()
 	p.sequence++
 	if p.sequence == 0 {
-		p.sequence = uint16(p.config.SequenceStart)
+		// Validate SequenceStart to prevent integer overflow
+		seqStart := p.config.SequenceStart
+		if seqStart < 0 || seqStart > 65535 {
+			seqStart = 1 // Default to safe value
+		}
+		p.sequence = uint16(seqStart)
 	}
 	icmpSeq := p.sequence
 	p.mu.Unlock()
@@ -325,11 +335,30 @@ func (p *ICMPProbe) parseICMPResponse(data []byte, isIPv4 bool) (*ICMPResponse, 
 		return nil, fmt.Errorf("unexpected ICMP message type")
 	}
 
+	// Validate ID and Seq to prevent integer overflow
+	var id uint16
+	if echo.ID < 0 {
+		id = 0
+	} else if echo.ID > 65535 {
+		id = 65535
+	} else {
+		id = uint16(echo.ID)
+	}
+
+	var seq uint16
+	if echo.Seq < 0 {
+		seq = 0
+	} else if echo.Seq > 65535 {
+		seq = 65535
+	} else {
+		seq = uint16(echo.Seq)
+	}
+
 	return &ICMPResponse{
 		Type:     int(msg.Type.Protocol()),
 		Code:     msg.Code,
-		ID:       uint16(echo.ID),
-		Sequence: uint16(echo.Seq),
+		ID:       id,
+		Sequence: seq,
 		Data:     echo.Data,
 	}, nil
 }

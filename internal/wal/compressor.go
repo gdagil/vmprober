@@ -50,9 +50,19 @@ func (g *GzipCompressor) Decompress(data []byte) ([]byte, error) {
 	}
 	defer reader.Close()
 
+	// Limit decompressed size to prevent decompression bomb attacks
+	// Maximum 100MB decompressed size
+	const maxDecompressedSize = 100 * 1024 * 1024
+	limitedReader := io.LimitReader(reader, maxDecompressedSize)
+
 	var buf bytes.Buffer
-	if _, err := io.Copy(&buf, reader); err != nil {
+	if _, err := io.Copy(&buf, limitedReader); err != nil {
 		return nil, fmt.Errorf("failed to decompress data: %w", err)
+	}
+
+	// Check if we hit the limit (which would indicate a potential bomb)
+	if buf.Len() >= maxDecompressedSize {
+		return nil, fmt.Errorf("decompressed data exceeds maximum allowed size (%d bytes)", maxDecompressedSize)
 	}
 
 	return buf.Bytes(), nil

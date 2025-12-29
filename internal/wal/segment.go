@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"path/filepath"
+	"strings"
 	"sync"
 	"time"
 
@@ -32,7 +34,11 @@ type WALSegment struct {
 
 // NewWALSegment creates a new WAL segment
 func NewWALSegment(id, path string, cfg *config.WALConfig, compressor Compressor, logger *logrus.Logger) (*WALSegment, error) {
-	file, err := os.OpenFile(path, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0o644)
+	// Validate path to prevent directory traversal
+	if err := validatePath(path); err != nil {
+		return nil, fmt.Errorf("invalid segment path: %w", err)
+	}
+	file, err := os.OpenFile(path, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0o600)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create segment file: %w", err)
 	}
@@ -51,14 +57,20 @@ func NewWALSegment(id, path string, cfg *config.WALConfig, compressor Compressor
 
 // OpenWALSegment opens an existing WAL segment
 func OpenWALSegment(id, path string, cfg *config.WALConfig, compressor Compressor, logger *logrus.Logger) (*WALSegment, error) {
-	file, err := os.OpenFile(path, os.O_RDONLY, 0o644)
+	// Validate path to prevent directory traversal
+	if err := validatePath(path); err != nil {
+		return nil, fmt.Errorf("invalid segment path: %w", err)
+	}
+	file, err := os.OpenFile(path, os.O_RDONLY, 0o600)
 	if err != nil {
 		return nil, fmt.Errorf("failed to open segment file: %w", err)
 	}
 
 	info, err := file.Stat()
 	if err != nil {
-		file.Close()
+		if closeErr := file.Close(); closeErr != nil {
+			logger.WithError(closeErr).Warn("Failed to close file after stat error")
+		}
 		return nil, fmt.Errorf("failed to stat segment file: %w", err)
 	}
 
@@ -356,6 +368,10 @@ func (s *WALSegment) AllRecordsSent(ctx context.Context) (bool, error) {
 // loadSentIndex loads the sent records index from file
 func (s *WALSegment) loadSentIndex() error {
 	indexPath := s.path + ".sent"
+	// Validate path to prevent directory traversal
+	if err := validatePath(indexPath); err != nil {
+		return fmt.Errorf("invalid index path: %w", err)
+	}
 	data, err := os.ReadFile(indexPath)
 	if err != nil {
 		if os.IsNotExist(err) {
@@ -376,4 +392,27 @@ func (s *WALSegment) saveSentIndex() error {
 	}
 
 	return os.WriteFile(indexPath, data, 0o600)
+}
+
+// validatePath validates that the path doesn't contain directory traversal attempts
+func validatePath(path string) error {
+	// Check for directory traversal attempts before cleaning
+	if strings.Contains(path, "..") {
+		return fmt.Errorf("path contains directory traversal: %s", path)
+	}
+
+	// Clean the path to resolve any "." components
+	cleaned := filepath.Clean(path)
+
+	// Ensure cleaned path doesn't contain ".." (shouldn't happen after Clean, but double-check)
+	if strings.Contains(cleaned, "..") {
+		return fmt.Errorf("path contains directory traversal after cleaning: %s", path)
+	}
+
+	// Check for null bytes which could be used in path injection
+	if strings.Contains(path, "\x00") {
+		return fmt.Errorf("path contains null byte: %s", path)
+	}
+
+	return nil
 }

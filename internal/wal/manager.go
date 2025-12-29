@@ -91,7 +91,7 @@ func NewWALManager(cfg *config.WALConfig, logger *logrus.Logger) (WALManager, er
 	}
 
 	// Create directory if needed
-	if err := os.MkdirAll(dir, 0o755); err != nil {
+	if err := os.MkdirAll(dir, 0o750); err != nil {
 		return nil, fmt.Errorf("failed to create WAL directory: %w", err)
 	}
 
