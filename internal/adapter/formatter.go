@@ -107,7 +107,7 @@ func NewJSONLineFormatter() Formatter {
 }
 
 // Format formats metrics in VictoriaMetrics JSON line format
-// Формат: {"metric":{"__name__":"metric_name","label1":"value1"},"values":[1.0],"timestamps":[1549891472010]}
+// Format: {"metric":{"__name__":"metric_name","label1":"value1"},"values":[1.0],"timestamps":[1549891472010]}
 func (f *JSONLineFormatter) Format(metrics []types.Metric) ([]byte, error) {
 	var builder strings.Builder
 	

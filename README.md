@@ -428,5 +428,5 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 <p align="center">
   <img src="assets/logo-inline.svg" alt="VMProber" width="150">
   <br>
-  <sub>Made with ❤️ by the VMProber Team</sub>
+  <sub>Made with ❤️ by gdagil and llms</sub>
 </p>

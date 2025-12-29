@@ -128,7 +128,7 @@ type TargetsConfig struct {
 type TargetConfig struct {
 	Host      string            `yaml:"host" json:"host"`
 	Port      int               `yaml:"port" json:"port"`
-	Protocols []string          `yaml:"protocols" json:"protocols"` // Список протоколов как строки
+	Protocols []string          `yaml:"protocols" json:"protocols"` // List of protocols as strings
 	Interval  time.Duration     `yaml:"interval" json:"interval"`
 	Timeout  time.Duration     `yaml:"timeout" json:"timeout"`
 	Labels   map[string]string `yaml:"labels" json:"labels"`
@@ -139,8 +139,8 @@ func (tc *TargetConfig) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	aux := &struct {
 		Host      string            `yaml:"host"`
 		Port      int               `yaml:"port"`
-		Proto     string            `yaml:"proto"`     // Одиночный протокол (для обратной совместимости)
-		Protocols []string          `yaml:"protocols"` // Массив протоколов
+		Proto     string            `yaml:"proto"`     // Single protocol (for backward compatibility)
+		Protocols []string          `yaml:"protocols"` // Array of protocols
 		Interval  time.Duration     `yaml:"interval"`
 		Timeout   time.Duration     `yaml:"timeout"`
 		Labels    map[string]string `yaml:"labels"`

@@ -1,19 +1,19 @@
 # VMProber Configuration Example
 
-# HTTP сервер
+# HTTP server
 listen:
   port: 8429
   host: "0.0.0.0"
   tls:
     enabled: false
 
-# Pull режим (Prometheus scrape)
+# Pull mode (Prometheus scrape)
 pull:
   enabled: true
   path: "/metrics"
   timeout: 10s
 
-# Push режим (VictoriaMetrics)
+# Push mode (VictoriaMetrics)
 push:
   enabled: true
   endpoints:
@@ -37,7 +37,7 @@ push:
   remote_write:
     enabled: false
 
-# Планировщик задач
+# Task scheduler
 scheduler:
   concurrent: 100
   rps_limit: 1000
@@ -54,10 +54,10 @@ scheduler:
   queue_size: 10000
   worker_timeout: 30s
 
-# Управление целями
+# Target management
 targets:
   static:
-    # ===== TCP пробы =====
+    # ===== TCP probes =====
     - host: "google.com"
       port: 80
       proto: "tcp"
@@ -76,7 +76,7 @@ targets:
         region: "us-east"
         type: "tcp-tls"
     
-    # ===== UDP пробы =====
+    # ===== UDP probes =====
     - host: "8.8.8.8"
       port: 53
       proto: "udp"
@@ -85,7 +85,7 @@ targets:
       labels:
         service: "dns-udp"
     
-    # ===== ICMP пробы (ping) =====
+    # ===== ICMP probes (ping) =====
     - host: "8.8.8.8"
       proto: "icmp"
       interval: 10s
@@ -94,7 +94,7 @@ targets:
         service: "google-dns"
         type: "icmp"
     
-    # ===== HTTP пробы =====
+    # ===== HTTP probes =====
     - host: "httpbin.org"
       port: 80
       proto: "http"
@@ -112,7 +112,7 @@ targets:
           Accept: "application/json"
           X-Custom-Header: "vmprober"
     
-    # HTTP с POST запросом
+    # HTTP with POST request
     - host: "httpbin.org"
       port: 80
       proto: "http"
@@ -129,7 +129,7 @@ targets:
         headers:
           Content-Type: "application/json"
     
-    # ===== HTTPS пробы =====
+    # ===== HTTPS probes =====
     - host: "github.com"
       port: 443
       proto: "https"
@@ -145,7 +145,7 @@ targets:
         validate_cert: true
         follow_redirects: true
     
-    # HTTPS с Basic Auth
+    # HTTPS with Basic Auth
     - host: "api.example.com"
       port: 443
       proto: "https"
@@ -163,7 +163,7 @@ targets:
           username: "admin"
           password: "secret"
     
-    # HTTPS с Bearer Token
+    # HTTPS with Bearer Token
     - host: "api.example.com"
       port: 443
       proto: "https"
@@ -176,9 +176,9 @@ targets:
         method: "GET"
         path: "/api/protected"
         expected_status_code: 200
-        bearer_token: "${API_TOKEN}"  # Переменная окружения
+        bearer_token: "${API_TOKEN}"  # Environment variable
     
-    # HTTPS через прокси
+    # HTTPS via proxy
     - host: "internal-service.corp"
       port: 443
       proto: "https"
@@ -190,11 +190,11 @@ targets:
       http:
         method: "GET"
         path: "/health"
-        validate_cert: false  # Для внутренних сервисов с самоподписанными сертами
+        validate_cert: false  # For internal services with self-signed certs
         proxy: "http://proxy.corp:8080"
     
-    # ===== DNS пробы =====
-    # Простая DNS проверка A записи
+    # ===== DNS probes =====
+    # Simple DNS A record check
     - host: "8.8.8.8"
       port: 53
       proto: "dns"
@@ -210,7 +210,7 @@ targets:
         validate_answer: true
         recursion: true
     
-    # DNS проверка AAAA записи (IPv6)
+    # DNS AAAA record check (IPv6)
     - host: "8.8.8.8"
       port: 53
       proto: "dns"
@@ -224,7 +224,7 @@ targets:
         query_type: "AAAA"
         protocol: "udp"
     
-    # DNS проверка MX записей
+    # DNS MX record check
     - host: "8.8.8.8"
       port: 53
       proto: "dns"
@@ -238,7 +238,7 @@ targets:
         query_type: "MX"
         expected_records: ["gmail-smtp-in.l.google.com"]
     
-    # DNS проверка TXT записей (SPF, DKIM)
+    # DNS TXT record check (SPF, DKIM)
     - host: "1.1.1.1"
       port: 53
       proto: "dns"
@@ -251,7 +251,7 @@ targets:
         query_name: "example.com"
         query_type: "TXT"
     
-    # DNS через TCP
+    # DNS over TCP
     - host: "8.8.8.8"
       port: 53
       proto: "dns"
@@ -278,8 +278,8 @@ targets:
         query_type: "A"
         protocol: "tcp-tls"
     
-    # ===== gRPC пробы =====
-    # Простая gRPC health check проверка
+    # ===== gRPC probes =====
+    # Simple gRPC health check
     - host: "grpc-service.local"
       port: 50051
       proto: "grpc"
@@ -289,10 +289,10 @@ targets:
         service: "grpc-backend"
         type: "grpc"
       grpc:
-        service: ""  # Пустая строка = общая проверка здоровья
+        service: ""  # Empty string = overall health check
         expected_status: "SERVING"
     
-    # gRPC health check конкретного сервиса
+    # gRPC health check for specific service
     - host: "grpc-api.local"
       port: 50051
       proto: "grpc"
@@ -305,7 +305,7 @@ targets:
         service: "user.UserService"
         expected_status: "SERVING"
     
-    # gRPC с TLS
+    # gRPC with TLS
     - host: "grpc-secure.example.com"
       port: 443
       proto: "grpc"
@@ -321,7 +321,7 @@ targets:
         server_name: "grpc-secure.example.com"
         expected_status: "SERVING"
     
-    # gRPC с metadata (headers)
+    # gRPC with metadata (headers)
     - host: "grpc-auth.local"
       port: 50051
       proto: "grpc"
@@ -337,10 +337,10 @@ targets:
           authorization: "Bearer ${GRPC_TOKEN}"
           x-request-id: "vmprober-health-check"
     
-    # ===== Множественные протоколы для одной цели =====
+    # ===== Multiple protocols for single target =====
     - host: "multi-protocol.example.com"
       port: 443
-      protocols: ["tcp", "https"]  # Проверить и TCP соединение и HTTP
+      protocols: ["tcp", "https"]  # Check both TCP connection and HTTP
       interval: 30s
       timeout: 10s
       labels:
@@ -357,7 +357,7 @@ targets:
   reload_interval: 1m
   hot_reload: true
 
-# Настройки проб по умолчанию
+# Default probe settings
 probes:
   defaults:
     count: 3
@@ -365,7 +365,7 @@ probes:
     timeout: 5s
     payload_size: 64
   
-  # TCP пробы
+  # TCP probes
   tcp:
     connect_timeout: 5s
     tls:
@@ -374,20 +374,20 @@ probes:
       enabled: true
       period: 30s
   
-  # UDP пробы
+  # UDP probes
   udp:
     payload_type: "random"
     payload_size: 64
     response_timeout: 2s
     max_packet_size: 1024
   
-  # ICMP пробы (ping)
+  # ICMP probes (ping)
   icmp:
     library: "systicmp"
     sequence_start: 1
     ttl: 64
   
-  # HTTP/HTTPS пробы
+  # HTTP/HTTPS probes
   http:
     method: "GET"
     path: "/"
@@ -399,7 +399,7 @@ probes:
     headers:
       User-Agent: "vmprober/1.0"
   
-  # DNS пробы
+  # DNS probes
   dns:
     query_type: "A"         # A, AAAA, CNAME, MX, TXT, NS, SOA, SRV, PTR
     protocol: "udp"         # udp, tcp, tcp-tls (DoT)
@@ -407,15 +407,15 @@ probes:
     recursion: true
     timeout: 5s
   
-  # gRPC пробы
+  # gRPC probes
   grpc:
-    service: ""             # Пустая строка = общая проверка (grpc.health.v1.Health)
+    service: ""             # Empty string = overall check (grpc.health.v1.Health)
     tls: false
     tls_skip_verify: false
     expected_status: "SERVING"  # SERVING, NOT_SERVING, UNKNOWN
     timeout: 10s
 
-# Настройки метрик
+# Metrics settings
 metrics:
   namespace: "vmprober"
   include_labels:
@@ -443,7 +443,7 @@ wal:
   segment_size: "64MB"
   index_cache_size: 1000
 
-# Логирование
+# Logging
 logging:
   level: "debug"
   format: "text"
@@ -457,7 +457,7 @@ logging:
   structured: true
   include_source: true
 
-# TLS настройки
+# TLS settings
 tls:
   client_certs:
     enabled: false
@@ -468,7 +468,7 @@ tls:
   max_version: "1.3"
   cipher_suites: []
 
-# Наблюдаемость
+# Observability
 observability:
   pprof:
     enabled: false

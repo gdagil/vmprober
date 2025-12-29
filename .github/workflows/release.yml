@@ -14,7 +14,7 @@ permissions:
 env:
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}
-  GO_VERSION: '1.25'
+  GO_VERSION: '1.23'
 
 jobs:
   release-binaries:
@@ -90,6 +90,153 @@ jobs:
         with:
           name: vmprober-${{ matrix.goos }}-${{ matrix.goarch }}
           path: dist/vmprober-*
+          retention-days: 1
+
+  release-deb:
+    name: Build DEB Packages
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        goarch: [amd64, arm64]
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache: true
+
+      - name: Install nFPM
+        run: |
+          echo 'deb [trusted=yes] https://repo.goreleaser.com/apt/ /' | sudo tee /etc/apt/sources.list.d/goreleaser.list
+          sudo apt-get update
+          sudo apt-get install -y nfpm
+
+      - name: Extract version from tag
+        id: version
+        run: |
+          VERSION=${GITHUB_REF#refs/tags/}
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "version_num=${VERSION#v}" >> $GITHUB_OUTPUT
+          echo "commit=$(git rev-parse HEAD)" >> $GITHUB_OUTPUT
+          echo "build_time=$(date -u +"%Y-%m-%dT%H:%M:%SZ")" >> $GITHUB_OUTPUT
+
+      - name: Build binary
+        env:
+          GOOS: linux
+          GOARCH: ${{ matrix.goarch }}
+          CGO_ENABLED: 0
+        run: |
+          mkdir -p dist
+          go build \
+            -trimpath \
+            -ldflags "-w -s -X main.Version=${{ steps.version.outputs.version }} -X main.BuildTime=${{ steps.version.outputs.build_time }} -X main.GitCommit=${{ steps.version.outputs.commit }}" \
+            -o dist/vmprober \
+            ./cmd/vmprober
+
+      - name: Create nFPM config
+        run: |
+          cat > nfpm.yaml << 'EOF'
+          name: vmprober
+          arch: ${{ matrix.goarch }}
+          platform: linux
+          version: ${{ steps.version.outputs.version_num }}
+          maintainer: gdagil <gdagil@users.noreply.github.com>
+          description: |
+            VMProber - Multi-protocol endpoint prober with VictoriaMetrics integration.
+            Supports HTTP, HTTPS, TCP, UDP, ICMP, DNS, and gRPC probing with 
+            comprehensive metrics collection and Prometheus-compatible output.
+          vendor: gdagil
+          homepage: https://github.com/gdagil/vmprober
+          license: MIT
+          section: utils
+          priority: optional
+          
+          contents:
+            - src: dist/vmprober
+              dst: /usr/bin/vmprober
+              file_info:
+                mode: 0755
+            
+            - src: config/vmprober/config.yaml.example
+              dst: /etc/vmprober/config.yaml.example
+              type: config
+              file_info:
+                mode: 0644
+            
+            - src: config/vmprober/vmprober.service
+              dst: /lib/systemd/system/vmprober.service
+              file_info:
+                mode: 0644
+            
+            - dst: /var/lib/vmprober
+              type: dir
+              file_info:
+                mode: 0755
+            
+            - dst: /var/log/vmprober
+              type: dir
+              file_info:
+                mode: 0755
+          
+          scripts:
+            postinstall: |
+              #!/bin/sh
+              set -e
+              if ! getent group vmprober >/dev/null 2>&1; then
+                groupadd --system vmprober
+              fi
+              if ! getent passwd vmprober >/dev/null 2>&1; then
+                useradd --system --gid vmprober --home-dir /var/lib/vmprober --shell /usr/sbin/nologin vmprober
+              fi
+              chown -R vmprober:vmprober /var/lib/vmprober /var/log/vmprober
+              if command -v systemctl >/dev/null 2>&1; then
+                systemctl daemon-reload
+              fi
+              echo ""
+              echo "vmprober installed successfully!"
+              echo ""
+              echo "To get started:"
+              echo "  1. Copy config: sudo cp /etc/vmprober/config.yaml.example /etc/vmprober/config.yaml"
+              echo "  2. Edit config: sudo nano /etc/vmprober/config.yaml"
+              echo "  3. Start service: sudo systemctl enable --now vmprober"
+              echo ""
+            
+            preremove: |
+              #!/bin/sh
+              set -e
+              if command -v systemctl >/dev/null 2>&1; then
+                systemctl stop vmprober 2>/dev/null || true
+                systemctl disable vmprober 2>/dev/null || true
+              fi
+            
+            postremove: |
+              #!/bin/sh
+              if command -v systemctl >/dev/null 2>&1; then
+                systemctl daemon-reload
+              fi
+          EOF
+
+      - name: Build DEB package
+        run: |
+          nfpm package -p deb -f nfpm.yaml
+          DEB_FILE=$(ls *.deb)
+          mv "$DEB_FILE" "vmprober_${{ steps.version.outputs.version_num }}_${{ matrix.goarch }}.deb"
+          sha256sum "vmprober_${{ steps.version.outputs.version_num }}_${{ matrix.goarch }}.deb" > "vmprober_${{ steps.version.outputs.version_num }}_${{ matrix.goarch }}.deb.sha256"
+
+      - name: Upload DEB artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: vmprober-deb-${{ matrix.goarch }}
+          path: |
+            *.deb
+            *.deb.sha256
           retention-days: 1
 
   release-docker:
@@ -209,7 +356,7 @@ jobs:
   create-release:
     name: Create GitHub Release
     runs-on: ubuntu-latest
-    needs: [release-binaries, release-docker]
+    needs: [release-binaries, release-deb, release-docker]
     
     steps:
       - name: Checkout code
@@ -224,6 +371,11 @@ jobs:
           pattern: vmprober-*
           merge-multiple: true
 
+      - name: List artifacts
+        run: |
+          echo "Downloaded artifacts:"
+          ls -la artifacts/
+
       - name: Extract version from tag
         id: version
         run: |
@@ -231,32 +383,9 @@ jobs:
           echo "version=$VERSION" >> $GITHUB_OUTPUT
           echo "version_num=${VERSION#v}" >> $GITHUB_OUTPUT
 
-      - name: Generate changelog
-        id: changelog
-        run: |
-          # Get the previous tag
-          PREV_TAG=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo "")
-          
-          if [ -n "$PREV_TAG" ]; then
-            echo "## What's Changed" > CHANGELOG.md
-            echo "" >> CHANGELOG.md
-            
-            # Get commit messages between tags
-            git log ${PREV_TAG}..HEAD --pretty=format:"* %s (%h)" >> CHANGELOG.md
-            echo "" >> CHANGELOG.md
-            echo "" >> CHANGELOG.md
-            echo "**Full Changelog**: https://github.com/${{ github.repository }}/compare/${PREV_TAG}...${{ steps.version.outputs.version }}" >> CHANGELOG.md
-          else
-            echo "## Initial Release" > CHANGELOG.md
-            echo "" >> CHANGELOG.md
-            echo "First release of vmprober!" >> CHANGELOG.md
-          fi
-
-      - name: Create release notes
+      - name: Create release notes header
         run: |
           cat << 'EOF' > RELEASE_NOTES.md
-          # vmprober ${{ steps.version.outputs.version }}
-          
           ## Installation
           
           ### Binary Downloads
@@ -268,6 +397,21 @@ jobs:
           | macOS | amd64 | [vmprober-${{ steps.version.outputs.version }}-darwin-amd64.tar.gz](https://github.com/${{ github.repository }}/releases/download/${{ steps.version.outputs.version }}/vmprober-${{ steps.version.outputs.version }}-darwin-amd64.tar.gz) |
           | macOS | arm64 | [vmprober-${{ steps.version.outputs.version }}-darwin-arm64.tar.gz](https://github.com/${{ github.repository }}/releases/download/${{ steps.version.outputs.version }}/vmprober-${{ steps.version.outputs.version }}-darwin-arm64.tar.gz) |
           | Windows | amd64 | [vmprober-${{ steps.version.outputs.version }}-windows-amd64.zip](https://github.com/${{ github.repository }}/releases/download/${{ steps.version.outputs.version }}/vmprober-${{ steps.version.outputs.version }}-windows-amd64.zip) |
+          
+          ### DEB Packages (Debian/Ubuntu)
+          
+          | Architecture | Download |
+          |---|---|
+          | amd64 | [vmprober_${{ steps.version.outputs.version_num }}_amd64.deb](https://github.com/${{ github.repository }}/releases/download/${{ steps.version.outputs.version }}/vmprober_${{ steps.version.outputs.version_num }}_amd64.deb) |
+          | arm64 | [vmprober_${{ steps.version.outputs.version_num }}_arm64.deb](https://github.com/${{ github.repository }}/releases/download/${{ steps.version.outputs.version }}/vmprober_${{ steps.version.outputs.version_num }}_arm64.deb) |
+          
+          ```bash
+          # Install on Debian/Ubuntu
+          sudo dpkg -i vmprober_${{ steps.version.outputs.version_num }}_amd64.deb
+          
+          # Or using apt
+          sudo apt install ./vmprober_${{ steps.version.outputs.version_num }}_amd64.deb
+          ```
           
           ### Docker Images
           
@@ -281,14 +425,15 @@ jobs:
           
           ### Verify checksums
           
-          All binaries include SHA256 checksum files. Verify with:
+          All binaries and packages include SHA256 checksum files. Verify with:
           ```bash
           sha256sum -c vmprober-${{ steps.version.outputs.version }}-linux-amd64.tar.gz.sha256
+          sha256sum -c vmprober_${{ steps.version.outputs.version_num }}_amd64.deb.sha256
           ```
           
-          EOF
+          ---
           
-          cat CHANGELOG.md >> RELEASE_NOTES.md
+          EOF
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
@@ -297,7 +442,8 @@ jobs:
           body_path: RELEASE_NOTES.md
           draft: false
           prerelease: ${{ contains(steps.version.outputs.version, '-') }}
-          generate_release_notes: false
+          generate_release_notes: true
+          append_body: true
           files: |
             artifacts/*
         env:
@@ -321,3 +467,8 @@ jobs:
           echo "## Links" >> $GITHUB_STEP_SUMMARY
           echo "- [GitHub Release](https://github.com/${{ github.repository }}/releases/tag/${{ steps.version.outputs.version }})" >> $GITHUB_STEP_SUMMARY
           echo "- [Docker Images](https://github.com/${{ github.repository }}/pkgs/container/vmprober)" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "## Packages" >> $GITHUB_STEP_SUMMARY
+          echo "- Binary archives (tar.gz, zip)" >> $GITHUB_STEP_SUMMARY
+          echo "- DEB packages for Debian/Ubuntu" >> $GITHUB_STEP_SUMMARY
+          echo "- Docker images (Alpine & Scratch)" >> $GITHUB_STEP_SUMMARY

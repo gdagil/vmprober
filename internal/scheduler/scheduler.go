@@ -101,7 +101,7 @@ func (s *Scheduler) Reschedule(ctx context.Context, job *types.Job) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	// Обновляем джоб в хранилище
+	// Update job in storage
 	if existingJob, exists := s.allJobs[job.ID]; exists {
 		s.logger.WithFields(logrus.Fields{
 			"job_id":   job.ID,

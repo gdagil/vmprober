@@ -24,7 +24,7 @@ func TestNewManager(t *testing.T) {
 }
 
 func TestLoad_ValidConfig(t *testing.T) {
-	// Создаем временный файл конфигурации
+	// Create temporary config file
 	tmpDir := t.TempDir()
 	configPath := filepath.Join(tmpDir, "config.yaml")
 	
@@ -186,7 +186,7 @@ scheduler:
 		t.Fatalf("Load failed: %v", err)
 	}
 	
-	// Проверяем значения по умолчанию
+	// Check default values
 	if cfg.Listen.Host == "" {
 		t.Error("Expected default host to be set")
 	}
@@ -220,12 +220,12 @@ scheduler:
 	logger.SetLevel(logrus.ErrorLevel)
 	manager := NewManager(configPath, logger)
 	
-	// До загрузки должен вернуть nil
+	// Before loading should return nil
 	if cfg := manager.Get(); cfg != nil {
 		t.Error("Expected nil config before Load")
 	}
 	
-	// После загрузки должен вернуть конфигурацию
+	// After loading should return configuration
 	_, err := manager.Load(context.Background())
 	if err != nil {
 		t.Fatalf("Load failed: %v", err)
@@ -259,7 +259,7 @@ scheduler:
 	logger.SetLevel(logrus.ErrorLevel)
 	manager := NewManager(configPath, logger)
 	
-	// Загружаем начальную конфигурацию
+	// Load initial configuration
 	_, err := manager.Load(context.Background())
 	if err != nil {
 		t.Fatalf("Load failed: %v", err)
@@ -273,7 +273,7 @@ scheduler:
 		t.Fatalf("Watch failed: %v", err)
 	}
 	
-	// Изменяем файл конфигурации
+	// Modify config file
 	newConfigContent := `
 listen:
   port: 9090
@@ -281,13 +281,13 @@ scheduler:
   concurrent: 10
   rps_limit: 100
 `
-	time.Sleep(100 * time.Millisecond) // Даем время watcher'у инициализироваться
+	time.Sleep(100 * time.Millisecond) // Give time for watcher to initialize
 	
 	if err := os.WriteFile(configPath, []byte(newConfigContent), 0644); err != nil {
 		t.Fatalf("Failed to write new config file: %v", err)
 	}
 	
-	// Ждем обновления (watcher проверяет каждые 5 секунд, но для теста можем подождать)
+	// Wait for update (watcher checks every 5 seconds, but for test we can wait)
 	select {
 	case update := <-updateChan:
 		if update.Type == "" {

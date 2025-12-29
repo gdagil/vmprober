@@ -25,7 +25,7 @@ func TestServer_StartStop(t *testing.T) {
 	logger := logrus.New()
 	logger.SetLevel(logrus.ErrorLevel)
 	
-	// Используем случайный порт для теста
+	// Use random port for test
 	server := NewServer("127.0.0.1", 0, logger)
 	
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
@@ -36,7 +36,7 @@ func TestServer_StartStop(t *testing.T) {
 		t.Fatalf("Start failed: %v", err)
 	}
 	
-	// Даем время серверу запуститься
+	// Give time for server to start
 	time.Sleep(100 * time.Millisecond)
 	
 	stopCtx, stopCancel := context.WithTimeout(context.Background(), 1*time.Second)
@@ -52,7 +52,7 @@ func TestServer_HealthEndpoint(t *testing.T) {
 	logger := logrus.New()
 	logger.SetLevel(logrus.ErrorLevel)
 	
-	// Находим свободный порт
+	// Find a free port
 	listener, err := net.Listen("tcp", "127.0.0.1:0")
 	if err != nil {
 		t.Fatalf("Failed to find free port: %v", err)
@@ -71,10 +71,10 @@ func TestServer_HealthEndpoint(t *testing.T) {
 	}
 	defer server.Stop(context.Background())
 	
-	// Даем время серверу запуститься
+	// Give time for server to start
 	time.Sleep(200 * time.Millisecond)
 	
-	// Проверяем /health endpoint
+	// Check /health endpoint
 	resp, err := http.Get(fmt.Sprintf("http://127.0.0.1:%d/health", port))
 	if err != nil {
 		t.Fatalf("Failed to GET /health: %v", err)
@@ -94,7 +94,7 @@ func TestServer_ReadyEndpoint(t *testing.T) {
 	logger := logrus.New()
 	logger.SetLevel(logrus.ErrorLevel)
 	
-	// Находим свободный порт
+	// Find a free port
 	listener, err := net.Listen("tcp", "127.0.0.1:0")
 	if err != nil {
 		t.Fatalf("Failed to find free port: %v", err)
@@ -113,10 +113,10 @@ func TestServer_ReadyEndpoint(t *testing.T) {
 	}
 	defer server.Stop(context.Background())
 	
-	// Даем время серверу запуститься
+	// Give time for server to start
 	time.Sleep(200 * time.Millisecond)
 	
-	// Проверяем /ready endpoint
+	// Check /ready endpoint
 	resp, err := http.Get(fmt.Sprintf("http://127.0.0.1:%d/ready", port))
 	if err != nil {
 		t.Fatalf("Failed to GET /ready: %v", err)
@@ -136,7 +136,7 @@ func TestServer_MetricsEndpoint(t *testing.T) {
 	logger := logrus.New()
 	logger.SetLevel(logrus.ErrorLevel)
 	
-	// Находим свободный порт
+	// Find a free port
 	listener, err := net.Listen("tcp", "127.0.0.1:0")
 	if err != nil {
 		t.Fatalf("Failed to find free port: %v", err)
@@ -155,10 +155,10 @@ func TestServer_MetricsEndpoint(t *testing.T) {
 	}
 	defer server.Stop(context.Background())
 	
-	// Даем время серверу запуститься
+	// Give time for server to start
 	time.Sleep(200 * time.Millisecond)
 	
-	// Проверяем /metrics endpoint
+	// Check /metrics endpoint
 	resp, err := http.Get(fmt.Sprintf("http://127.0.0.1:%d/metrics", port))
 	if err != nil {
 		t.Fatalf("Failed to GET /metrics: %v", err)
@@ -174,7 +174,7 @@ func TestServer_ConcurrentRequests(t *testing.T) {
 	logger := logrus.New()
 	logger.SetLevel(logrus.ErrorLevel)
 	
-	// Находим свободный порт
+	// Find a free port
 	listener, err := net.Listen("tcp", "127.0.0.1:0")
 	if err != nil {
 		t.Fatalf("Failed to find free port: %v", err)
@@ -193,10 +193,10 @@ func TestServer_ConcurrentRequests(t *testing.T) {
 	}
 	defer server.Stop(context.Background())
 	
-	// Даем время серверу запуститься
+	// Give time for server to start
 	time.Sleep(200 * time.Millisecond)
 	
-	// Отправляем несколько параллельных запросов
+	// Send several parallel requests
 	baseURL := fmt.Sprintf("http://127.0.0.1:%d", port)
 	endpoints := []string{"/health", "/ready", "/metrics"}
 	

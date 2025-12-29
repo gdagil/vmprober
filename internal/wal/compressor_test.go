@@ -38,7 +38,7 @@ func TestGzipCompressor_LargeData(t *testing.T) {
 		t.Fatal("Failed to create gzip compressor")
 	}
 
-	// Создаем большой объем данных
+	// Create large data volume
 	originalData := make([]byte, 10000)
 	for i := range originalData {
 		originalData[i] = byte(i % 256)

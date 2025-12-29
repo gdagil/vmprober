@@ -8,7 +8,7 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-// mockComponent мок компонента для тестирования
+// mockComponent mock component for testing
 type mockComponent struct {
 	name     string
 	priority int
@@ -102,7 +102,7 @@ func TestShutdownManager_Shutdown_PriorityOrder(t *testing.T) {
 
 	component1 := &mockComponent{
 		name:     "component-1",
-		priority: 3, // Низкий приоритет - должен быть последним
+		priority: 3, // Low priority - should be last
 		shutdown: func(ctx context.Context) error {
 			shutdownOrder = append(shutdownOrder, "component-1")
 			return nil
@@ -111,7 +111,7 @@ func TestShutdownManager_Shutdown_PriorityOrder(t *testing.T) {
 
 	component2 := &mockComponent{
 		name:     "component-2",
-		priority: 1, // Высокий приоритет - должен быть первым
+		priority: 1, // High priority - should be first
 		shutdown: func(ctx context.Context) error {
 			shutdownOrder = append(shutdownOrder, "component-2")
 			return nil
@@ -120,7 +120,7 @@ func TestShutdownManager_Shutdown_PriorityOrder(t *testing.T) {
 
 	component3 := &mockComponent{
 		name:     "component-3",
-		priority: 2, // Средний приоритет
+		priority: 2, // Medium priority
 		shutdown: func(ctx context.Context) error {
 			shutdownOrder = append(shutdownOrder, "component-3")
 			return nil
@@ -136,7 +136,7 @@ func TestShutdownManager_Shutdown_PriorityOrder(t *testing.T) {
 		t.Fatalf("Shutdown failed: %v", err)
 	}
 
-	// Проверяем порядок shutdown
+	// Check shutdown order
 	if len(shutdownOrder) != 3 {
 		t.Fatalf("Expected 3 components to shutdown, got %d", len(shutdownOrder))
 	}
@@ -170,7 +170,7 @@ func TestShutdownManager_Shutdown_ErrorHandling(t *testing.T) {
 
 	ctx := context.Background()
 	err := manager.Shutdown(ctx, 5*time.Second)
-	// Shutdown может завершиться с ошибкой, но это нормально
+	// Shutdown may complete with error, but this is normal
 	if err != nil {
 		t.Logf("Shutdown returned error (expected): %v", err)
 	}
@@ -191,7 +191,7 @@ func TestShutdownManager_Shutdown_Timeout(t *testing.T) {
 		name:     "slow-component",
 		priority: 1,
 		shutdown: func(ctx context.Context) error {
-			// Симулируем медленный shutdown
+			// Simulate slow shutdown
 			time.Sleep(2 * time.Second)
 			return nil
 		},
@@ -200,7 +200,7 @@ func TestShutdownManager_Shutdown_Timeout(t *testing.T) {
 	manager.Register(component)
 
 	ctx := context.Background()
-	// Используем короткий timeout
+	// Use short timeout
 	err := manager.Shutdown(ctx, 100*time.Millisecond)
 	if err == nil {
 		t.Log("Shutdown completed (may have been fast enough)")
@@ -248,7 +248,7 @@ func TestShutdownManager_Shutdown_AlreadyInProgress(t *testing.T) {
 
 	ctx := context.Background()
 
-	// Запускаем два shutdown параллельно
+	// Start two shutdowns in parallel
 	errChan := make(chan error, 2)
 	go func() {
 		errChan <- manager.Shutdown(ctx, 1*time.Second)
@@ -257,7 +257,7 @@ func TestShutdownManager_Shutdown_AlreadyInProgress(t *testing.T) {
 		errChan <- manager.Shutdown(ctx, 1*time.Second)
 	}()
 
-	// Один должен завершиться успешно, другой должен вернуть ошибку
+	// One should complete successfully, other should return error
 	err1 := <-errChan
 	err2 := <-errChan
 
