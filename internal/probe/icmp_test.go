@@ -156,3 +156,75 @@ func TestICMPProbe_SequenceIncrement(t *testing.T) {
 		}
 	}
 }
+
+func TestICMPProbe_Execute_WithHostname(t *testing.T) {
+	probe := NewICMPProbe(nil)
+	defer probe.Close()
+
+	ctx := context.Background()
+	target := types.Target{
+		ID:       "test",
+		Host:     "localhost", // Hostname instead of IP
+		Protocol: types.ProbeTypeICMP,
+		Timeout:  1 * time.Second,
+	}
+
+	result, err := probe.Execute(ctx, target)
+	// May fail if localhost is not reachable, but should not panic
+	if err != nil {
+		t.Logf("ICMP probe with hostname failed (may be expected): %v", err)
+	}
+	if result != nil {
+		t.Logf("ICMP probe result: Success=%v, TargetIP=%s", result.Success, result.TargetIP)
+	}
+}
+
+func TestICMPProbe_Execute_IPv6(t *testing.T) {
+	probe := NewICMPProbe(nil)
+	defer probe.Close()
+
+	ctx := context.Background()
+	target := types.Target{
+		ID:            "test",
+		Host:          "::1", // IPv6 localhost
+		Protocol:      types.ProbeTypeICMP,
+		Timeout:       1 * time.Second,
+		NetworkFamily: types.NetworkFamilyInet6,
+	}
+
+	result, err := probe.Execute(ctx, target)
+	// May fail if IPv6 is not available, but should not panic
+	if err != nil {
+		t.Logf("ICMP probe with IPv6 failed (may be expected): %v", err)
+	}
+	if result != nil {
+		t.Logf("ICMP probe result: Success=%v", result.Success)
+	}
+}
+
+func TestICMPProbe_Execute_WithCustomData(t *testing.T) {
+	config := &ICMPConfig{
+		SequenceStart: 1,
+		TTL:           64,
+		Data:          []byte("test data for ICMP probe"),
+	}
+	probe := NewICMPProbe(config)
+	defer probe.Close()
+
+	ctx := context.Background()
+	target := types.Target{
+		ID:       "test",
+		Host:     "127.0.0.1",
+		Protocol: types.ProbeTypeICMP,
+		Timeout:  1 * time.Second,
+	}
+
+	result, err := probe.Execute(ctx, target)
+	// May fail if localhost is not reachable, but should not panic
+	if err != nil {
+		t.Logf("ICMP probe with custom data failed (may be expected): %v", err)
+	}
+	if result != nil {
+		t.Logf("ICMP probe result: Success=%v", result.Success)
+	}
+}

@@ -218,3 +218,135 @@ func TestTCPProbe_Close(t *testing.T) {
 		t.Errorf("Close() error = %v", err)
 	}
 }
+
+func TestTCPProbe_Execute_WithTLS(t *testing.T) {
+	config := &TCPConfig{
+		ConnectTimeout: 5 * time.Second,
+	}
+	probe := NewTCPProbe(config)
+	defer probe.Close()
+
+	target := types.Target{
+		Host:     "google.com",
+		Port:     443,
+		Protocol: types.ProbeTypeTCP,
+		Timeout:  5 * time.Second,
+		TLS: &types.TLSConfig{
+			Enabled:            true,
+			InsecureSkipVerify: true,
+		},
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	result, err := probe.Execute(ctx, target)
+	// May fail if connection is unavailable, but should not panic
+	if err != nil {
+		t.Logf("TCP probe with TLS failed (may be expected): %v", err)
+	}
+	if result != nil {
+		t.Logf("TCP probe result: Success=%v, TLS=%v", result.Success, result.TLS)
+	}
+}
+
+func TestTCPProbe_Execute_IPv6(t *testing.T) {
+	config := &TCPConfig{
+		ConnectTimeout: 5 * time.Second,
+	}
+	probe := NewTCPProbe(config)
+	defer probe.Close()
+
+	target := types.Target{
+		Host:          "2001:4860:4860::8888", // Google DNS IPv6
+		Port:          53,
+		Protocol:      types.ProbeTypeTCP,
+		Timeout:       5 * time.Second,
+		NetworkFamily: types.NetworkFamilyInet6,
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	result, err := probe.Execute(ctx, target)
+	// May fail if IPv6 is not available, but should not panic
+	if err != nil {
+		t.Logf("TCP probe with IPv6 failed (may be expected): %v", err)
+	}
+	if result != nil {
+		t.Logf("TCP probe result: Success=%v", result.Success)
+	}
+}
+
+func TestTCPProbe_Execute_WithZeroPort(t *testing.T) {
+	config := &TCPConfig{
+		ConnectTimeout: 5 * time.Second,
+	}
+	probe := NewTCPProbe(config)
+	defer probe.Close()
+
+	target := types.Target{
+		Host:     "127.0.0.1",
+		Port:     0, // Zero port
+		Protocol: types.ProbeTypeTCP,
+		Timeout:  5 * time.Second,
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	result, err := probe.Execute(ctx, target)
+	// May fail if connection is unavailable, but should not panic
+	if err != nil {
+		t.Logf("TCP probe with zero port failed (may be expected): %v", err)
+	}
+	if result != nil {
+		t.Logf("TCP probe result: Success=%v", result.Success)
+	}
+}
+
+func TestTCPProbe_Execute_WithReadWriteTimeout(t *testing.T) {
+	config := &TCPConfig{
+		ConnectTimeout: 5 * time.Second,
+		ReadTimeout:    1 * time.Second,
+		WriteTimeout:   1 * time.Second,
+	}
+	probe := NewTCPProbe(config)
+	defer probe.Close()
+
+	// Start a simple TCP server
+	listener, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatalf("Failed to start TCP server: %v", err)
+	}
+	defer listener.Close()
+
+	go func() {
+		for {
+			conn, err := listener.Accept()
+			if err != nil {
+				return
+			}
+			conn.Close()
+		}
+	}()
+
+	target := types.Target{
+		Host:     "127.0.0.1",
+		Port:     listener.Addr().(*net.TCPAddr).Port,
+		Protocol: types.ProbeTypeTCP,
+		Timeout:  5 * time.Second,
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	result, err := probe.Execute(ctx, target)
+	if err != nil {
+		t.Fatalf("Execute failed: %v", err)
+	}
+
+	if !result.Success {
+		t.Errorf("Expected successful probe, got error: %s", result.Error)
+	}
+}

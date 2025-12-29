@@ -9,6 +9,9 @@ import (
 	"time"
 
 	"github.com/sirupsen/logrus"
+
+	"github.com/gdagil/vmprober/internal/scheduler"
+	"github.com/gdagil/vmprober/internal/types"
 )
 
 func TestNewServer(t *testing.T) {
@@ -224,5 +227,372 @@ func TestServer_ConcurrentRequests(t *testing.T) {
 				t.Errorf("Expected at least 8 successful requests, got %d", successCount)
 			}
 		})
+	}
+}
+
+func TestServer_SetScheduler(t *testing.T) {
+	logger := logrus.New()
+	logger.SetLevel(logrus.ErrorLevel)
+
+	server := NewServer("127.0.0.1", 0, logger)
+
+	// Create a mock scheduler
+	scheduler := &scheduler.Scheduler{}
+	server.SetScheduler(scheduler)
+
+	if server.scheduler != scheduler {
+		t.Error("Scheduler was not set correctly")
+	}
+}
+
+func TestServer_JobsHandler(t *testing.T) {
+	logger := logrus.New()
+	logger.SetLevel(logrus.ErrorLevel)
+
+	// Find a free port
+	listener, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatalf("Failed to find free port: %v", err)
+	}
+	port := listener.Addr().(*net.TCPAddr).Port
+	listener.Close()
+
+	server := NewServer("127.0.0.1", port, logger)
+
+	// Create scheduler and add some jobs
+	sched := scheduler.NewScheduler(logger)
+	server.SetScheduler(sched)
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	err = server.Start(ctx)
+	if err != nil {
+		t.Fatalf("Start failed: %v", err)
+	}
+	defer server.Stop(context.Background())
+
+	// Give time for server to start
+	time.Sleep(200 * time.Millisecond)
+
+	// Test /api/v1/jobs endpoint
+	resp, err := http.Get(fmt.Sprintf("http://127.0.0.1:%d/api/v1/jobs", port))
+	if err != nil {
+		t.Fatalf("Failed to GET /api/v1/jobs: %v", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		t.Errorf("Expected status 200, got %d", resp.StatusCode)
+	}
+
+	if resp.Header.Get("Content-Type") != "application/json" {
+		t.Errorf("Expected Content-Type application/json, got %s", resp.Header.Get("Content-Type"))
+	}
+}
+
+func TestServer_JobsHandler_NoScheduler(t *testing.T) {
+	logger := logrus.New()
+	logger.SetLevel(logrus.ErrorLevel)
+
+	// Find a free port
+	listener, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatalf("Failed to find free port: %v", err)
+	}
+	port := listener.Addr().(*net.TCPAddr).Port
+	listener.Close()
+
+	server := NewServer("127.0.0.1", port, logger)
+	// Don't set scheduler
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	err = server.Start(ctx)
+	if err != nil {
+		t.Fatalf("Start failed: %v", err)
+	}
+	defer server.Stop(context.Background())
+
+	// Give time for server to start
+	time.Sleep(200 * time.Millisecond)
+
+	// Test /api/v1/jobs endpoint without scheduler
+	resp, err := http.Get(fmt.Sprintf("http://127.0.0.1:%d/api/v1/jobs", port))
+	if err != nil {
+		t.Fatalf("Failed to GET /api/v1/jobs: %v", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusInternalServerError {
+		t.Errorf("Expected status 500, got %d", resp.StatusCode)
+	}
+}
+
+func TestServer_StatsHandler(t *testing.T) {
+	logger := logrus.New()
+	logger.SetLevel(logrus.ErrorLevel)
+
+	// Find a free port
+	listener, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatalf("Failed to find free port: %v", err)
+	}
+	port := listener.Addr().(*net.TCPAddr).Port
+	listener.Close()
+
+	server := NewServer("127.0.0.1", port, logger)
+
+	// Create scheduler
+	sched := scheduler.NewScheduler(logger)
+	server.SetScheduler(sched)
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	err = server.Start(ctx)
+	if err != nil {
+		t.Fatalf("Start failed: %v", err)
+	}
+	defer server.Stop(context.Background())
+
+	// Give time for server to start
+	time.Sleep(200 * time.Millisecond)
+
+	// Test /api/v1/stats endpoint
+	resp, err := http.Get(fmt.Sprintf("http://127.0.0.1:%d/api/v1/stats", port))
+	if err != nil {
+		t.Fatalf("Failed to GET /api/v1/stats: %v", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		t.Errorf("Expected status 200, got %d", resp.StatusCode)
+	}
+
+	if resp.Header.Get("Content-Type") != "application/json" {
+		t.Errorf("Expected Content-Type application/json, got %s", resp.Header.Get("Content-Type"))
+	}
+}
+
+func TestServer_StatsHandler_NoScheduler(t *testing.T) {
+	logger := logrus.New()
+	logger.SetLevel(logrus.ErrorLevel)
+
+	// Find a free port
+	listener, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatalf("Failed to find free port: %v", err)
+	}
+	port := listener.Addr().(*net.TCPAddr).Port
+	listener.Close()
+
+	server := NewServer("127.0.0.1", port, logger)
+	// Don't set scheduler
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	err = server.Start(ctx)
+	if err != nil {
+		t.Fatalf("Start failed: %v", err)
+	}
+	defer server.Stop(context.Background())
+
+	// Give time for server to start
+	time.Sleep(200 * time.Millisecond)
+
+	// Test /api/v1/stats endpoint without scheduler
+	resp, err := http.Get(fmt.Sprintf("http://127.0.0.1:%d/api/v1/stats", port))
+	if err != nil {
+		t.Fatalf("Failed to GET /api/v1/stats: %v", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusInternalServerError {
+		t.Errorf("Expected status 500, got %d", resp.StatusCode)
+	}
+}
+
+func TestServer_TargetsHandler(t *testing.T) {
+	logger := logrus.New()
+	logger.SetLevel(logrus.ErrorLevel)
+
+	// Find a free port
+	listener, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatalf("Failed to find free port: %v", err)
+	}
+	port := listener.Addr().(*net.TCPAddr).Port
+	listener.Close()
+
+	server := NewServer("127.0.0.1", port, logger)
+
+	// Create scheduler and add a job
+	sched := scheduler.NewScheduler(logger)
+	ctx := context.Background()
+
+	job := &types.Job{
+		ID:       "test-job-1",
+		NextRun:  time.Now(),
+		Interval: 30 * time.Second,
+		Priority: 1,
+		Target: types.Target{
+			ID:       "test-target",
+			Host:     "127.0.0.1",
+			Port:     80,
+			Protocol: types.ProbeTypeTCP,
+		},
+		CreatedAt: time.Now(),
+	}
+
+	if err := sched.Schedule(ctx, job); err != nil {
+		t.Fatalf("Failed to schedule job: %v", err)
+	}
+
+	server.SetScheduler(sched)
+
+	err = server.Start(ctx)
+	if err != nil {
+		t.Fatalf("Start failed: %v", err)
+	}
+	defer server.Stop(context.Background())
+
+	// Give time for server to start
+	time.Sleep(200 * time.Millisecond)
+
+	// Test /api/v1/targets endpoint
+	resp, err := http.Get(fmt.Sprintf("http://127.0.0.1:%d/api/v1/targets", port))
+	if err != nil {
+		t.Fatalf("Failed to GET /api/v1/targets: %v", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		t.Errorf("Expected status 200, got %d", resp.StatusCode)
+	}
+
+	if resp.Header.Get("Content-Type") != "application/json" {
+		t.Errorf("Expected Content-Type application/json, got %s", resp.Header.Get("Content-Type"))
+	}
+}
+
+func TestServer_TargetsHandler_NoScheduler(t *testing.T) {
+	logger := logrus.New()
+	logger.SetLevel(logrus.ErrorLevel)
+
+	// Find a free port
+	listener, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatalf("Failed to find free port: %v", err)
+	}
+	port := listener.Addr().(*net.TCPAddr).Port
+	listener.Close()
+
+	server := NewServer("127.0.0.1", port, logger)
+	// Don't set scheduler
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	err = server.Start(ctx)
+	if err != nil {
+		t.Fatalf("Start failed: %v", err)
+	}
+	defer server.Stop(context.Background())
+
+	// Give time for server to start
+	time.Sleep(200 * time.Millisecond)
+
+	// Test /api/v1/targets endpoint without scheduler
+	resp, err := http.Get(fmt.Sprintf("http://127.0.0.1:%d/api/v1/targets", port))
+	if err != nil {
+		t.Fatalf("Failed to GET /api/v1/targets: %v", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusInternalServerError {
+		t.Errorf("Expected status 500, got %d", resp.StatusCode)
+	}
+}
+
+func TestServer_UIHandler(t *testing.T) {
+	logger := logrus.New()
+	logger.SetLevel(logrus.ErrorLevel)
+
+	// Find a free port
+	listener, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatalf("Failed to find free port: %v", err)
+	}
+	port := listener.Addr().(*net.TCPAddr).Port
+	listener.Close()
+
+	server := NewServer("127.0.0.1", port, logger)
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	err = server.Start(ctx)
+	if err != nil {
+		t.Fatalf("Start failed: %v", err)
+	}
+	defer server.Stop(context.Background())
+
+	// Give time for server to start
+	time.Sleep(200 * time.Millisecond)
+
+	// Test root endpoint (UI)
+	resp, err := http.Get(fmt.Sprintf("http://127.0.0.1:%d/", port))
+	if err != nil {
+		t.Fatalf("Failed to GET /: %v", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		t.Errorf("Expected status 200, got %d", resp.StatusCode)
+	}
+
+	if resp.Header.Get("Content-Type") != "text/html; charset=utf-8" {
+		t.Errorf("Expected Content-Type text/html; charset=utf-8, got %s", resp.Header.Get("Content-Type"))
+	}
+}
+
+func TestServer_UIHandler_NotFound(t *testing.T) {
+	logger := logrus.New()
+	logger.SetLevel(logrus.ErrorLevel)
+
+	// Find a free port
+	listener, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatalf("Failed to find free port: %v", err)
+	}
+	port := listener.Addr().(*net.TCPAddr).Port
+	listener.Close()
+
+	server := NewServer("127.0.0.1", port, logger)
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	err = server.Start(ctx)
+	if err != nil {
+		t.Fatalf("Start failed: %v", err)
+	}
+	defer server.Stop(context.Background())
+
+	// Give time for server to start
+	time.Sleep(200 * time.Millisecond)
+
+	// Test non-root path (should return 404)
+	resp, err := http.Get(fmt.Sprintf("http://127.0.0.1:%d/nonexistent", port))
+	if err != nil {
+		t.Fatalf("Failed to GET /nonexistent: %v", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusNotFound {
+		t.Errorf("Expected status 404, got %d", resp.StatusCode)
 	}
 }

@@ -80,3 +80,36 @@ func TestNewCompressor_EmptyType(t *testing.T) {
 		t.Error("Expected nil compressor for empty type")
 	}
 }
+
+func TestNewCompressor_GZ(t *testing.T) {
+	compressor := NewCompressor("gz")
+	if compressor == nil {
+		t.Error("Expected compressor for 'gz' type")
+	}
+}
+
+func TestGzipCompressor_Decompress_InvalidData(t *testing.T) {
+	compressor := NewCompressor("gzip")
+	if compressor == nil {
+		t.Fatal("Failed to create gzip compressor")
+	}
+
+	invalidData := []byte("not valid gzip data")
+	_, err := compressor.Decompress(invalidData)
+	if err == nil {
+		t.Error("Expected error for invalid gzip data")
+	}
+}
+
+func TestGzipCompressor_Decompress_EmptyData(t *testing.T) {
+	compressor := NewCompressor("gzip")
+	if compressor == nil {
+		t.Fatal("Failed to create gzip compressor")
+	}
+
+	emptyData := []byte{}
+	_, err := compressor.Decompress(emptyData)
+	if err == nil {
+		t.Error("Expected error for empty gzip data")
+	}
+}

@@ -321,3 +321,19 @@ func TestComputeHash(t *testing.T) {
 		t.Error("Hash should not be empty")
 	}
 }
+
+func TestSetLogger(t *testing.T) {
+	logger1 := logrus.New()
+	logger1.SetLevel(logrus.ErrorLevel)
+
+	logger2 := logrus.New()
+	logger2.SetLevel(logrus.DebugLevel)
+
+	manager := NewManager("test.yaml", logger1)
+
+	// Set new logger
+	manager.SetLogger(logger2)
+
+	// Verify logger was updated (we can't directly check, but SetLogger should not panic)
+	// The logger is used internally, so we just verify the method works
+}

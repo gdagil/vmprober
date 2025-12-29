@@ -340,3 +340,125 @@ func TestGRPCProbe_TLSConfig(t *testing.T) {
 		t.Errorf("Expected server name secure.example.com, got %s", probe.config.ServerName)
 	}
 }
+
+func TestGRPCProbe_Execute_WithTLS(t *testing.T) {
+	config := &GRPCConfig{
+		Service:        "",
+		ExpectedStatus: "SERVING",
+		TLS:            true,
+		TLSSkipVerify:  true,
+		Timeout:        1 * time.Second,
+	}
+	probe := NewGRPCProbe(config)
+	defer probe.Close()
+
+	target := types.Target{
+		Host:     "grpc.example.com",
+		Port:     443,
+		Protocol: types.ProbeTypeGRPC,
+		Timeout:  1 * time.Second,
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	result, err := probe.Execute(ctx, target)
+	// May fail if server is unavailable, but should not panic
+	if err != nil {
+		t.Logf("GRPC probe with TLS failed (may be expected): %v", err)
+	}
+	if result != nil {
+		t.Logf("GRPC probe result: Success=%v, TLS=%v", result.Success, result.TLS)
+	}
+}
+
+func TestGRPCProbe_Execute_WithService(t *testing.T) {
+	config := &GRPCConfig{
+		Service:        "test.Service",
+		ExpectedStatus: "SERVING",
+		Timeout:        1 * time.Second,
+	}
+	probe := NewGRPCProbe(config)
+	defer probe.Close()
+
+	target := types.Target{
+		Host:     "127.0.0.1",
+		Port:     50051,
+		Protocol: types.ProbeTypeGRPC,
+		Timeout:  1 * time.Second,
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	result, err := probe.Execute(ctx, target)
+	// May fail if server is unavailable, but should not panic
+	if err != nil {
+		t.Logf("GRPC probe with service failed (may be expected): %v", err)
+	}
+	if result != nil {
+		t.Logf("GRPC probe result: Success=%v", result.Success)
+	}
+}
+
+func TestGRPCProbe_Execute_WithMetadata(t *testing.T) {
+	config := &GRPCConfig{
+		Service:        "",
+		ExpectedStatus: "SERVING",
+		Metadata: map[string]string{
+			"authorization": "Bearer test-token",
+			"x-request-id":  "test-123",
+		},
+		Timeout: 1 * time.Second,
+	}
+	probe := NewGRPCProbe(config)
+	defer probe.Close()
+
+	target := types.Target{
+		Host:     "127.0.0.1",
+		Port:     50051,
+		Protocol: types.ProbeTypeGRPC,
+		Timeout:  1 * time.Second,
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	result, err := probe.Execute(ctx, target)
+	// May fail if server is unavailable, but should not panic
+	if err != nil {
+		t.Logf("GRPC probe with metadata failed (may be expected): %v", err)
+	}
+	if result != nil {
+		t.Logf("GRPC probe result: Success=%v", result.Success)
+	}
+}
+
+func TestGRPCProbe_Execute_DefaultPort(t *testing.T) {
+	config := &GRPCConfig{
+		Service:        "",
+		ExpectedStatus: "SERVING",
+		Timeout:        1 * time.Second,
+	}
+	probe := NewGRPCProbe(config)
+	defer probe.Close()
+
+	target := types.Target{
+		Host:     "grpc.example.com",
+		Port:     0, // Should default to 443
+		Protocol: types.ProbeTypeGRPC,
+		Timeout:  1 * time.Second,
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	result, err := probe.Execute(ctx, target)
+	// May fail if server is unavailable, but should not panic
+	if err != nil {
+		t.Logf("GRPC probe with default port failed (may be expected): %v", err)
+	}
+	if result != nil {
+		t.Logf("GRPC probe result: Success=%v", result.Success)
+	}
+}

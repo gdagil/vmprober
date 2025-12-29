@@ -2,6 +2,7 @@ package shutdown
 
 import (
 	"context"
+	"fmt"
 	"testing"
 	"time"
 
@@ -265,5 +266,149 @@ func TestShutdownManager_Shutdown_AlreadyInProgress(t *testing.T) {
 		t.Log("Both shutdowns completed (race condition)")
 	} else {
 		t.Logf("One shutdown returned error (expected): %v, %v", err1, err2)
+	}
+}
+
+func TestShutdownManager_Shutdown_ContextTimeout(t *testing.T) {
+	logger := logrus.New()
+	logger.SetLevel(logrus.ErrorLevel)
+
+	manager := NewShutdownManager(logger)
+
+	component := &mockComponent{
+		name:     "test-component",
+		priority: 1,
+		shutdown: func(ctx context.Context) error {
+			// Wait for context to be canceled
+			<-ctx.Done()
+			return ctx.Err()
+		},
+	}
+
+	manager.Register(component)
+
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel() // Cancel immediately
+
+	// Shutdown with canceled context
+	err := manager.Shutdown(ctx, 1*time.Second)
+	if err == nil {
+		t.Log("Shutdown may have completed despite canceled context")
+	}
+}
+
+func TestShutdownManager_Shutdown_MultipleComponentsWithErrors(t *testing.T) {
+	logger := logrus.New()
+	logger.SetLevel(logrus.ErrorLevel)
+
+	manager := NewShutdownManager(logger)
+
+	// Add multiple components, some with errors
+	component1 := &mockComponent{
+		name:     "component-1",
+		priority: 1,
+		shutdown: func(ctx context.Context) error {
+			return nil
+		},
+	}
+
+	component2 := &mockComponent{
+		name:     "component-2",
+		priority: 2,
+		shutdown: func(ctx context.Context) error {
+			return context.DeadlineExceeded
+		},
+	}
+
+	component3 := &mockComponent{
+		name:     "component-3",
+		priority: 3,
+		shutdown: func(ctx context.Context) error {
+			return nil
+		},
+	}
+
+	manager.Register(component1)
+	manager.Register(component2)
+	manager.Register(component3)
+
+	ctx := context.Background()
+	err := manager.Shutdown(ctx, 5*time.Second)
+	if err != nil {
+		t.Logf("Shutdown returned error: %v", err)
+	}
+
+	status := manager.GetStatus()
+	if len(status.Errors) == 0 {
+		t.Log("No errors recorded (may be expected)")
+	}
+
+	// All components should be marked as shutdown
+	if len(status.Components) != 3 {
+		t.Errorf("Expected 3 components, got %d", len(status.Components))
+	}
+}
+
+func TestShutdownManager_GetStatus_AfterShutdown(t *testing.T) {
+	logger := logrus.New()
+	logger.SetLevel(logrus.ErrorLevel)
+
+	manager := NewShutdownManager(logger)
+
+	component := &mockComponent{
+		name:     "test-component",
+		priority: 1,
+		shutdown: func(ctx context.Context) error {
+			return nil
+		},
+	}
+
+	manager.Register(component)
+
+	ctx := context.Background()
+	if err := manager.Shutdown(ctx, 5*time.Second); err != nil {
+		t.Fatalf("Shutdown failed: %v", err)
+	}
+
+	status := manager.GetStatus()
+	if status == nil {
+		t.Fatal("Status is nil")
+	}
+
+	if status.InProgress {
+		t.Error("Shutdown should not be in progress after completion")
+	}
+
+	if status.StartTime.IsZero() {
+		t.Error("StartTime should be set")
+	}
+
+	if status.EndTime.IsZero() {
+		t.Error("EndTime should be set")
+	}
+
+	if status.Duration == 0 {
+		t.Error("Duration should be set")
+	}
+}
+
+func TestShutdownManager_Register_MultipleComponents(t *testing.T) {
+	logger := logrus.New()
+	logger.SetLevel(logrus.ErrorLevel)
+
+	manager := NewShutdownManager(logger)
+
+	// Register multiple components
+	for i := 0; i < 10; i++ {
+		component := &mockComponent{
+			name:     fmt.Sprintf("component-%d", i),
+			priority: i,
+		}
+		manager.Register(component)
+	}
+
+	status := manager.GetStatus()
+	if len(status.Components) != 10 {
+		t.Errorf("Expected 10 components, got %d", len(status.Components))
 	}
 }

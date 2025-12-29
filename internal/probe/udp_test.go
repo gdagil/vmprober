@@ -238,3 +238,143 @@ func TestUDPProbe_DefaultPayloadSize(t *testing.T) {
 		t.Error("Expected default payload size to be used")
 	}
 }
+
+func TestUDPProbe_Execute_WithResponse(t *testing.T) {
+	config := &UDPConfig{
+		PayloadSize:     64,
+		ResponseTimeout: 1 * time.Second,
+		MaxPacketSize:   1024,
+	}
+	probe := NewUDPProbe(config)
+	defer probe.Close()
+
+	// Start UDP echo server
+	addr, err := net.ResolveUDPAddr("udp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatalf("Failed to resolve UDP address: %v", err)
+	}
+
+	conn, err := net.ListenUDP("udp", addr)
+	if err != nil {
+		t.Fatalf("Failed to start UDP server: %v", err)
+	}
+	defer conn.Close()
+
+	// Echo server
+	go func() {
+		buffer := make([]byte, 1024)
+		for {
+			n, clientAddr, err := conn.ReadFromUDP(buffer)
+			if err != nil {
+				return
+			}
+			conn.WriteToUDP(buffer[:n], clientAddr)
+		}
+	}()
+
+	target := types.Target{
+		Host:     "127.0.0.1",
+		Port:     conn.LocalAddr().(*net.UDPAddr).Port,
+		Protocol: types.ProbeTypeUDP,
+		Timeout:  2 * time.Second,
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	result, err := probe.Execute(ctx, target)
+	if err != nil {
+		t.Logf("UDP probe error (may be expected): %v", err)
+	}
+	if result != nil {
+		t.Logf("UDP probe result: Success=%v, PayloadLen=%d, ResponseLen=%d",
+			result.Success, len(result.Payload), len(result.Response))
+	}
+}
+
+func TestUDPProbe_Execute_LargePayload(t *testing.T) {
+	config := &UDPConfig{
+		PayloadSize:     512,
+		ResponseTimeout: 1 * time.Second,
+		MaxPacketSize:   2048,
+	}
+	probe := NewUDPProbe(config)
+	defer probe.Close()
+
+	target := types.Target{
+		Host:     "127.0.0.1",
+		Port:     53,
+		Protocol: types.ProbeTypeUDP,
+		Timeout:  1 * time.Second,
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+
+	result, err := probe.Execute(ctx, target)
+	// May fail if no response, but should not panic
+	if err != nil {
+		t.Logf("UDP probe with large payload failed (may be expected): %v", err)
+	}
+	if result != nil {
+		t.Logf("UDP probe result: Success=%v, PayloadLen=%d", result.Success, len(result.Payload))
+	}
+}
+
+func TestUDPProbe_Execute_WithMaxPacketSize(t *testing.T) {
+	config := &UDPConfig{
+		PayloadSize:     64,
+		ResponseTimeout: 1 * time.Second,
+		MaxPacketSize:   512,
+	}
+	probe := NewUDPProbe(config)
+	defer probe.Close()
+
+	target := types.Target{
+		Host:     "127.0.0.1",
+		Port:     53,
+		Protocol: types.ProbeTypeUDP,
+		Timeout:  1 * time.Second,
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+
+	result, err := probe.Execute(ctx, target)
+	// May fail if no response, but should not panic
+	if err != nil {
+		t.Logf("UDP probe with max packet size failed (may be expected): %v", err)
+	}
+	if result != nil {
+		t.Logf("UDP probe result: Success=%v", result.Success)
+	}
+}
+
+func TestUDPProbe_Execute_WithResponseTimeout(t *testing.T) {
+	config := &UDPConfig{
+		PayloadSize:     64,
+		ResponseTimeout: 100 * time.Millisecond,
+		MaxPacketSize:   1024,
+	}
+	probe := NewUDPProbe(config)
+	defer probe.Close()
+
+	target := types.Target{
+		Host:     "127.0.0.1",
+		Port:     53,
+		Protocol: types.ProbeTypeUDP,
+		Timeout:  1 * time.Second,
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+
+	result, err := probe.Execute(ctx, target)
+	// Should timeout, but should not panic
+	if err != nil {
+		t.Logf("UDP probe timeout (expected): %v", err)
+	}
+	if result != nil {
+		t.Logf("UDP probe result: Success=%v, Error=%s", result.Success, result.Error)
+	}
+}

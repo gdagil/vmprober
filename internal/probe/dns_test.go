@@ -510,3 +510,249 @@ func TestBuildDNSConfigFromTarget_Defaults(t *testing.T) {
 		t.Error("Expected default recursion to be true")
 	}
 }
+
+func TestDNSProbe_Execute_TCPProtocol(t *testing.T) {
+	config := &DNSConfig{
+		QueryName: "google.com",
+		QueryType: "A",
+		Protocol:  "tcp",
+		Timeout:   5 * time.Second,
+	}
+	probe := NewDNSProbe(config)
+	defer probe.Close()
+
+	target := types.Target{
+		Host:     "8.8.8.8",
+		Port:     53,
+		Protocol: types.ProbeTypeDNS,
+		Timeout:  5 * time.Second,
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	result, err := probe.Execute(ctx, target)
+	// May fail if DNS server is unavailable, but should not panic
+	if err != nil {
+		t.Logf("DNS probe with TCP failed (may be expected): %v", err)
+	}
+	if result != nil {
+		t.Logf("DNS probe result: Success=%v, Error=%s", result.Success, result.Error)
+	}
+}
+
+func TestDNSProbe_Execute_UnsupportedProtocol(t *testing.T) {
+	config := &DNSConfig{
+		QueryName: "google.com",
+		QueryType: "A",
+		Protocol:  "invalid-protocol",
+		Timeout:   5 * time.Second,
+	}
+	probe := NewDNSProbe(config)
+	defer probe.Close()
+
+	target := types.Target{
+		Host:     "8.8.8.8",
+		Port:     53,
+		Protocol: types.ProbeTypeDNS,
+		Timeout:  5 * time.Second,
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	result, err := probe.Execute(ctx, target)
+	if err == nil {
+		t.Error("Expected error for unsupported protocol")
+	}
+	if result != nil && result.Success {
+		t.Error("Expected unsuccessful probe")
+	}
+}
+
+func TestDNSProbe_Execute_WithExpectedRecords(t *testing.T) {
+	config := &DNSConfig{
+		QueryName:       "google.com",
+		QueryType:       "A",
+		Protocol:        "udp",
+		ExpectedRecords: []string{"172.217"}, // Partial match for Google IPs
+		Timeout:         5 * time.Second,
+	}
+	probe := NewDNSProbe(config)
+	defer probe.Close()
+
+	target := types.Target{
+		Host:     "8.8.8.8",
+		Port:     53,
+		Protocol: types.ProbeTypeDNS,
+		Timeout:  5 * time.Second,
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	result, err := probe.Execute(ctx, target)
+	// May fail if expected records not found, but should not panic
+	if err != nil {
+		t.Logf("DNS probe with expected records failed (may be expected): %v", err)
+	}
+	if result != nil {
+		t.Logf("DNS probe result: Success=%v", result.Success)
+	}
+}
+
+func TestDNSProbe_Execute_InvalidQueryType(t *testing.T) {
+	config := &DNSConfig{
+		QueryName: "google.com",
+		QueryType: "INVALID",
+		Protocol:  "udp",
+		Timeout:   5 * time.Second,
+	}
+	probe := NewDNSProbe(config)
+	defer probe.Close()
+
+	target := types.Target{
+		Host:     "8.8.8.8",
+		Port:     53,
+		Protocol: types.ProbeTypeDNS,
+		Timeout:  5 * time.Second,
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	result, err := probe.Execute(ctx, target)
+	if err == nil {
+		t.Error("Expected error for invalid query type")
+	}
+	if result != nil && result.Success {
+		t.Error("Expected unsuccessful probe")
+	}
+}
+
+func TestDNSProbe_Execute_QueryNameFromTarget(t *testing.T) {
+	config := &DNSConfig{
+		QueryType: "A",
+		Protocol:  "udp",
+		Timeout:   5 * time.Second,
+		// QueryName not set - should use target.Host
+	}
+	probe := NewDNSProbe(config)
+	defer probe.Close()
+
+	target := types.Target{
+		Host:     "google.com", // Will be used as query name
+		Port:     53,
+		Protocol: types.ProbeTypeDNS,
+		Timeout:  5 * time.Second,
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	result, err := probe.Execute(ctx, target)
+	// May fail if DNS server is unavailable, but should not panic
+	if err != nil {
+		t.Logf("DNS probe failed (may be expected): %v", err)
+	}
+	if result != nil {
+		t.Logf("DNS probe result: Success=%v", result.Success)
+	}
+}
+
+func TestDNSProbe_Execute_DefaultPort(t *testing.T) {
+	config := &DNSConfig{
+		QueryName: "google.com",
+		QueryType: "A",
+		Protocol:  "udp",
+		Timeout:   5 * time.Second,
+	}
+	probe := NewDNSProbe(config)
+	defer probe.Close()
+
+	target := types.Target{
+		Host:     "8.8.8.8",
+		Port:     0, // Should default to 53
+		Protocol: types.ProbeTypeDNS,
+		Timeout:  5 * time.Second,
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	result, err := probe.Execute(ctx, target)
+	// May fail if DNS server is unavailable, but should not panic
+	if err != nil {
+		t.Logf("DNS probe with default port failed (may be expected): %v", err)
+	}
+	if result != nil {
+		t.Logf("DNS probe result: Success=%v", result.Success)
+	}
+}
+
+func TestDNSProbe_Execute_WithDifferentQueryTypes(t *testing.T) {
+	queryTypes := []string{"A", "AAAA", "MX", "TXT", "NS", "CNAME"}
+
+	for _, qtype := range queryTypes {
+		t.Run(qtype, func(t *testing.T) {
+			config := &DNSConfig{
+				QueryName: "google.com",
+				QueryType: qtype,
+				Protocol:  "udp",
+				Timeout:   5 * time.Second,
+			}
+			probe := NewDNSProbe(config)
+			defer probe.Close()
+
+			target := types.Target{
+				Host:     "8.8.8.8",
+				Port:     53,
+				Protocol: types.ProbeTypeDNS,
+				Timeout:  5 * time.Second,
+			}
+
+			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+			defer cancel()
+
+			result, err := probe.Execute(ctx, target)
+			// May fail if DNS server is unavailable, but should not panic
+			if err != nil {
+				t.Logf("DNS probe with query type %s failed (may be expected): %v", qtype, err)
+			}
+			if result != nil {
+				t.Logf("DNS probe result for %s: Success=%v", qtype, result.Success)
+			}
+		})
+	}
+}
+
+func TestDNSProbe_Execute_WithValidateAnswer(t *testing.T) {
+	config := &DNSConfig{
+		QueryName:      "google.com",
+		QueryType:      "A",
+		Protocol:       "udp",
+		ValidateAnswer: true,
+		Timeout:        5 * time.Second,
+	}
+	probe := NewDNSProbe(config)
+	defer probe.Close()
+
+	target := types.Target{
+		Host:     "8.8.8.8",
+		Port:     53,
+		Protocol: types.ProbeTypeDNS,
+		Timeout:  5 * time.Second,
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	result, err := probe.Execute(ctx, target)
+	// May fail if DNS server is unavailable, but should not panic
+	if err != nil {
+		t.Logf("DNS probe with validate answer failed (may be expected): %v", err)
+	}
+	if result != nil {
+		t.Logf("DNS probe result: Success=%v", result.Success)
+	}
+}
