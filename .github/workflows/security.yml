@@ -29,17 +29,17 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v6
 
-      - name: Initialize CodeQL
-        uses: github/codeql-action/init@v4
-        with:
-          languages: go
-          queries: +security-extended,security-and-quality
-
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
           go-version: ${{ env.GO_VERSION }}
           cache: true
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v4
+        with:
+          languages: go
+          queries: +security-extended,security-and-quality
 
       - name: Build
         run: go build ./...
