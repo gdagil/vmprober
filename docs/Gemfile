@@ -1,4 +1,7 @@
 source "https://rubygems.org"
 
+# Use github-pages gem which manages Jekyll and all dependencies
 gem "github-pages", group: :jekyll_plugins
-gem "jekyll", "~> 4.3"
+
+# Additional plugins
+gem "webrick", "~> 1.8"

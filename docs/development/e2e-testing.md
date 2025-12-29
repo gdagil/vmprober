@@ -116,7 +116,7 @@ flowchart LR
 
 ### Prerequisites
 
-- Go 1.25+
+- Go 1.23+
 - Docker and Docker Compose (or `docker compose`)
 - Built VMProber binary (`bin/vmprober`)
 - Available ports: 8480, 8481, 8482, 3000
