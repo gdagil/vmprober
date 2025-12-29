@@ -4,7 +4,7 @@ go 1.25.5
 
 require (
 	github.com/VictoriaMetrics/metrics v1.40.2
-	github.com/miekg/dns v1.1.62
+	github.com/miekg/dns v1.1.69
 	github.com/sirupsen/logrus v1.9.3
 	github.com/stretchr/testify v1.11.1
 	golang.org/x/net v0.48.0
