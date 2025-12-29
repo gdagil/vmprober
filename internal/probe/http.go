@@ -68,6 +68,7 @@ func NewHTTPProbe(config *HTTPConfig) interfaces.Probe {
 
 	// Create TLS config
 	tlsConfig := &tls.Config{
+		//nolint:gosec // InsecureSkipVerify is configurable via ValidateCert and may be needed for testing/internal services
 		InsecureSkipVerify: !config.ValidateCert,
 		MinVersion:         tls.VersionTLS12,
 	}

@@ -67,10 +67,13 @@ func NewICMPProbe(config *ICMPConfig) interfaces.Probe {
 	if seqStart < 0 || seqStart > 65535 {
 		seqStart = 1 // Default to safe value
 	}
+	// seqStart is validated above to be in range [0, 65535]
+	//nolint:gosec // SequenceStart is validated to prevent integer overflow
+	seqVal := uint16(seqStart)
 	return &ICMPProbe{
 		config:   config,
 		socket:   conn,
-		sequence: uint16(seqStart),
+		sequence: seqVal,
 	}
 }
 
@@ -158,7 +161,11 @@ func (p *ICMPProbe) Execute(ctx context.Context, target types.Target) (*types.Pr
 	}
 
 	// Create ICMP packet
-	icmpID := uint16(os.Getpid() & 0xFFFF)
+	// Get process ID and mask to ensure it fits in uint16
+	pid := os.Getpid()
+	// Mask to ensure value fits in uint16 range (0-65535)
+	//nolint:gosec // PID is masked with 0xFFFF to ensure it fits in uint16
+	icmpID := uint16(pid & 0xFFFF)
 	p.mu.Lock()
 	p.sequence++
 	if p.sequence == 0 {
@@ -167,6 +174,8 @@ func (p *ICMPProbe) Execute(ctx context.Context, target types.Target) (*types.Pr
 		if seqStart < 0 || seqStart > 65535 {
 			seqStart = 1 // Default to safe value
 		}
+		// seqStart is validated above to be in range [0, 65535]
+		//nolint:gosec // SequenceStart is validated to prevent integer overflow
 		p.sequence = uint16(seqStart)
 	}
 	icmpSeq := p.sequence

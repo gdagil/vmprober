@@ -38,14 +38,17 @@ func NewWALSegment(id, path string, cfg *config.WALConfig, compressor Compressor
 	if err := validatePath(path); err != nil {
 		return nil, fmt.Errorf("invalid segment path: %w", err)
 	}
-	file, err := os.OpenFile(path, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0o600)
+	// Clean path after validation to ensure it's safe
+	cleanPath := filepath.Clean(path)
+	//nolint:gosec // Path is validated by validatePath() to prevent directory traversal
+	file, err := os.OpenFile(cleanPath, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0o600)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create segment file: %w", err)
 	}
 
 	return &WALSegment{
 		ID:         id,
-		path:       path,
+		path:       cleanPath,
 		file:       file,
 		config:     cfg,
 		compressor: compressor,
@@ -61,7 +64,10 @@ func OpenWALSegment(id, path string, cfg *config.WALConfig, compressor Compresso
 	if err := validatePath(path); err != nil {
 		return nil, fmt.Errorf("invalid segment path: %w", err)
 	}
-	file, err := os.OpenFile(path, os.O_RDONLY, 0o600)
+	// Clean path after validation to ensure it's safe
+	cleanPath := filepath.Clean(path)
+	//nolint:gosec // Path is validated by validatePath() to prevent directory traversal
+	file, err := os.OpenFile(cleanPath, os.O_RDONLY, 0o600)
 	if err != nil {
 		return nil, fmt.Errorf("failed to open segment file: %w", err)
 	}
@@ -76,7 +82,7 @@ func OpenWALSegment(id, path string, cfg *config.WALConfig, compressor Compresso
 
 	segment := &WALSegment{
 		ID:         id,
-		path:       path,
+		path:       cleanPath,
 		file:       file,
 		config:     cfg,
 		compressor: compressor,
@@ -372,7 +378,10 @@ func (s *WALSegment) loadSentIndex() error {
 	if err := validatePath(indexPath); err != nil {
 		return fmt.Errorf("invalid index path: %w", err)
 	}
-	data, err := os.ReadFile(indexPath)
+	// Clean path after validation to ensure it's safe
+	cleanIndexPath := filepath.Clean(indexPath)
+	//nolint:gosec // Path is validated by validatePath() to prevent directory traversal
+	data, err := os.ReadFile(cleanIndexPath)
 	if err != nil {
 		if os.IsNotExist(err) {
 			return nil
