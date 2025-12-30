@@ -232,6 +232,49 @@
             gap: 0.5rem;
         }
 
+        /* Mobile menu button */
+        .mobile-menu-toggle {
+            display: none;
+            align-items: center;
+            justify-content: center;
+            width: 36px;
+            height: 36px;
+            padding: 0;
+            background: var(--color-bg-tertiary);
+            border: 1px solid var(--color-border);
+            border-radius: 6px;
+            cursor: pointer;
+            color: var(--color-text);
+            transition: all 0.2s;
+        }
+
+        .mobile-menu-toggle:hover {
+            background: var(--color-border);
+        }
+
+        .mobile-menu-toggle svg {
+            width: 20px;
+            height: 20px;
+        }
+
+        /* Mobile sidebar overlay */
+        .mobile-sidebar-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 998;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .mobile-sidebar-overlay.active {
+            opacity: 1;
+        }
+
         /* Main content */
         .main-wrapper {
             display: flex;
@@ -250,7 +293,30 @@
             top: 60px;
             height: calc(100vh - 60px);
             overflow-y: auto;
-            transition: border-color 0.3s ease;
+            transition: border-color 0.3s ease, transform 0.3s ease;
+            background: var(--color-bg);
+        }
+
+        /* Mobile sidebar */
+        @media (max-width: 1024px) {
+            aside {
+                position: fixed;
+                top: 0;
+                left: 0;
+                height: 100vh;
+                width: 280px;
+                z-index: 999;
+                transform: translateX(-100%);
+                box-shadow: 2px 0 10px rgba(0, 0, 0, 0.1);
+            }
+
+            aside.mobile-open {
+                transform: translateX(0);
+            }
+
+            .mobile-sidebar-overlay {
+                display: block;
+            }
         }
 
         .sidebar-section {
@@ -370,6 +436,7 @@
             border-radius: 8px;
             overflow-x: auto;
             margin-bottom: 1.5rem;
+            -webkit-overflow-scrolling: touch;
         }
 
         .content pre code {
@@ -408,12 +475,24 @@
             border-collapse: collapse;
             margin-bottom: 1.5rem;
             font-size: 0.875rem;
+            display: block;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        .content table thead,
+        .content table tbody,
+        .content table tr {
+            display: table;
+            width: 100%;
+            table-layout: fixed;
         }
 
         .content th, .content td {
             padding: 0.75rem 1rem;
             text-align: left;
             border-bottom: 1px solid var(--color-border);
+            word-wrap: break-word;
         }
 
         .content th {
@@ -475,6 +554,7 @@
             display: flex;
             justify-content: center;
             gap: 1.5rem;
+            flex-wrap: wrap;
         }
 
         .footer-links a {
@@ -490,12 +570,12 @@
 
         /* Responsive */
         @media (max-width: 1024px) {
-            aside {
-                display: none;
-            }
-
             .header-content {
                 flex-wrap: wrap;
+            }
+
+            .mobile-menu-toggle {
+                display: flex;
             }
         }
 
@@ -508,16 +588,127 @@
                 display: none;
             }
 
+            .header-content {
+                gap: 0.75rem;
+            }
+
+            .logo-text {
+                font-size: 1.125rem;
+            }
+
+            .logo svg {
+                width: 28px;
+                height: 28px;
+            }
+
+            .github-link {
+                padding: 0.5rem 0.75rem;
+                font-size: 0.8125rem;
+            }
+
+            .github-link span {
+                display: none;
+            }
+
+            .github-link svg {
+                width: 20px;
+                height: 20px;
+            }
+
             main {
-                padding: 1.5rem;
+                padding: 1.5rem 1rem;
             }
 
             .content h1 {
-                font-size: 2rem;
+                font-size: 1.75rem;
+                line-height: 1.3;
             }
 
             .content h2 {
+                font-size: 1.375rem;
+                margin-top: 2rem;
+            }
+
+            .content h3 {
+                font-size: 1.125rem;
+            }
+
+            .content pre {
+                padding: 0.75rem 1rem;
+                font-size: 0.8125rem;
+            }
+
+            .content table {
+                font-size: 0.8125rem;
+            }
+
+            .content th,
+            .content td {
+                padding: 0.5rem 0.75rem;
+            }
+
+            footer {
+                padding: 1.5rem 1rem;
+            }
+
+            .footer-links {
+                gap: 1rem;
+                font-size: 0.8125rem;
+            }
+        }
+
+        @media (max-width: 480px) {
+            header {
+                padding: 0.5rem 0.75rem;
+            }
+
+            .logo-text {
+                font-size: 1rem;
+            }
+
+            .logo svg {
+                width: 24px;
+                height: 24px;
+            }
+
+            main {
+                padding: 1rem 0.75rem;
+            }
+
+            .content h1 {
                 font-size: 1.5rem;
+            }
+
+            .content h2 {
+                font-size: 1.25rem;
+            }
+
+            .content h3 {
+                font-size: 1rem;
+            }
+
+            .content p,
+            .content li {
+                font-size: 0.9375rem;
+            }
+
+            .content code {
+                font-size: 0.8125em;
+            }
+
+            .content pre {
+                padding: 0.625rem 0.75rem;
+                font-size: 0.75rem;
+            }
+
+            .content blockquote {
+                padding-left: 0.75rem;
+                margin: 1rem 0;
+            }
+
+            .content ul,
+            .content ol {
+                padding-left: 1.25rem;
             }
         }
     </style>
@@ -552,6 +743,13 @@
                 <a href="{{ site.baseurl }}/guides/monitoring-setup">Guides</a>
             </nav>
             <div class="header-actions">
+                <button class="mobile-menu-toggle" id="mobile-menu-toggle" aria-label="Toggle menu">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <line x1="3" y1="12" x2="21" y2="12"/>
+                        <line x1="3" y1="6" x2="21" y2="6"/>
+                        <line x1="3" y1="18" x2="21" y2="18"/>
+                    </svg>
+                </button>
                 <button class="theme-toggle" id="theme-toggle" aria-label="Toggle theme">
                     <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <circle cx="12" cy="12" r="5"/>
@@ -572,14 +770,15 @@
                     <svg viewBox="0 0 24 24" fill="currentColor">
                         <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/>
                     </svg>
-                    GitHub
+                    <span>GitHub</span>
                 </a>
             </div>
         </div>
     </header>
 
+    <div class="mobile-sidebar-overlay" id="mobile-sidebar-overlay"></div>
     <div class="main-wrapper">
-        <aside>
+        <aside id="sidebar">
             <div class="sidebar-section">
                 <div class="sidebar-title">Getting Started</div>
                 <div class="sidebar-nav">
@@ -791,6 +990,65 @@
 
             // Initial image update
             updateThemeImages();
+
+            // Mobile menu toggle
+            const mobileMenuToggle = document.getElementById('mobile-menu-toggle');
+            const sidebar = document.getElementById('sidebar');
+            const mobileSidebarOverlay = document.getElementById('mobile-sidebar-overlay');
+
+            function toggleMobileMenu() {
+                const isOpen = sidebar.classList.contains('mobile-open');
+                if (isOpen) {
+                    sidebar.classList.remove('mobile-open');
+                    mobileSidebarOverlay.classList.remove('active');
+                    document.body.style.overflow = '';
+                } else {
+                    sidebar.classList.add('mobile-open');
+                    mobileSidebarOverlay.classList.add('active');
+                    document.body.style.overflow = 'hidden';
+                }
+            }
+
+            function closeMobileMenu() {
+                sidebar.classList.remove('mobile-open');
+                mobileSidebarOverlay.classList.remove('active');
+                document.body.style.overflow = '';
+            }
+
+            if (mobileMenuToggle) {
+                mobileMenuToggle.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    toggleMobileMenu();
+                });
+            }
+
+            if (mobileSidebarOverlay) {
+                mobileSidebarOverlay.addEventListener('click', closeMobileMenu);
+            }
+
+            // Close mobile menu when clicking on a sidebar link
+            const sidebarLinks = document.querySelectorAll('.sidebar-nav a');
+            sidebarLinks.forEach(function(link) {
+                link.addEventListener('click', function() {
+                    if (window.innerWidth <= 1024) {
+                        closeMobileMenu();
+                    }
+                });
+            });
+
+            // Close mobile menu on window resize if it becomes desktop size
+            window.addEventListener('resize', function() {
+                if (window.innerWidth > 1024) {
+                    closeMobileMenu();
+                }
+            });
+
+            // Close mobile menu on escape key
+            document.addEventListener('keydown', function(e) {
+                if (e.key === 'Escape' && sidebar.classList.contains('mobile-open')) {
+                    closeMobileMenu();
+                }
+            });
         })();
     </script>
 </body>

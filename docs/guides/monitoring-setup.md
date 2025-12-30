@@ -76,6 +76,7 @@ rate(vmprober_probe_failure_total[5m]) / rate(vmprober_probe_attempts_total[5m])
 
 ### High Failure Rate
 
+{% raw %}
 ```yaml
 - alert: HighProbeFailureRate
   expr: |
@@ -85,9 +86,11 @@ rate(vmprober_probe_failure_total[5m]) / rate(vmprober_probe_attempts_total[5m])
   annotations:
     summary: "High probe failure rate for {{ $labels.target }}"
 ```
+{% endraw %}
 
 ### High Latency
 
+{% raw %}
 ```yaml
 - alert: HighProbeLatency
   expr: |
@@ -98,6 +101,7 @@ rate(vmprober_probe_failure_total[5m]) / rate(vmprober_probe_attempts_total[5m])
   annotations:
     summary: "High probe latency for {{ $labels.target }}"
 ```
+{% endraw %}
 
 ## Service Discovery
 
