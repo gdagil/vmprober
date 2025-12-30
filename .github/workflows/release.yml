@@ -256,8 +256,11 @@ jobs:
         run: |
           nfpm package -p deb -f nfpm.yaml
           DEB_FILE=$(ls *.deb)
-          mv "$DEB_FILE" "vmprober_${{ steps.version.outputs.version_num }}_${{ matrix.goarch }}.deb"
-          sha256sum "vmprober_${{ steps.version.outputs.version_num }}_${{ matrix.goarch }}.deb" > "vmprober_${{ steps.version.outputs.version_num }}_${{ matrix.goarch }}.deb.sha256"
+          TARGET_NAME="vmprober_${{ steps.version.outputs.version_num }}_${{ matrix.goarch }}.deb"
+          if [ "$DEB_FILE" != "$TARGET_NAME" ]; then
+            mv "$DEB_FILE" "$TARGET_NAME"
+          fi
+          sha256sum "$TARGET_NAME" > "${TARGET_NAME}.sha256"
 
       - name: Upload DEB artifacts
         uses: actions/upload-artifact@v4
