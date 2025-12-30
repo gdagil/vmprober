@@ -3,6 +3,7 @@ package adapter
 import (
 	"context"
 	"errors"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -76,10 +77,10 @@ func TestRetryEngine_ScheduleRetry(t *testing.T) {
 	ctx := context.Background()
 
 	// Schedule a retry
-	attempts := 0
+	var attempts int64
 	engine.ScheduleRetry(ctx, "http://localhost:8428", func() error {
-		attempts++
-		if attempts < 2 {
+		atomic.AddInt64(&attempts, 1)
+		if atomic.LoadInt64(&attempts) < 2 {
 			return errors.New("temporary error")
 		}
 		return nil
@@ -89,7 +90,7 @@ func TestRetryEngine_ScheduleRetry(t *testing.T) {
 	time.Sleep(500 * time.Millisecond)
 
 	// Check that retry was attempted
-	if attempts == 0 {
+	if atomic.LoadInt64(&attempts) == 0 {
 		t.Log("Retry may not have been processed yet (this is OK)")
 	}
 }
@@ -143,9 +144,9 @@ func TestRetryEngine_RetryWithExponentialBackoff(t *testing.T) {
 
 	ctx := context.Background()
 
-	attempts := 0
+	var attempts int64
 	engine.ScheduleRetry(ctx, "http://localhost:8428", func() error {
-		attempts++
+		atomic.AddInt64(&attempts, 1)
 		return errors.New("always fail")
 	})
 
@@ -153,7 +154,7 @@ func TestRetryEngine_RetryWithExponentialBackoff(t *testing.T) {
 	time.Sleep(1 * time.Second)
 
 	// Should have attempted retries
-	if attempts == 0 {
+	if atomic.LoadInt64(&attempts) == 0 {
 		t.Log("Retries may not have been processed yet (this is OK)")
 	}
 }
@@ -171,9 +172,9 @@ func TestRetryEngine_RetryWithLinearBackoff(t *testing.T) {
 
 	ctx := context.Background()
 
-	attempts := 0
+	var attempts int64
 	engine.ScheduleRetry(ctx, "http://localhost:8428", func() error {
-		attempts++
+		atomic.AddInt64(&attempts, 1)
 		return errors.New("always fail")
 	})
 
@@ -181,7 +182,7 @@ func TestRetryEngine_RetryWithLinearBackoff(t *testing.T) {
 	time.Sleep(500 * time.Millisecond)
 
 	// Should have attempted retries
-	if attempts == 0 {
+	if atomic.LoadInt64(&attempts) == 0 {
 		t.Log("Retries may not have been processed yet (this is OK)")
 	}
 }
@@ -199,9 +200,9 @@ func TestRetryEngine_RetryWithFixedBackoff(t *testing.T) {
 
 	ctx := context.Background()
 
-	attempts := 0
+	var attempts int64
 	engine.ScheduleRetry(ctx, "http://localhost:8428", func() error {
-		attempts++
+		atomic.AddInt64(&attempts, 1)
 		return errors.New("always fail")
 	})
 
@@ -209,7 +210,7 @@ func TestRetryEngine_RetryWithFixedBackoff(t *testing.T) {
 	time.Sleep(500 * time.Millisecond)
 
 	// Should have attempted retries
-	if attempts == 0 {
+	if atomic.LoadInt64(&attempts) == 0 {
 		t.Log("Retries may not have been processed yet (this is OK)")
 	}
 }
@@ -226,9 +227,9 @@ func TestRetryEngine_RetryWithDefaultBackoff(t *testing.T) {
 
 	ctx := context.Background()
 
-	attempts := 0
+	var attempts int64
 	engine.ScheduleRetry(ctx, "http://localhost:8428", func() error {
-		attempts++
+		atomic.AddInt64(&attempts, 1)
 		return errors.New("always fail")
 	})
 
@@ -236,7 +237,7 @@ func TestRetryEngine_RetryWithDefaultBackoff(t *testing.T) {
 	time.Sleep(500 * time.Millisecond)
 
 	// Should have attempted retries
-	if attempts == 0 {
+	if atomic.LoadInt64(&attempts) == 0 {
 		t.Log("Retries may not have been processed yet (this is OK)")
 	}
 }
@@ -254,9 +255,9 @@ func TestRetryEngine_MaxAttempts(t *testing.T) {
 
 	ctx := context.Background()
 
-	attempts := 0
+	var attempts int64
 	engine.ScheduleRetry(ctx, "http://localhost:8428", func() error {
-		attempts++
+		atomic.AddInt64(&attempts, 1)
 		return errors.New("always fail")
 	})
 
@@ -264,8 +265,8 @@ func TestRetryEngine_MaxAttempts(t *testing.T) {
 	time.Sleep(1 * time.Second)
 
 	// Should not exceed max attempts
-	if attempts > cfg.MaxAttempts+1 {
-		t.Errorf("Should not exceed max attempts, got %d", attempts)
+	if atomic.LoadInt64(&attempts) > int64(cfg.MaxAttempts+1) {
+		t.Errorf("Should not exceed max attempts, got %d", atomic.LoadInt64(&attempts))
 	}
 }
 
