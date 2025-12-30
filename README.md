@@ -406,9 +406,9 @@ We welcome contributions! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for:
 - Coding standards
 - Pull request process
 
-## License
+## Star History
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+[![Star History Chart](https://api.star-history.com/svg?repos=gdagil/vmprober&type=date&legend=top-left)](https://www.star-history.com/#gdagil/vmprober&type=date&legend=top-left)
 
 ## Acknowledgments
 
