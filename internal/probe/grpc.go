@@ -80,7 +80,7 @@ func (p *GRPCProbe) Execute(ctx context.Context, target types.Target) (*types.Pr
 
 	if p.config.TLS {
 		tlsConfig := &tls.Config{
-			//nolint:gosec // InsecureSkipVerify is configurable and may be needed for testing/internal services
+			// #nosec G402 -- InsecureSkipVerify is configurable and may be needed for testing/internal services
 			InsecureSkipVerify: p.config.TLSSkipVerify,
 			MinVersion:         tls.VersionTLS12,
 		}
