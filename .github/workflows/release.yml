@@ -156,6 +156,51 @@ jobs:
             -o dist/vmprober \
             ./cmd/vmprober
 
+      - name: Create nFPM scripts
+        run: |
+          mkdir -p scripts
+          cat > scripts/postinstall.sh << 'EOF'
+          #!/bin/sh
+          set -e
+          if ! getent group vmprober >/dev/null 2>&1; then
+            groupadd --system vmprober
+          fi
+          if ! getent passwd vmprober >/dev/null 2>&1; then
+            useradd --system --gid vmprober --home-dir /var/lib/vmprober --shell /usr/sbin/nologin vmprober
+          fi
+          chown -R vmprober:vmprober /var/lib/vmprober /var/log/vmprober
+          if command -v systemctl >/dev/null 2>&1; then
+            systemctl daemon-reload
+          fi
+          echo ""
+          echo "vmprober installed successfully!"
+          echo ""
+          echo "To get started:"
+          echo "  1. Copy config: sudo cp /etc/vmprober/config.yaml.example /etc/vmprober/config.yaml"
+          echo "  2. Edit config: sudo nano /etc/vmprober/config.yaml"
+          echo "  3. Start service: sudo systemctl enable --now vmprober"
+          echo ""
+          EOF
+          chmod +x scripts/postinstall.sh
+
+          cat > scripts/preremove.sh << 'EOF'
+          #!/bin/sh
+          set -e
+          if command -v systemctl >/dev/null 2>&1; then
+            systemctl stop vmprober 2>/dev/null || true
+            systemctl disable vmprober 2>/dev/null || true
+          fi
+          EOF
+          chmod +x scripts/preremove.sh
+
+          cat > scripts/postremove.sh << 'EOF'
+          #!/bin/sh
+          if command -v systemctl >/dev/null 2>&1; then
+            systemctl daemon-reload
+          fi
+          EOF
+          chmod +x scripts/postremove.sh
+
       - name: Create nFPM config
         run: |
           cat > nfpm.yaml << 'EOF'
@@ -202,41 +247,9 @@ jobs:
                 mode: 0755
 
           scripts:
-            postinstall: |
-              #!/bin/sh
-              set -e
-              if ! getent group vmprober >/dev/null 2>&1; then
-                groupadd --system vmprober
-              fi
-              if ! getent passwd vmprober >/dev/null 2>&1; then
-                useradd --system --gid vmprober --home-dir /var/lib/vmprober --shell /usr/sbin/nologin vmprober
-              fi
-              chown -R vmprober:vmprober /var/lib/vmprober /var/log/vmprober
-              if command -v systemctl >/dev/null 2>&1; then
-                systemctl daemon-reload
-              fi
-              echo ""
-              echo "vmprober installed successfully!"
-              echo ""
-              echo "To get started:"
-              echo "  1. Copy config: sudo cp /etc/vmprober/config.yaml.example /etc/vmprober/config.yaml"
-              echo "  2. Edit config: sudo nano /etc/vmprober/config.yaml"
-              echo "  3. Start service: sudo systemctl enable --now vmprober"
-              echo ""
-
-            preremove: |
-              #!/bin/sh
-              set -e
-              if command -v systemctl >/dev/null 2>&1; then
-                systemctl stop vmprober 2>/dev/null || true
-                systemctl disable vmprober 2>/dev/null || true
-              fi
-
-            postremove: |
-              #!/bin/sh
-              if command -v systemctl >/dev/null 2>&1; then
-                systemctl daemon-reload
-              fi
+            postinstall: scripts/postinstall.sh
+            preremove: scripts/preremove.sh
+            postremove: scripts/postremove.sh
           EOF
 
       - name: Build DEB package
