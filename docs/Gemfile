@@ -1,6 +1,7 @@
 source "https://rubygems.org"
 
 # Use github-pages gem which manages Jekyll and all dependencies
+# This ensures compatibility with GitHub Pages
 gem "github-pages", group: :jekyll_plugins
 
 # Additional plugins

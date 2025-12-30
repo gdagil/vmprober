@@ -62,6 +62,17 @@
             box-sizing: border-box;
         }
 
+        /* Smooth theme transitions */
+        html.theme-transitioning *,
+        html.theme-transitioning *::before,
+        html.theme-transitioning *::after {
+            transition: background-color 0.3s ease,
+                        color 0.3s ease,
+                        border-color 0.3s ease,
+                        fill 0.3s ease,
+                        stroke 0.3s ease !important;
+        }
+
         body {
             font-family: var(--font-sans);
             line-height: 1.7;
@@ -70,6 +81,7 @@
             min-height: 100vh;
             display: flex;
             flex-direction: column;
+            transition: background-color 0.3s ease, color 0.3s ease;
         }
 
         /* Header */
@@ -81,6 +93,7 @@
             top: 0;
             z-index: 100;
             backdrop-filter: blur(10px);
+            transition: background-color 0.3s ease, border-color 0.3s ease;
         }
 
         .header-content {
@@ -237,6 +250,7 @@
             top: 60px;
             height: calc(100vh - 60px);
             overflow-y: auto;
+            transition: border-color 0.3s ease;
         }
 
         .sidebar-section {
@@ -416,6 +430,7 @@
             max-width: 100%;
             height: auto;
             border-radius: 8px;
+            transition: opacity 0.2s ease;
         }
 
         .content hr {
@@ -430,6 +445,7 @@
             border-top: 1px solid var(--color-border);
             padding: 2rem;
             text-align: center;
+            transition: background-color 0.3s ease, border-color 0.3s ease;
         }
 
         .footer-content {
@@ -666,10 +682,17 @@
                 return 'dark';
             }
 
-            // Set theme
+            // Set theme with smooth transition
             function setTheme(theme) {
+                // Add transition class for smooth change
+                html.classList.add('theme-transitioning');
                 html.setAttribute('data-theme', theme);
                 localStorage.setItem('theme', theme);
+
+                // Remove transition class after animation
+                setTimeout(function() {
+                    html.classList.remove('theme-transitioning');
+                }, 300);
             }
 
             // Initialize theme
@@ -693,46 +716,70 @@
                 });
             }
 
-            // Update logo based on theme
-            function updateLogos() {
+            // Update images based on theme
+            function updateThemeImages() {
                 const theme = html.getAttribute('data-theme');
-                const logos = document.querySelectorAll('img[src*="logo"], img[src*="banner"]');
+                const images = document.querySelectorAll('img[src*="assets/"]');
 
-                logos.forEach(function(img) {
+                images.forEach(function(img) {
                     const src = img.getAttribute('src');
+                    if (!src) return;
+
                     let newSrc = src;
+                    const pathParts = src.split('/');
+                    const filename = pathParts[pathParts.length - 1];
+                    const basePath = pathParts.slice(0, -1).join('/');
 
                     if (theme === 'light') {
-                        // Use light version if available
-                        if (src.includes('logo.svg') && !src.includes('logo-light.svg') && !src.includes('logo-dark.svg')) {
-                            newSrc = src.replace('logo.svg', 'logo-light.svg');
-                        } else if (src.includes('logo-inline.svg') && !src.includes('logo-inline-light.svg')) {
-                            newSrc = src.replace('logo-inline.svg', 'logo-inline.svg'); // Keep inline as is or use light version
-                        } else if (src.includes('banner-dark.svg')) {
-                            newSrc = src.replace('banner-dark.svg', 'banner.svg');
+                        // Switch to light versions
+                        if (filename === 'banner-dark.svg') {
+                            newSrc = basePath + '/banner.svg';
+                        } else if (filename === 'logo-dark.svg') {
+                            newSrc = basePath + '/logo-light.svg';
+                        } else if (filename === 'logo-inline-dark.svg') {
+                            newSrc = basePath + '/logo-inline.svg';
+                        } else if (filename === 'logo.svg') {
+                            // Try logo-light.svg, fallback to logo.svg
+                            newSrc = basePath + '/logo-light.svg';
                         }
                     } else {
-                        // Use dark version if available
-                        if (src.includes('logo-light.svg')) {
-                            newSrc = src.replace('logo-light.svg', 'logo.svg');
-                        } else if (src.includes('logo-inline-light.svg')) {
-                            newSrc = src.replace('logo-inline-light.svg', 'logo-inline-dark.svg');
-                        } else if (src.includes('banner.svg') && !src.includes('banner-dark.svg')) {
-                            newSrc = src.replace('banner.svg', 'banner-dark.svg');
+                        // Switch to dark versions
+                        if (filename === 'banner.svg') {
+                            newSrc = basePath + '/banner-dark.svg';
+                        } else if (filename === 'logo-light.svg') {
+                            newSrc = basePath + '/logo-dark.svg';
+                        } else if (filename === 'logo-inline.svg') {
+                            newSrc = basePath + '/logo-inline-dark.svg';
+                        } else if (filename === 'logo.svg') {
+                            // Try logo-dark.svg, fallback to logo.svg
+                            newSrc = basePath + '/logo-dark.svg';
                         }
                     }
 
                     if (newSrc !== src) {
-                        img.setAttribute('src', newSrc);
+                        // Preload image to avoid flicker
+                        const preloadImg = new Image();
+                        preloadImg.onerror = function() {
+                            // If the theme-specific image doesn't exist, keep the original
+                            // This handles cases where only one version exists
+                        };
+                        preloadImg.onload = function() {
+                            img.style.opacity = '0.7';
+                            setTimeout(function() {
+                                img.src = newSrc;
+                                img.style.opacity = '1';
+                            }, 100);
+                        };
+                        preloadImg.src = newSrc;
                     }
                 });
             }
 
-            // Update logos when theme changes
+            // Update images when theme changes
             const observer = new MutationObserver(function(mutations) {
                 mutations.forEach(function(mutation) {
                     if (mutation.type === 'attributes' && mutation.attributeName === 'data-theme') {
-                        updateLogos();
+                        updateThemeImages();
                     }
                 });
             });
@@ -742,8 +789,8 @@
                 attributeFilter: ['data-theme']
             });
 
-            // Initial logo update
-            updateLogos();
+            // Initial image update
+            updateThemeImages();
         })();
     </script>
 </body>
