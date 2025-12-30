@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
     <title>{% if page.title %}{{ page.title }} - {% endif %}{{ site.title }}</title>
     <meta name="description" content="{{ site.description }}">
     <link rel="icon" type="image/svg+xml" href="{{ site.baseurl }}/assets/favicon.svg">
@@ -56,6 +56,11 @@
             }
         }
 
+        html {
+            width: 100%;
+            overflow-x: hidden;
+        }
+
         * {
             margin: 0;
             padding: 0;
@@ -82,6 +87,8 @@
             display: flex;
             flex-direction: column;
             transition: background-color 0.3s ease, color 0.3s ease;
+            width: 100%;
+            overflow-x: hidden;
         }
 
         /* Header */
@@ -94,6 +101,8 @@
             z-index: 100;
             backdrop-filter: blur(10px);
             transition: background-color 0.3s ease, border-color 0.3s ease;
+            width: 100%;
+            box-sizing: border-box;
         }
 
         .header-content {
@@ -103,6 +112,8 @@
             align-items: center;
             justify-content: space-between;
             gap: 2rem;
+            width: 100%;
+            box-sizing: border-box;
         }
 
         .logo {
@@ -165,6 +176,11 @@
             font-size: 0.875rem;
             font-weight: 500;
             transition: background 0.2s;
+            position: relative;
+            z-index: 101;
+            -webkit-tap-highlight-color: transparent;
+            touch-action: manipulation;
+            flex-shrink: 0;
         }
 
         .github-link:hover {
@@ -191,6 +207,10 @@
             color: var(--color-text);
             transition: all 0.2s;
             margin-left: 0.5rem;
+            position: relative;
+            z-index: 101;
+            -webkit-tap-highlight-color: transparent;
+            touch-action: manipulation;
         }
 
         .theme-toggle:hover {
@@ -230,6 +250,9 @@
             display: flex;
             align-items: center;
             gap: 0.5rem;
+            flex-shrink: 0;
+            position: relative;
+            z-index: 101;
         }
 
         /* Mobile menu button */
@@ -246,6 +269,11 @@
             cursor: pointer;
             color: var(--color-text);
             transition: all 0.2s;
+            position: relative;
+            z-index: 101;
+            -webkit-tap-highlight-color: transparent;
+            touch-action: manipulation;
+            flex-shrink: 0;
         }
 
         .mobile-menu-toggle:hover {
@@ -282,6 +310,7 @@
             margin: 0 auto;
             width: 100%;
             flex: 1;
+            box-sizing: border-box;
         }
 
         /* Sidebar */
@@ -358,6 +387,18 @@
             flex: 1;
             padding: 3rem;
             max-width: 900px;
+            width: 100%;
+            box-sizing: border-box;
+            overflow-x: hidden;
+        }
+
+        .content {
+            width: 100%;
+            max-width: 100%;
+            box-sizing: border-box;
+            overflow-x: hidden;
+            word-wrap: break-word;
+            overflow-wrap: break-word;
         }
 
         .content h1 {
@@ -366,6 +407,8 @@
             margin-bottom: 1rem;
             color: var(--color-text);
             line-height: 1.2;
+            word-wrap: break-word;
+            overflow-wrap: break-word;
         }
 
         .content h2 {
@@ -376,6 +419,8 @@
             color: var(--color-text);
             padding-bottom: 0.5rem;
             border-bottom: 1px solid var(--color-border);
+            word-wrap: break-word;
+            overflow-wrap: break-word;
         }
 
         .content h3 {
@@ -397,6 +442,8 @@
         .content p {
             margin-bottom: 1rem;
             color: var(--color-text-secondary);
+            word-wrap: break-word;
+            overflow-wrap: break-word;
         }
 
         .content a {
@@ -414,6 +461,8 @@
             margin-bottom: 1rem;
             padding-left: 1.5rem;
             color: var(--color-text-secondary);
+            overflow-wrap: break-word;
+            word-wrap: break-word;
         }
 
         .content li {
@@ -427,6 +476,8 @@
             font-family: var(--font-mono);
             font-size: 0.875em;
             color: var(--color-primary);
+            word-break: break-word;
+            overflow-wrap: break-word;
         }
 
         .content pre {
@@ -437,6 +488,9 @@
             overflow-x: auto;
             margin-bottom: 1.5rem;
             -webkit-overflow-scrolling: touch;
+            max-width: 100%;
+            width: 100%;
+            box-sizing: border-box;
         }
 
         .content pre code {
@@ -468,6 +522,10 @@
             margin: 1.5rem 0;
             color: var(--color-text-secondary);
             font-style: italic;
+            word-wrap: break-word;
+            overflow-wrap: break-word;
+            max-width: 100%;
+            box-sizing: border-box;
         }
 
         .content table {
@@ -507,9 +565,11 @@
 
         .content img {
             max-width: 100%;
+            width: auto;
             height: auto;
             border-radius: 8px;
             transition: opacity 0.2s ease;
+            box-sizing: border-box;
         }
 
         .content hr {
@@ -525,11 +585,15 @@
             padding: 2rem;
             text-align: center;
             transition: background-color 0.3s ease, border-color 0.3s ease;
+            width: 100%;
+            box-sizing: border-box;
         }
 
         .footer-content {
             max-width: 1400px;
             margin: 0 auto;
+            width: 100%;
+            box-sizing: border-box;
         }
 
         .footer-logo {
@@ -577,19 +641,44 @@
             .mobile-menu-toggle {
                 display: flex;
             }
+
+            .main-wrapper {
+                width: 100%;
+                max-width: 100%;
+            }
+
+            main {
+                width: 100%;
+                max-width: 100%;
+                min-width: 0;
+            }
+
+            .content {
+                width: 100%;
+                max-width: 100%;
+                min-width: 0;
+            }
         }
 
         @media (max-width: 768px) {
             header {
                 padding: 0.75rem 1rem;
+                width: 100%;
+            }
+
+            .header-content {
+                gap: 0.75rem;
+                padding: 0;
+                width: 100%;
             }
 
             nav {
                 display: none;
             }
 
-            .header-content {
-                gap: 0.75rem;
+            .logo {
+                flex-shrink: 0;
+                min-width: 0;
             }
 
             .logo-text {
@@ -604,6 +693,9 @@
             .github-link {
                 padding: 0.5rem 0.75rem;
                 font-size: 0.8125rem;
+                min-width: 44px;
+                min-height: 44px;
+                justify-content: center;
             }
 
             .github-link span {
@@ -615,8 +707,28 @@
                 height: 20px;
             }
 
+            .theme-toggle,
+            .mobile-menu-toggle {
+                min-width: 44px;
+                min-height: 44px;
+            }
+
+            .main-wrapper {
+                width: 100%;
+                max-width: 100%;
+            }
+
             main {
                 padding: 1.5rem 1rem;
+                width: 100%;
+                max-width: 100%;
+                min-width: 0;
+            }
+
+            .content {
+                width: 100%;
+                max-width: 100%;
+                min-width: 0;
             }
 
             .content h1 {
@@ -649,6 +761,11 @@
 
             footer {
                 padding: 1.5rem 1rem;
+                width: 100%;
+            }
+
+            .footer-content {
+                padding: 0;
             }
 
             .footer-links {
@@ -660,6 +777,11 @@
         @media (max-width: 480px) {
             header {
                 padding: 0.5rem 0.75rem;
+                width: 100%;
+            }
+
+            .header-content {
+                gap: 0.5rem;
             }
 
             .logo-text {
@@ -671,8 +793,22 @@
                 height: 24px;
             }
 
+            .main-wrapper {
+                width: 100%;
+                max-width: 100%;
+            }
+
             main {
                 padding: 1rem 0.75rem;
+                width: 100%;
+                max-width: 100%;
+                min-width: 0;
+            }
+
+            .content {
+                width: 100%;
+                max-width: 100%;
+                min-width: 0;
             }
 
             .content h1 {
