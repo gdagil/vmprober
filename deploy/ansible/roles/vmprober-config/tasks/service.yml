@@ -1,0 +1,30 @@
+---
+# Tasks for managing vmprober service
+
+- name: Check if vmprober service exists
+  systemd:
+    name: vmprober
+  register: vmprober_service_status
+  failed_when: false
+  changed_when: false
+
+- name: Ensure vmprober service is enabled and started
+  systemd:
+    name: vmprober
+    state: started
+    enabled: yes
+  when: vmprober_service_status.status is defined
+
+- name: Get vmprober service status
+  systemd:
+    name: vmprober
+  register: vmprober_status
+  when: vmprober_service_status.status is defined
+  changed_when: false
+
+- name: Display vmprober service status
+  debug:
+    msg:
+      - "vmprober service is {{ vmprober_status.status.ActiveState | default('unknown') }}"
+      - "vmprober service is {{ 'enabled' if vmprober_status.status.UnitFileState == 'enabled' else 'disabled' }}"
+  when: vmprober_service_status.status is defined

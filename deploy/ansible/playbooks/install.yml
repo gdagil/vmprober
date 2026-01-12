@@ -1,0 +1,15 @@
+---
+# Playbook for installing vmprober
+# This playbook only installs vmprober without configuration
+
+- name: Install vmprober from GitHub releases
+  hosts: vmprober
+  become: true
+  vars:
+    vmprober_install: true
+    vmprober_configure: false
+    vmprober_manage_service: true
+    vmprober_cleanup: true
+
+  roles:
+    - vmprober-config

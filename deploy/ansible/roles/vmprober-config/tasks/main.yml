@@ -1,0 +1,31 @@
+---
+# Main tasks file for vmprober-config role
+# This file imports all task files in the correct order
+
+- name: Gather system facts and detect architecture
+  import_tasks: facts.yml
+  when: vmprober_install | default(true)
+
+- name: Prepare package information
+  import_tasks: prepare.yml
+  when: vmprober_install | default(true)
+
+- name: Download vmprober package
+  import_tasks: download.yml
+  when: vmprober_install | default(true)
+
+- name: Install vmprober package
+  import_tasks: install.yml
+  when: vmprober_install | default(true)
+
+- name: Configure vmprober
+  import_tasks: configure.yml
+  when: vmprober_configure | default(true)
+
+- name: Manage vmprober service
+  import_tasks: service.yml
+  when: vmprober_manage_service | default(true)
+
+- name: Cleanup temporary files
+  import_tasks: cleanup.yml
+  when: vmprober_cleanup | default(true) and vmprober_install | default(true)

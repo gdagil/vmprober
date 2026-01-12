@@ -1,0 +1,8 @@
+---
+# Variables for vmprober-config role
+
+# Local download directory on control node
+vmprober_local_download_dir: "/tmp/vmprober_downloads"
+
+# Remote package directory on target hosts
+vmprober_remote_package_dir: "/tmp/vmprober"

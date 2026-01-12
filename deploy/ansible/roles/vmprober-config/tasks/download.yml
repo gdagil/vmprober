@@ -1,0 +1,44 @@
+---
+# Tasks for downloading vmprober package
+
+- name: Create local download directory
+  delegate_to: localhost
+  run_once: true
+  file:
+    path: "{{ vmprober_local_download_dir }}"
+    state: directory
+    mode: '0755'
+
+- name: Download deb package locally
+  delegate_to: localhost
+  run_once: true
+  get_url:
+    url: "{{ vmprober_download_url }}"
+    dest: "{{ vmprober_local_package_path }}"
+    mode: '0644'
+    timeout: 30
+  register: download_result
+
+- name: Verify package was downloaded
+  delegate_to: localhost
+  run_once: true
+  assert:
+    that:
+      - download_result.dest is defined
+      - download_result.dest | length > 0
+    fail_msg: "Failed to download package from {{ vmprober_download_url }}"
+    success_msg: "Package downloaded successfully to {{ vmprober_local_package_path }}"
+
+- name: Check if local package file exists
+  delegate_to: localhost
+  run_once: true
+  stat:
+    path: "{{ vmprober_local_package_path }}"
+  register: local_package_stat
+
+- name: Fail if local package file doesn't exist
+  fail:
+    msg: "Local package file {{ vmprober_local_package_path }} does not exist. Download may have failed."
+  when: not local_package_stat.stat.exists
+  delegate_to: localhost
+  run_once: true

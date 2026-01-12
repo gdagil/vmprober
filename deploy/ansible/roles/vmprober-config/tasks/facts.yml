@@ -1,0 +1,26 @@
+---
+# Tasks for gathering system facts and detecting architecture
+
+- name: Gather system facts
+  setup:
+    gather_subset:
+      - hardware
+      - architecture
+
+- name: Detect system architecture
+  set_fact:
+    vmprober_arch: >-
+      {%- if ansible_architecture == 'x86_64' -%}
+        amd64
+      {%- elif ansible_architecture == 'aarch64' -%}
+        arm64
+      {%- elif ansible_architecture == 'armv7l' or ansible_architecture == 'armv6l' -%}
+        arm64
+      {%- else -%}
+        {{ ansible_architecture | lower }}
+      {%- endif %}
+  when: vmprober_arch is not defined
+
+- name: Display detected architecture
+  debug:
+    msg: "Detected architecture: {{ vmprober_arch }}"

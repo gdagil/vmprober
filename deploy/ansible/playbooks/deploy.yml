@@ -1,0 +1,15 @@
+---
+# Main deployment playbook
+# This playbook installs, configures and manages vmprober service
+
+- name: Deploy vmprober (install, configure and start)
+  hosts: vmprober
+  become: true
+  vars:
+    vmprober_install: true
+    vmprober_configure: true
+    vmprober_manage_service: true
+    vmprober_cleanup: true
+
+  roles:
+    - vmprober-config

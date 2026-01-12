@@ -1,0 +1,19 @@
+---
+# Tasks for configuring vmprober
+
+- name: Ensure vmprober config directory exists
+  file:
+    path: /etc/vmprober
+    state: directory
+    mode: '0755'
+    owner: root
+    group: root
+
+- name: Generate vmprober configuration with inventory probes
+  template:
+    src: config.yaml.j2
+    dest: /etc/vmprober/config.yaml
+    mode: '0644'
+    owner: root
+    group: root
+  notify: restart vmprober

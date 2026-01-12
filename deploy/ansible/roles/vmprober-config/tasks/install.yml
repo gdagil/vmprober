@@ -1,0 +1,53 @@
+---
+# Tasks for installing vmprober package
+
+- name: Create remote package directory
+  file:
+    path: "{{ vmprober_remote_package_dir }}"
+    state: directory
+    mode: '0755'
+
+- name: Copy deb package to remote host
+  copy:
+    src: "{{ vmprober_local_package_path }}"
+    dest: "{{ vmprober_remote_package_path }}"
+    mode: '0644'
+
+- name: Update apt cache
+  apt:
+    update_cache: yes
+    cache_valid_time: 3600
+
+- name: Install required dependencies
+  apt:
+    name:
+      - dpkg
+      - apt
+    state: present
+
+- name: Install deb package
+  apt:
+    deb: "{{ vmprober_remote_package_path }}"
+    state: present
+    update_cache: no
+  register: install_result
+
+- name: Verify installation
+  command: which vmprober
+  register: vmprober_binary_path
+  changed_when: false
+  failed_when: false
+
+- name: Check vmprober version
+  command: vmprober --version
+  register: vmprober_binary_version
+  changed_when: false
+  failed_when: false
+  when: vmprober_binary_path.rc == 0
+
+- name: Display installation status
+  debug:
+    msg:
+      - "Package installed successfully!"
+      - "vmprober path: {{ vmprober_binary_path.stdout if vmprober_binary_path.rc == 0 else 'Not found' }}"
+      - "vmprober version: {{ vmprober_binary_version.stdout if vmprober_binary_version.rc == 0 else 'Unknown' }}"

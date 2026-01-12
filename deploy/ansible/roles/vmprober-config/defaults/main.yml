@@ -1,0 +1,17 @@
+---
+# Default variables for vmprober-config role
+
+# Control which tasks to run
+vmprober_install: true
+vmprober_configure: true
+vmprober_manage_service: true
+vmprober_cleanup: true
+
+# TCP probe configuration for inventory nodes
+vmprober_tcp_probe_port: 8429
+vmprober_tcp_probe_interval: "10s"
+vmprober_tcp_probe_timeout: "5s"
+
+# ICMP probe configuration for inventory nodes
+vmprober_icmp_probe_interval: "10s"
+vmprober_icmp_probe_timeout: "2s"

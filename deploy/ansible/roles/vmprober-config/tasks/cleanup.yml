@@ -1,0 +1,16 @@
+---
+# Tasks for cleaning up temporary files
+
+- name: Cleanup remote package file
+  file:
+    path: "{{ vmprober_remote_package_path }}"
+    state: absent
+  when: install_result is defined and install_result.changed
+
+- name: Cleanup local package file
+  delegate_to: localhost
+  run_once: true
+  file:
+    path: "{{ vmprober_local_package_path }}"
+    state: absent
+  when: install_result is defined and install_result.changed

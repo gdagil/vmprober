@@ -1,0 +1,28 @@
+---
+# Handlers for vmprober-config role
+
+- name: restart vmprober
+  systemd:
+    name: vmprober
+    state: restarted
+    enabled: yes
+  ignore_errors: yes
+
+- name: reload vmprober
+  systemd:
+    name: vmprober
+    state: reloaded
+  ignore_errors: yes
+
+- name: start vmprober
+  systemd:
+    name: vmprober
+    state: started
+    enabled: yes
+  ignore_errors: yes
+
+- name: stop vmprober
+  systemd:
+    name: vmprober
+    state: stopped
+  ignore_errors: yes

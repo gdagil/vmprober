@@ -1,0 +1,18 @@
+---
+# Tasks for preparing package information and paths
+
+- name: Set package name
+  set_fact:
+    vmprober_package_name: "vmprober_{{ vmprober_version | replace('v', '') }}_{{ vmprober_arch }}.deb"
+
+- name: Set download URL
+  set_fact:
+    vmprober_download_url: "https://github.com/gdagil/vmprober/releases/download/{{ vmprober_version }}/{{ vmprober_package_name }}"
+
+- name: Set local package path
+  set_fact:
+    vmprober_local_package_path: "{{ vmprober_local_download_dir }}/{{ vmprober_package_name }}"
+
+- name: Set remote package path
+  set_fact:
+    vmprober_remote_package_path: "{{ vmprober_remote_package_dir }}/{{ vmprober_package_name }}"

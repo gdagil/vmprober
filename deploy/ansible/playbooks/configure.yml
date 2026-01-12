@@ -1,0 +1,15 @@
+---
+# Playbook for configuring vmprober
+# This playbook only configures vmprober without installation
+
+- name: Configure vmprober with inventory probes
+  hosts: vmprober
+  become: true
+  vars:
+    vmprober_install: false
+    vmprober_configure: true
+    vmprober_manage_service: true
+    vmprober_cleanup: false
+
+  roles:
+    - vmprober-config
