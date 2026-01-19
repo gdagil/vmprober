@@ -5,7 +5,7 @@ go 1.24.0
 require (
 	github.com/VictoriaMetrics/metrics v1.40.2
 	github.com/miekg/dns v1.1.69
-	github.com/sirupsen/logrus v1.9.3
+	github.com/sirupsen/logrus v1.9.4
 	github.com/stretchr/testify v1.11.1
 	golang.org/x/net v0.48.0
 	google.golang.org/grpc v1.78.0
