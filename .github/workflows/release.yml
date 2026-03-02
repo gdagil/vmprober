@@ -389,14 +389,14 @@ jobs:
             GIT_COMMIT=${{ steps.version.outputs.commit }}
 
       - name: Generate artifact attestation for Alpine
-        uses: actions/attest-build-provenance@v2
+        uses: actions/attest-build-provenance@v4
         with:
           subject-name: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           subject-digest: ${{ steps.build-alpine.outputs.digest }}
           push-to-registry: true
 
       - name: Generate artifact attestation for Scratch
-        uses: actions/attest-build-provenance@v2
+        uses: actions/attest-build-provenance@v4
         with:
           subject-name: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           subject-digest: ${{ steps.build-scratch.outputs.digest }}
