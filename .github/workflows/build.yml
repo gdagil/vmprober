@@ -246,7 +246,7 @@ jobs:
 
       - name: Extract metadata for Alpine
         id: meta-alpine
-        uses: docker/metadata-action@v5
+        uses: docker/metadata-action@v6
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           flavor: |
@@ -262,7 +262,7 @@ jobs:
 
       - name: Extract metadata for Scratch
         id: meta-scratch
-        uses: docker/metadata-action@v5
+        uses: docker/metadata-action@v6
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           flavor: |
