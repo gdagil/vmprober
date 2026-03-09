@@ -278,7 +278,7 @@ jobs:
 
       - name: Build and push Alpine image
         id: build-alpine
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: .
           file: ./Dockerfile
@@ -297,7 +297,7 @@ jobs:
 
       - name: Build and push Scratch image
         id: build-scratch
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: .
           file: ./Dockerfile.scratch
