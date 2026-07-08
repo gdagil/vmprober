@@ -24,13 +24,12 @@ serviceAccount:
 podAnnotations: {}
 podLabels: {}
 
-# Secure-by-default. ICMP probes need NET_RAW — if you enable icmp targets,
-# override securityContext to add it (capabilities.add: ["NET_RAW"]) and set
-# readOnlyRootFilesystem/runAsNonRoot as your probe library requires.
+# The published image runs as root with WORKDIR /root (binary at /root/vmprober),
+# so it can't run as an arbitrary non-root UID without an image change — hence no
+# runAsNonRoot/runAsUser default here. The container is still hardened (no privilege
+# escalation, all caps dropped, read-only rootfs). ICMP probes need NET_RAW: if you
+# enable icmp targets, override securityContext.capabilities.add: ["NET_RAW"].
 podSecurityContext:
-  runAsNonRoot: true
-  runAsUser: 65532
-  fsGroup: 65532
   seccompProfile:
     type: RuntimeDefault
 

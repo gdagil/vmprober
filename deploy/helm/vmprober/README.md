@@ -36,7 +36,7 @@ kubectl port-forward svc/vmprober 8429:8429
 | `config` | minimal pull-only config | Rendered into a ConfigMap, mounted at `/etc/vmprober/config.yaml`. |
 | `serviceMonitor.enabled` | `false` | Set `true` to scrape `/metrics` via Prometheus Operator. |
 | `resources` | 100m/64Mi → 500m/256Mi | |
-| `podSecurityContext` / `securityContext` | non-root, read-only rootfs, drop ALL caps | **ICMP probes need `NET_RAW`** — add it here if you enable icmp targets. |
+| `podSecurityContext` / `securityContext` | read-only rootfs, drop ALL caps, no priv-escalation | Image runs as **root** (binary in `/root`), so no non-root default. **ICMP probes need `NET_RAW`** — add it here if you enable icmp targets. |
 
 ## Config changes roll the pods
 
