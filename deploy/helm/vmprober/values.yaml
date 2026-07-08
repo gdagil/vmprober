@@ -1,0 +1,104 @@
+# Default values for vmprober.
+
+# vmprober does NOT dedup across processes — running >1 replica double-pushes
+# metrics to VictoriaMetrics. Keep replicaCount at 1 (scale vertically, not out).
+replicaCount: 1
+
+image:
+  repository: ghcr.io/gdagil/vmprober
+  # Published flavors are "<version>-alpine" and "<version>-scratch".
+  # Empty tag defaults to "<Chart.appVersion>-alpine" (see _helpers.tpl).
+  tag: ""
+  pullPolicy: IfNotPresent
+
+imagePullSecrets: []
+nameOverride: ""
+fullnameOverride: ""
+
+serviceAccount:
+  # vmprober never calls the Kubernetes API, so no Role/RoleBinding is created.
+  create: true
+  annotations: {}
+  name: ""
+
+podAnnotations: {}
+podLabels: {}
+
+# Secure-by-default. ICMP probes need NET_RAW — if you enable icmp targets,
+# override securityContext to add it (capabilities.add: ["NET_RAW"]) and set
+# readOnlyRootFilesystem/runAsNonRoot as your probe library requires.
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 65532
+  fsGroup: 65532
+  seccompProfile:
+    type: RuntimeDefault
+
+securityContext:
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: true
+  capabilities:
+    drop:
+      - ALL
+
+service:
+  type: ClusterIP
+  port: 8429
+
+resources:
+  requests:
+    cpu: 100m
+    memory: 64Mi
+  limits:
+    cpu: 500m
+    memory: 256Mi
+
+livenessProbe:
+  httpGet:
+    path: /health
+    port: http
+  initialDelaySeconds: 5
+  periodSeconds: 15
+readinessProbe:
+  httpGet:
+    path: /ready
+    port: http
+  initialDelaySeconds: 3
+  periodSeconds: 10
+
+nodeSelector: {}
+tolerations: []
+affinity: {}
+
+# Optional Prometheus Operator integration. Enable to scrape /metrics.
+serviceMonitor:
+  enabled: false
+  interval: 30s
+  scrapeTimeout: 10s
+  labels: {}
+  relabelings: []
+  metricRelabelings: []
+
+# vmprober config, rendered verbatim into a ConfigMap and mounted at
+# /etc/vmprober/config.yaml. A config change rolls the pods (checksum annotation)
+# because vmprober does not hot-reload its config in-process.
+# Validation requires: listen.port in 1-65535, scheduler.concurrent>0, scheduler.rps_limit>0.
+config:
+  listen:
+    port: 8429
+    host: "0.0.0.0"
+  pull:
+    enabled: true
+    path: /metrics
+  push:
+    enabled: false
+    endpoints:
+      - url: "http://vminsert:8480/insert/0/prometheus/api/v1/import"
+  scheduler:
+    concurrent: 100
+    rps_limit: 1000
+    queue_size: 10000
+  metrics:
+    namespace: vmprober
+  targets:
+    static: []

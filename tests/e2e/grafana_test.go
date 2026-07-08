@@ -12,8 +12,17 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+// requireGrafana skips a test when the Grafana container is not part of the run
+// (E2E_SKIP_GRAFANA=true), e.g. during the vminsert version-compatibility matrix.
+func requireGrafana(t *testing.T) {
+	if !grafanaEnabled() {
+		t.Skip("Grafana disabled via E2E_SKIP_GRAFANA; skipping Grafana test")
+	}
+}
+
 // TestE2E_Grafana_DashboardLoads tests that Grafana dashboard loads correctly
 func TestE2E_Grafana_DashboardLoads(t *testing.T) {
+	requireGrafana(t)
 	env := NewTestEnvironment(t, 5*time.Minute)
 	defer env.Teardown()
 
@@ -50,6 +59,7 @@ func TestE2E_Grafana_DashboardLoads(t *testing.T) {
 
 // TestE2E_Grafana_DatasourceConfigured tests that VictoriaMetrics datasource is configured
 func TestE2E_Grafana_DatasourceConfigured(t *testing.T) {
+	requireGrafana(t)
 	env := NewTestEnvironment(t, 5*time.Minute)
 	defer env.Teardown()
 
@@ -86,6 +96,7 @@ func TestE2E_Grafana_DatasourceConfigured(t *testing.T) {
 
 // TestE2E_Grafana_QueryReturnsData tests that Grafana can query metrics from VictoriaMetrics
 func TestE2E_Grafana_QueryReturnsData(t *testing.T) {
+	requireGrafana(t)
 	env := NewTestEnvironment(t, 5*time.Minute)
 	defer env.Teardown()
 
@@ -111,6 +122,7 @@ func TestE2E_Grafana_QueryReturnsData(t *testing.T) {
 
 // TestE2E_Grafana_JobLabelIssue documents the "No Data" issue with job label
 func TestE2E_Grafana_JobLabelIssue(t *testing.T) {
+	requireGrafana(t)
 	env := NewTestEnvironment(t, 5*time.Minute)
 	defer env.Teardown()
 

@@ -1,8 +1,6 @@
-version: '3.8'
-
 services:
   vmstorage:
-    image: victoriametrics/vmstorage:latest
+    image: victoriametrics/vmstorage:${VM_VERSION:-latest}
     container_name: vmstorage
     volumes:
       - ./data/vmstorage:/victoria-metrics-data
@@ -21,7 +19,7 @@ services:
       retries: 3
 
   vminsert:
-    image: victoriametrics/vminsert:latest
+    image: victoriametrics/vminsert:${VM_VERSION:-latest}
     container_name: vminsert
     depends_on:
       - vmstorage
@@ -38,13 +36,16 @@ services:
       retries: 3
 
   vmselect:
-    image: victoriametrics/vmselect:latest
+    image: victoriametrics/vmselect:${VM_VERSION:-latest}
     container_name: vmselect
     depends_on:
       - vmstorage
     command:
       - "--storageNode=vmstorage:8401"
       - "--httpListenAddr=:8481"
+      # Make freshly-ingested samples queryable within ~1s (default is 30s), so
+      # e2e tests can read back metrics right after pushing them.
+      - "--search.latencyOffset=1s"
     ports:
       - "8481:8481"
     restart: unless-stopped
@@ -56,7 +57,7 @@ services:
 
 
   grafana:
-    image: grafana/grafana:latest
+    image: grafana/grafana:${GRAFANA_VERSION:-latest}
     container_name: grafana
     volumes:
       - ./config/grafana/provisioning:/etc/grafana/provisioning
