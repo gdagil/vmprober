@@ -1,0 +1,96 @@
+name: E2E (vminsert versions)
+
+# Compatibility matrix: run the end-to-end suite (vmprober -> vminsert -> vmselect)
+# against multiple VictoriaMetrics cluster versions.
+#   - pull_request: reduced matrix (oldest + newest) for fast feedback
+#   - push to main / nightly / manual: full matrix
+# Override the tested version(s) manually via workflow_dispatch input `vm_version`.
+
+on:
+  push:
+    branches: [main]
+    paths: &code_paths
+      - '**/*.go'
+      - 'go.mod'
+      - 'go.sum'
+      - 'docker-compose.yml'
+      - 'Makefile'
+      - '.github/workflows/e2e.yml'
+  pull_request:
+    branches: [main]
+    paths: *code_paths
+  schedule:
+    - cron: '0 2 * * *'
+  workflow_dispatch:
+    inputs:
+      vm_version:
+        description: 'Single VictoriaMetrics cluster tag to test (e.g. v1.147.0-cluster or latest). Empty = full matrix.'
+        required: false
+        default: ''
+
+concurrency:
+  group: e2e-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  GO_VERSION: '1.24'
+
+jobs:
+  setup:
+    name: Resolve version matrix
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.set.outputs.matrix }}
+    steps:
+      - id: set
+        env:
+          # Pass the untrusted dispatch input through env, never inline into the shell.
+          INPUT_VERSION: ${{ github.event.inputs.vm_version }}
+          EVENT_NAME: ${{ github.event_name }}
+        run: |
+          if [ -n "$INPUT_VERSION" ]; then
+            echo "matrix={\"vm_version\":[\"$INPUT_VERSION\"]}" >> "$GITHUB_OUTPUT"
+          elif [ "$EVENT_NAME" = "pull_request" ]; then
+            echo 'matrix={"vm_version":["v1.97.0-cluster","v1.147.0-cluster"]}' >> "$GITHUB_OUTPUT"
+          else
+            echo 'matrix={"vm_version":["v1.97.0-cluster","v1.110.0-cluster","v1.130.0-cluster","v1.147.0-cluster","latest"]}' >> "$GITHUB_OUTPUT"
+          fi
+
+  e2e:
+    name: e2e (vminsert ${{ matrix.vm_version }})
+    needs: setup
+    runs-on: ubuntu-latest
+    # `latest` is bleeding-edge — let it fail without failing the whole workflow.
+    continue-on-error: ${{ matrix.vm_version == 'latest' }}
+    strategy:
+      fail-fast: false
+      max-parallel: 3
+      matrix: ${{ fromJSON(needs.setup.outputs.matrix) }}
+    env:
+      VM_VERSION: ${{ matrix.vm_version }}
+      # The version matrix exercises the VictoriaMetrics ingest/query path only;
+      # Grafana is not involved, so skip its (heavy) container entirely.
+      E2E_SKIP_GRAFANA: 'true'
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache: true
+
+      - name: Build vmprober binary
+        run: make build
+
+      - name: Pre-pull VictoriaMetrics images (${{ matrix.vm_version }})
+        run: docker compose pull vmstorage vminsert vmselect
+
+      - name: Run E2E suite
+        # -count=1 disables Go's test cache — the VM_VERSION env var is not part
+        # of the cache key, so without it a cached result could mask a real run.
+        # -skip drops two tests that require an external service to *succeed*
+        # (httpbin.org / public DNS); they verify probe success, not vminsert
+        # version compatibility, and are unreliable from CI runners. Every other
+        # test — the full push -> vminsert -> vmselect path — runs.
+        run: go test -short -count=1 -v -timeout 40m -skip 'TestE2E_HTTPProbes_Basic|TestE2E_DNSProbes_Basic' ./tests/e2e/...

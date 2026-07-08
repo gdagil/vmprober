@@ -1,4 +1,4 @@
-.PHONY: build test clean run docker-build docker-run help docs docs-install docs-serve docs-build \
+.PHONY: build test test-coverage e2e-test e2e-test-short clean run docker-build docker-run help docs docs-install docs-serve docs-build \
         pre-commit pre-commit-install pre-commit-run tools validate
 
 # Variables
@@ -23,6 +23,17 @@ test-coverage:
 	@echo "Running tests with coverage..."
 	@go test -v -coverprofile=coverage.out ./internal/...
 	@go tool cover -html=coverage.out -o coverage.html
+
+# Run E2E tests (builds the binary first; requires docker or docker-compose).
+# Override the VictoriaMetrics stack version with VM_VERSION, e.g. make e2e-test VM_VERSION=v1.102.0
+e2e-test: build
+	@echo "Running E2E tests (VM_VERSION=$(or $(VM_VERSION),latest))..."
+	@go test -v -count=1 -timeout 40m ./tests/e2e/...
+
+# Run E2E tests in short mode (skips the high-load stability test)
+e2e-test-short: build
+	@echo "Running E2E tests in short mode..."
+	@go test -v -count=1 -timeout 20m -short ./tests/e2e/...
 
 # Clean build artifacts
 clean:
@@ -98,6 +109,8 @@ help:
 	@echo "  build            - Build the application"
 	@echo "  test             - Run tests"
 	@echo "  test-coverage    - Run tests with coverage"
+	@echo "  e2e-test         - Run E2E tests (docker); set VM_VERSION to pin the VictoriaMetrics stack"
+	@echo "  e2e-test-short   - Run E2E tests in short mode (skips high-load test)"
 	@echo "  clean            - Clean build artifacts"
 	@echo "  run              - Build and run the application"
 	@echo "  fmt              - Format code"

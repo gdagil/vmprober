@@ -1,0 +1,14 @@
+{
+  "name": "vmprober-ui-tests",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Playwright UI tests for the vmprober dashboard",
+  "scripts": {
+    "test": "playwright test",
+    "test:headed": "playwright test --headed",
+    "report": "playwright show-report"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.50.0"
+  }
+}

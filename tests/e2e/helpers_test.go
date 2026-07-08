@@ -9,11 +9,21 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/require"
 )
+
+// grafanaEnabled reports whether e2e should start and exercise Grafana.
+// Set E2E_SKIP_GRAFANA=true to run only the VictoriaMetrics cluster — used by the
+// vminsert version-compatibility matrix, which does not touch Grafana and should
+// not pay for pulling/waiting on the heavy Grafana image.
+func grafanaEnabled() bool {
+	v := strings.ToLower(os.Getenv("E2E_SKIP_GRAFANA"))
+	return v != "true" && v != "1" && v != "yes"
+}
 
 // Test environment constants
 const (
@@ -119,14 +129,24 @@ func (e *TestEnvironment) Context() context.Context {
 	return e.ctx
 }
 
+// composeCommand builds a `docker compose -f <file> ...` command, falling back to
+// the legacy `docker-compose` binary when the compose plugin is unavailable.
+func composeCommand(ctx context.Context, args ...string) *exec.Cmd {
+	full := append([]string{"-f", dockerComposeFile}, args...)
+	if commandExists("docker-compose") {
+		return exec.CommandContext(ctx, "docker-compose", full...)
+	}
+	return exec.CommandContext(ctx, "docker", append([]string{"compose"}, full...)...)
+}
+
 // startDockerCompose starts docker-compose services
 func startDockerCompose(ctx context.Context) error {
-	var cmd *exec.Cmd
-	if commandExists("docker-compose") {
-		cmd = exec.CommandContext(ctx, "docker-compose", "-f", dockerComposeFile, "up", "-d")
-	} else {
-		cmd = exec.CommandContext(ctx, "docker", "compose", "-f", dockerComposeFile, "up", "-d")
+	upArgs := []string{"up", "-d"}
+	if !grafanaEnabled() {
+		// Bring up only the VictoriaMetrics cluster; skip the Grafana container.
+		upArgs = append(upArgs, "vmstorage", "vminsert", "vmselect")
 	}
+	cmd := composeCommand(ctx, upArgs...)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	return cmd.Run()
@@ -134,13 +154,7 @@ func startDockerCompose(ctx context.Context) error {
 
 // stopDockerCompose stops docker-compose services
 func stopDockerCompose(ctx context.Context) {
-	var cmd *exec.Cmd
-	if commandExists("docker-compose") {
-		cmd = exec.CommandContext(ctx, "docker-compose", "-f", dockerComposeFile, "down", "-v")
-	} else {
-		cmd = exec.CommandContext(ctx, "docker", "compose", "-f", dockerComposeFile, "down", "-v")
-	}
-	cmd.Run()
+	composeCommand(ctx, "down", "-v").Run()
 }
 
 // waitForServices waits for all services to become ready
@@ -149,11 +163,14 @@ func waitForServices(ctx context.Context) error {
 		"vmstorage": vmStorageURL + "/health",
 		"vminsert":  vmInsertURL + "/health",
 		"vmselect":  vmSelectURL + "/health",
-		"grafana":   grafanaURL + "/api/health",
+	}
+	if grafanaEnabled() {
+		services["grafana"] = grafanaURL + "/api/health"
 	}
 
 	client := &http.Client{Timeout: 5 * time.Second}
-	maxAttempts := 30
+	// 60 attempts x 2s = up to 120s per service, to tolerate cold image pulls in CI.
+	maxAttempts := 60
 	attemptInterval := 2 * time.Second
 
 	for service, url := range services {

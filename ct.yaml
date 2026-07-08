@@ -1,0 +1,10 @@
+# chart-testing (ct) config — https://github.com/helm/chart-testing
+remote: origin
+target-branch: main
+chart-dirs:
+  - deploy/helm
+# validate-maintainers hits the GitHub API per maintainer; off to avoid a network
+# dependency during lint (the maintainers field is still present in Chart.yaml).
+validate-maintainers: false
+check-version-increment: true
+helm-extra-args: --timeout 300s

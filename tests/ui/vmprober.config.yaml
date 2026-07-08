@@ -1,0 +1,66 @@
+# Config for Playwright UI tests. Pull-only (no VictoriaMetrics needed): the
+# dashboard reads from vmprober's own /api endpoints. Two TCP targets — one that
+# is always up (vmprober's own listen port) and one that is refused instantly —
+# populate the stats grid, protocol distribution, and up/down health bar.
+listen:
+  port: 8429
+  host: "0.0.0.0"
+
+pull:
+  enabled: true
+  path: "/metrics"
+  timeout: 10s
+
+push:
+  enabled: false
+
+scheduler:
+  concurrent: 10
+  rps_limit: 100
+  per_host_cap: 5
+  jitter: 0.1
+  queue_size: 1000
+  worker_timeout: 30s
+  timeouts:
+    tcp: 5s
+
+probes:
+  defaults:
+    count: 1
+    interval: 2s
+    timeout: 2s
+  tcp:
+    connect_timeout: 2s
+
+metrics:
+  namespace: "vmprober"
+  enable_job_metrics: true
+
+wal:
+  dir: "./ui-wal"
+
+logging:
+  level: "info"
+  format: "text"
+  output: "stdout"
+
+targets:
+  static:
+    # Always up: vmprober's own HTTP port is open.
+    - host: "127.0.0.1"
+      port: 8429
+      proto: "tcp"
+      interval: 2s
+      timeout: 2s
+      labels:
+        test: "ui"
+        target: "self-up"
+    # Always down: TCP/9 (discard) is refused instantly on loopback.
+    - host: "127.0.0.1"
+      port: 9
+      proto: "tcp"
+      interval: 2s
+      timeout: 2s
+      labels:
+        test: "ui"
+        target: "closed-down"
