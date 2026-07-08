@@ -34,8 +34,9 @@ spec:
         - name: vmprober
           image: {{ include "vmprober.image" . }}
           imagePullPolicy: {{ .Values.image.pullPolicy }}
-          args:
-            - "--config=/etc/vmprober/config.yaml"
+          # The image already runs `./vmprober --config=/etc/vmprober/config.yaml`
+          # (Dockerfile CMD, no ENTRYPOINT); the ConfigMap mount provides that file.
+          # Do NOT set args here — it would replace the whole command with just the flag.
           ports:
             - name: http
               containerPort: {{ .Values.config.listen.port | default 8429 }}
