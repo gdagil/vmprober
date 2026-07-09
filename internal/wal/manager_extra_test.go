@@ -199,16 +199,35 @@ func TestWALManager_MarkSent_SegmentsAndNotFound(t *testing.T) {
 		}
 	}
 
-	// Inject a rotated segment so the segments loop has something to mark.
+	// Inject a rotated segment that actually contains a record. buildSegment
+	// writes a single record whose ID is "<id>-rec".
 	seg := buildSegment(t, tmpDir, "seg-loop", cfg, false, time.Now())
 	defer seg.Close(ctx)
 	dm.mu.Lock()
 	dm.segments = []*WALSegment{seg}
 	dm.mu.Unlock()
 
-	// With no active segment, MarkSent succeeds via the segments loop.
-	if err := manager.MarkSent(ctx, "any-id"); err != nil {
-		t.Fatalf("MarkSent via segments loop should succeed, got %v", err)
+	// MarkSent succeeds only for a record the segment actually contains, and the
+	// record's own segment is the one that gets updated: it drops out of that
+	// segment's unsent set.
+	if err := manager.MarkSent(ctx, "seg-loop-rec"); err != nil {
+		t.Fatalf("MarkSent should succeed for a record the segment contains, got %v", err)
+	}
+	unsent, err := seg.GetUnsentRecords(ctx)
+	if err != nil {
+		t.Fatalf("GetUnsentRecords failed: %v", err)
+	}
+	for _, r := range unsent {
+		if r.ID == "seg-loop-rec" {
+			t.Error("seg-loop-rec should be marked sent in its own segment after MarkSent")
+		}
+	}
+
+	// An id no segment contains must report not found even though a segment
+	// exists. The old contract silently "succeeded" on the wrong segment here,
+	// leaving the real record perpetually unsent.
+	if err := manager.MarkSent(ctx, "unknown-id"); err == nil {
+		t.Error("MarkSent should return an error for an id no segment contains")
 	}
 
 	// With no active segment and no segments, MarkSent reports not found.
@@ -322,15 +341,6 @@ func TestWALManager_DeleteSentRecords_RemovesOldFullySentSegments(t *testing.T) 
 }
 
 func TestWALManager_RotationLoop_RotatesOnTick(t *testing.T) {
-	origRotation := rotationLoopInterval
-	origCompaction := compactionLoopInterval
-	rotationLoopInterval = 15 * time.Millisecond
-	compactionLoopInterval = 15 * time.Millisecond
-	defer func() {
-		rotationLoopInterval = origRotation
-		compactionLoopInterval = origCompaction
-	}()
-
 	tmpDir := t.TempDir()
 	cfg := createTestWALConfig()
 	cfg.Dir = tmpDir
@@ -338,10 +348,15 @@ func TestWALManager_RotationLoop_RotatesOnTick(t *testing.T) {
 	// immediately, so the background rotation loop will rotate on its next tick.
 	cfg.MaxAge = time.Millisecond
 
-	manager, err := NewWALManager(cfg, quietLogger())
+	// Build the manager without starting its loops, shorten the tick intervals on
+	// this instance, then start the loops so they pick up the short intervals.
+	manager, err := newManager(cfg, quietLogger())
 	if err != nil {
 		t.Fatalf("failed to create manager: %v", err)
 	}
+	manager.rotationInterval = 15 * time.Millisecond
+	manager.compactionInterval = 15 * time.Millisecond
+	manager.startBackgroundLoops()
 	defer manager.Close(context.Background())
 
 	deadline := time.Now().Add(2 * time.Second)

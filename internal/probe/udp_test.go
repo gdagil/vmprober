@@ -12,53 +12,6 @@ import (
 	"github.com/gdagil/vmprober/internal/types"
 )
 
-// startUDPEchoServer starts a loopback UDP echo server that mirrors every
-// datagram back to its sender. It returns the server address and a cleanup
-// function. Fully hermetic.
-func startUDPEchoServer(t *testing.T) (*net.UDPAddr, func()) {
-	t.Helper()
-	conn, err := net.ListenUDP("udp", &net.UDPAddr{IP: net.IPv4(127, 0, 0, 1), Port: 0})
-	require.NoError(t, err)
-
-	go func() {
-		buffer := make([]byte, 4096)
-		for {
-			n, clientAddr, err := conn.ReadFromUDP(buffer)
-			if err != nil {
-				return
-			}
-			_, _ = conn.WriteToUDP(buffer[:n], clientAddr)
-		}
-	}()
-
-	return conn.LocalAddr().(*net.UDPAddr), func() {
-		_ = conn.Close()
-	}
-}
-
-// startUDPSilentServer starts a loopback UDP socket that reads datagrams but
-// never replies, so probes deterministically hit the response-timeout path
-// (as opposed to an ICMP "connection refused" from a closed port).
-func startUDPSilentServer(t *testing.T) (*net.UDPAddr, func()) {
-	t.Helper()
-	conn, err := net.ListenUDP("udp", &net.UDPAddr{IP: net.IPv4(127, 0, 0, 1), Port: 0})
-	require.NoError(t, err)
-
-	go func() {
-		buffer := make([]byte, 4096)
-		for {
-			if _, _, err := conn.ReadFromUDP(buffer); err != nil {
-				return
-			}
-			// Intentionally never reply.
-		}
-	}()
-
-	return conn.LocalAddr().(*net.UDPAddr), func() {
-		_ = conn.Close()
-	}
-}
-
 func TestNewUDPProbe(t *testing.T) {
 	config := &UDPConfig{
 		PayloadSize:     64,
@@ -78,8 +31,12 @@ func TestNewUDPProbe(t *testing.T) {
 
 func TestUDPProbe_Execute_Success(t *testing.T) {
 	// Hermetic loopback echo server guarantees a response, so the success path
-	// is exercised deterministically (loopback UDP does not drop packets).
-	serverAddr, cleanup := startUDPEchoServer(t)
+	// is exercised deterministically (loopback UDP does not drop packets). The
+	// server waits echoDelay before replying so the measured RTT has a real,
+	// deterministic lower bound even on hosts with a coarse monotonic clock
+	// (notably Windows, where a bare RTT > 0 check is flaky).
+	const echoDelay = 20 * time.Millisecond
+	serverAddr, cleanup := startUDPServer(t, true, echoDelay)
 	defer cleanup()
 
 	config := &UDPConfig{
@@ -104,7 +61,9 @@ func TestUDPProbe_Execute_Success(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, result)
 	assert.True(t, result.Success, "expected successful probe, error: %s", result.Error)
-	assert.GreaterOrEqual(t, result.RTT, time.Duration(0))
+	// The server slept echoDelay before echoing, so RTT must reflect at least
+	// most of that wait. 10ms is a safe deterministic floor below the 20ms delay.
+	assert.GreaterOrEqual(t, result.RTT, 10*time.Millisecond)
 	assert.Equal(t, types.ProbeTypeUDP, result.Protocol)
 	assert.Len(t, result.Payload, 64)
 	assert.Equal(t, "client", result.Role)
@@ -115,7 +74,7 @@ func TestUDPProbe_Execute_ResponseTimeout(t *testing.T) {
 	// A live-but-silent server keeps the socket open (no ICMP port-unreachable),
 	// so ReadFromUDP hits the read deadline and the "UDP response timeout" branch
 	// is covered deterministically. Timeouts are reported as non-errors for UDP.
-	serverAddr, cleanup := startUDPSilentServer(t)
+	serverAddr, cleanup := startUDPServer(t, false, 0)
 	defer cleanup()
 
 	config := &UDPConfig{
@@ -145,7 +104,7 @@ func TestUDPProbe_Execute_ResponseTimeout(t *testing.T) {
 
 func TestUDPProbe_Execute_DefaultMaxPacketSize(t *testing.T) {
 	// MaxPacketSize 0 exercises the default (1500-byte) receive-buffer branch.
-	serverAddr, cleanup := startUDPEchoServer(t)
+	serverAddr, cleanup := startUDPServer(t, true, 0)
 	defer cleanup()
 
 	config := &UDPConfig{

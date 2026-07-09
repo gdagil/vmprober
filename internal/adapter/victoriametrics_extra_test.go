@@ -360,6 +360,8 @@ func TestSendBatch_ServerError_SchedulesRetryAndFails(t *testing.T) {
 	defer server.Close()
 
 	a := newTestAdapter(t, 100, 5*time.Second, config.EndpointConfig{URL: server.URL})
+	// Stop via defer so an assertion failure below cannot leak the adapter.
+	defer a.Stop(context.Background())
 
 	err := a.sendBatch(context.Background(), []types.Metric{sampleMetric("a")})
 	require.Error(t, err)
@@ -379,8 +381,6 @@ func TestSendBatch_ServerError_SchedulesRetryAndFails(t *testing.T) {
 	scheduled := a.retryEngine.stats.TotalRetries
 	a.retryEngine.mu.RUnlock()
 	assert.EqualValues(t, 1, scheduled)
-
-	require.NoError(t, a.Stop(context.Background()))
 }
 
 func TestSendBatch_FormatError(t *testing.T) {

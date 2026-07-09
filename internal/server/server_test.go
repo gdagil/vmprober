@@ -709,6 +709,11 @@ func TestServer_UIHandler_WriteError(t *testing.T) {
 		t.Errorf("Expected Content-Type text/html; charset=utf-8, got %q", got)
 	}
 
+	// A 200 status must have been written before the body write failed.
+	if fw.status != http.StatusOK {
+		t.Errorf("Expected status %d written before write failure, got %d", http.StatusOK, fw.status)
+	}
+
 	// The write failure must be logged at Error level with the underlying error.
 	entry := hook.LastEntry()
 	if entry == nil {
@@ -880,6 +885,11 @@ func TestServer_Handlers_EncodeError(t *testing.T) {
 
 			if got := fw.Header().Get("Content-Type"); got != "application/json" {
 				t.Errorf("Expected Content-Type application/json, got %q", got)
+			}
+
+			// A 200 status must have been written before the encode write failed.
+			if fw.status != http.StatusOK {
+				t.Errorf("Expected status %d written before encode failure, got %d", http.StatusOK, fw.status)
 			}
 
 			// The encode failure must be logged at Error level with the error.

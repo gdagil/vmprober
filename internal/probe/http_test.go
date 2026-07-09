@@ -63,8 +63,12 @@ func TestNewHTTPProbe_Defaults(t *testing.T) {
 }
 
 func TestHTTPProbe_Execute_Success(t *testing.T) {
-	// Start a test HTTP server
+	// The handler sleeps handlerDelay before responding so the measured RTT has a
+	// real, deterministic lower bound even on hosts with a coarse monotonic clock
+	// (notably Windows, where a bare RTT > 0 check is flaky).
+	const handlerDelay = 20 * time.Millisecond
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		time.Sleep(handlerDelay)
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte("OK"))
 	}))
@@ -100,10 +104,11 @@ func TestHTTPProbe_Execute_Success(t *testing.T) {
 	if !result.Success {
 		t.Errorf("Expected successful probe, got error: %s", result.Error)
 	}
-	// RTT can be exactly 0 for a localhost round-trip on hosts with a coarse
-	// monotonic clock (notably Windows); only a negative value is a real bug.
-	if result.RTT < 0 {
-		t.Error("Expected non-negative RTT")
+	// The handler slept handlerDelay before replying, so the round-trip RTT must
+	// reflect at least most of that wait. 10ms is a safe deterministic floor
+	// below the 20ms delay, even on a coarse-clock host.
+	if result.RTT < 10*time.Millisecond {
+		t.Errorf("Expected RTT >= 10ms given the %v handler delay, got %v", handlerDelay, result.RTT)
 	}
 	if result.Protocol != types.ProbeTypeHTTP {
 		t.Errorf("Expected protocol HTTP, got %s", result.Protocol)

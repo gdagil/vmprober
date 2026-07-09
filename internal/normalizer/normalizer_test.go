@@ -300,7 +300,10 @@ func newTestDedupCache(window time.Duration, ticker *time.Ticker) *DedupCache {
 }
 
 func TestDedupCache_CheckAndMark(t *testing.T) {
-	d := NewDedupCache(time.Minute)
+	// Use the no-goroutine test constructor so we don't leak an unstoppable
+	// cleanupLoop goroutine (and its 1-minute ticker) for the whole test run.
+	d := newTestDedupCache(time.Minute, time.NewTicker(time.Hour))
+	defer d.cleanupTicker.Stop()
 
 	now := time.Now()
 	if d.Check("series-a", now) {
@@ -319,12 +322,16 @@ func TestDedupCache_CheckAndMark(t *testing.T) {
 }
 
 func TestDedupCache_Cleanup(t *testing.T) {
-	d := newTestDedupCache(50*time.Millisecond, time.NewTicker(time.Hour))
+	// A comfortably large window plus a stale entry backdated well beyond it
+	// keeps Cleanup's expiry decision independent of test execution speed: the
+	// fresh entry can never age out mid-test, and the stale one is always past
+	// the window regardless of how long the test takes to run.
+	d := newTestDedupCache(10*time.Second, time.NewTicker(time.Hour))
 	defer d.cleanupTicker.Stop()
 
 	now := time.Now()
-	// Stale entry (older than the window) and a fresh entry.
-	d.Mark("stale", now.Add(-time.Second))
+	// Stale entry (backdated far past the window) and a fresh entry.
+	d.Mark("stale", now.Add(-time.Hour))
 	d.Mark("fresh", now)
 
 	d.Cleanup(context.Background())

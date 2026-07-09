@@ -100,12 +100,11 @@ func TestSetupLogger_Output(t *testing.T) {
 }
 
 func TestBuildProbeConfig_TCP(t *testing.T) {
-	probesCfg := &config.ProbesConfig{}
-	schedulerCfg := &config.SchedulerConfig{}
-
 	t.Run("explicit connect timeout is honored", func(t *testing.T) {
+		// Own fixture copy so subtests stay order-independent.
+		probesCfg := &config.ProbesConfig{}
 		probesCfg.TCP.ConnectTimeout = 7 * time.Second
-		result := buildProbeConfig(types.ProbeTypeTCP, probesCfg, schedulerCfg)
+		result := buildProbeConfig(types.ProbeTypeTCP, probesCfg, &config.SchedulerConfig{})
 		tcpCfg, ok := result.(*probe.TCPConfig)
 		require.True(t, ok, "expected *probe.TCPConfig, got %T", result)
 		assert.Equal(t, 7*time.Second, tcpCfg.ConnectTimeout)

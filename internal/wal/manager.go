@@ -44,11 +44,12 @@ type WALManager interface {
 	DeleteSentRecords(ctx context.Context, olderThan time.Duration) error
 }
 
-// Background loop tick intervals. Declared as vars (not literals) so tests can
-// shorten them to exercise the rotation/compaction loops without waiting minutes.
-var (
-	rotationLoopInterval   = 1 * time.Minute
-	compactionLoopInterval = 5 * time.Minute
+// Default background loop tick intervals. Applied to every new manager in
+// NewWALManager; stored per-instance (see DefaultWALManager) so a manager can
+// be constructed with shorter intervals for tests without mutating shared state.
+const (
+	defaultRotationInterval   = 1 * time.Minute
+	defaultCompactionInterval = 5 * time.Minute
 )
 
 // WALFilter is a filter for reading records
@@ -84,10 +85,30 @@ type DefaultWALManager struct {
 	cancel        context.CancelFunc
 	wg            sync.WaitGroup
 	closed        bool
+
+	// Background loop tick intervals, defaulted in NewWALManager. Held per
+	// instance (not as package globals) and read once when each loop starts.
+	rotationInterval   time.Duration
+	compactionInterval time.Duration
 }
 
-// NewWALManager creates a new WAL manager
+// NewWALManager creates a new WAL manager and starts its background loops.
 func NewWALManager(cfg *config.WALConfig, logger *logrus.Logger) (WALManager, error) {
+	manager, err := newManager(cfg, logger)
+	if err != nil {
+		return nil, err
+	}
+
+	manager.startBackgroundLoops()
+
+	return manager, nil
+}
+
+// newManager builds a DefaultWALManager (recovering existing segments and
+// creating the active segment) without starting the background loops. Splitting
+// construction from loop startup lets tests override the loop intervals before
+// the goroutines read them.
+func newManager(cfg *config.WALConfig, logger *logrus.Logger) (*DefaultWALManager, error) {
 	if cfg == nil {
 		return nil, fmt.Errorf("WAL config is nil")
 	}
@@ -104,14 +125,16 @@ func NewWALManager(cfg *config.WALConfig, logger *logrus.Logger) (WALManager, er
 
 	ctx, cancel := context.WithCancel(context.Background())
 	manager := &DefaultWALManager{
-		config:     cfg,
-		dir:        dir,
-		segments:   make([]*WALSegment, 0),
-		logger:     logger,
-		stats:      &WALStats{},
-		compressor: NewCompressor(cfg.Compression),
-		ctx:        ctx,
-		cancel:     cancel,
+		config:             cfg,
+		dir:                dir,
+		segments:           make([]*WALSegment, 0),
+		logger:             logger,
+		stats:              &WALStats{},
+		compressor:         NewCompressor(cfg.Compression),
+		ctx:                ctx,
+		cancel:             cancel,
+		rotationInterval:   defaultRotationInterval,
+		compactionInterval: defaultCompactionInterval,
 	}
 
 	// Recover existing segments
@@ -126,12 +149,14 @@ func NewWALManager(cfg *config.WALConfig, logger *logrus.Logger) (WALManager, er
 		return nil, fmt.Errorf("failed to create active segment: %w", err)
 	}
 
-	// Start background tasks
-	manager.wg.Add(2)
-	go manager.rotationLoop()
-	go manager.compactionLoop()
-
 	return manager, nil
+}
+
+// startBackgroundLoops launches the rotation and compaction goroutines.
+func (w *DefaultWALManager) startBackgroundLoops() {
+	w.wg.Add(2)
+	go w.rotationLoop()
+	go w.compactionLoop()
 }
 
 // Write writes a record to WAL
@@ -387,7 +412,7 @@ func (w *DefaultWALManager) recoverSegments(ctx context.Context) error {
 // rotationLoop is the segment rotation loop
 func (w *DefaultWALManager) rotationLoop() {
 	defer w.wg.Done()
-	ticker := time.NewTicker(rotationLoopInterval)
+	ticker := time.NewTicker(w.rotationInterval)
 	defer ticker.Stop()
 
 	for {
@@ -395,7 +420,14 @@ func (w *DefaultWALManager) rotationLoop() {
 		case <-w.ctx.Done():
 			return
 		case <-ticker.C:
-			if w.shouldRotate() {
+			// shouldRotate reads w.activeSegment, which Rotate reassigns under
+			// w.mu; take the read lock so this check does not race the write.
+			// Release it before Rotate, which acquires w.mu itself.
+			w.mu.RLock()
+			needRotate := w.shouldRotate()
+			w.mu.RUnlock()
+
+			if needRotate {
 				if err := w.Rotate(w.ctx); err != nil {
 					w.logger.WithError(err).Error("Failed to rotate segment in loop")
 				}
@@ -407,7 +439,7 @@ func (w *DefaultWALManager) rotationLoop() {
 // compactionLoop is the old segment compression loop
 func (w *DefaultWALManager) compactionLoop() {
 	defer w.wg.Done()
-	ticker := time.NewTicker(compactionLoopInterval)
+	ticker := time.NewTicker(w.compactionInterval)
 	defer ticker.Stop()
 
 	for {

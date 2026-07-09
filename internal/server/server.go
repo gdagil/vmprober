@@ -113,6 +113,7 @@ func (s *Server) jobsHandler(w http.ResponseWriter, r *http.Request) {
 
 	jobs := s.scheduler.GetAllJobs()
 	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
 	if err := json.NewEncoder(w).Encode(jobs); err != nil {
 		s.logger.WithError(err).Error("Failed to encode jobs response")
 	}
@@ -133,6 +134,7 @@ func (s *Server) statsHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
 	if err := json.NewEncoder(w).Encode(response); err != nil {
 		s.logger.WithError(err).Error("Failed to encode stats response")
 	}
@@ -174,6 +176,7 @@ func (s *Server) targetsHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
 	if err := json.NewEncoder(w).Encode(targets); err != nil {
 		s.logger.WithError(err).Error("Failed to encode targets response")
 	}
@@ -195,6 +198,7 @@ func (s *Server) uiHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	w.WriteHeader(http.StatusOK)
 	if _, err = w.Write(htmlContent); err != nil {
 		s.logger.WithError(err).Error("Failed to write HTML content")
 	}

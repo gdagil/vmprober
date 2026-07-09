@@ -297,12 +297,13 @@ func TestDNSProbe_Execute_ExpectedRecords_NotFound(t *testing.T) {
 }
 
 func TestDNSProbe_Execute_InvalidServer(t *testing.T) {
-	// Hermetic + deterministic: point at a reserved-then-released loopback port
-	// so the query cannot be answered. On loopback this yields a fast
-	// connection-refused (ICMP port unreachable) or a read timeout - either way
-	// Execute returns an error. The previous 192.0.2.1 version was flaky because
-	// captive portals / DNS interceptors answer queries to arbitrary IPs.
-	closed := closedUDPAddr(t)
+	// Hermetic + deterministic: point at a live-but-silent loopback UDP server
+	// that reads and discards every datagram and never replies. The DNS client's
+	// read deadline therefore expires and Execute returns an i/o timeout. A
+	// reserved-then-released port is unreliable here - the ephemeral port can be
+	// re-bound (even by our own client), producing a flake or false pass.
+	serverAddr, cleanup := startUDPServer(t, false, 0)
+	defer cleanup()
 
 	config := &DNSConfig{
 		QueryName: "example.com",
@@ -314,8 +315,8 @@ func TestDNSProbe_Execute_InvalidServer(t *testing.T) {
 	defer probe.Close()
 
 	target := types.Target{
-		Host:     closed.IP.String(),
-		Port:     closed.Port,
+		Host:     serverAddr.IP.String(),
+		Port:     serverAddr.Port,
 		Protocol: types.ProbeTypeDNS,
 		Timeout:  500 * time.Millisecond,
 	}
@@ -327,7 +328,7 @@ func TestDNSProbe_Execute_InvalidServer(t *testing.T) {
 	require.Error(t, err)
 	require.NotNil(t, result)
 	assert.False(t, result.Success)
-	assert.NotEmpty(t, result.Error)
+	assert.Contains(t, result.Error, "timeout")
 }
 
 func TestDNSProbe_Execute_LocalServer_Success(t *testing.T) {
@@ -432,10 +433,13 @@ func TestDNSProbe_Execute_LocalServer_ExpectedRecords(t *testing.T) {
 		Protocol: types.ProbeTypeDNS,
 		Timeout:  2 * time.Second,
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
 
 	t.Run("found", func(t *testing.T) {
+		// Each subtest owns its context so one subtest's deadline or cancellation
+		// cannot bleed into the other.
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+
 		probe := NewDNSProbe(&DNSConfig{
 			QueryName:       "example.com",
 			QueryType:       "A",
@@ -451,6 +455,9 @@ func TestDNSProbe_Execute_LocalServer_ExpectedRecords(t *testing.T) {
 	})
 
 	t.Run("not found", func(t *testing.T) {
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+
 		probe := NewDNSProbe(&DNSConfig{
 			QueryName:       "example.com",
 			QueryType:       "A",
