@@ -1,0 +1,5 @@
+# Values used by `ct install` in CI (chart-testing auto-loads ci/*-values.yaml).
+# The chart default tag is "<appVersion>-alpine", which only exists once a release
+# is tagged. Pin the install-test to the always-published moving tag so kind can pull.
+image:
+  tag: latest-alpine

@@ -1,0 +1,25 @@
+vmprober {{ .Chart.AppVersion }} has been deployed as release "{{ .Release.Name }}".
+
+Get the dashboard / metrics URL:
+
+{{- if contains "NodePort" .Values.service.type }}
+  export NODE_PORT=$(kubectl get -n {{ .Release.Namespace }} -o jsonpath="{.spec.ports[0].nodePort}" svc {{ include "vmprober.fullname" . }})
+  export NODE_IP=$(kubectl get nodes -n {{ .Release.Namespace }} -o jsonpath="{.items[0].status.addresses[0].address}")
+  echo "http://$NODE_IP:$NODE_PORT/"
+{{- else if contains "LoadBalancer" .Values.service.type }}
+  kubectl get svc -n {{ .Release.Namespace }} {{ include "vmprober.fullname" . }} -w
+{{- else }}
+  kubectl -n {{ .Release.Namespace }} port-forward svc/{{ include "vmprober.fullname" . }} {{ .Values.service.port }}:{{ .Values.service.port }}
+  # then open http://localhost:{{ .Values.service.port }}/  (dashboard)  and  /metrics , /health , /ready
+{{- end }}
+
+Verify the release:
+  helm test {{ .Release.Name }} -n {{ .Release.Namespace }}
+
+Notes:
+- Editing .Values.config rolls the pods automatically (config is not hot-reloaded).
+- Keep replicaCount at 1 in push mode: vmprober dedups per-process, so multiple
+  replicas double-push metrics to VictoriaMetrics.
+{{- if not .Values.serviceMonitor.enabled }}
+- Prometheus Operator scraping is off. Enable it with --set serviceMonitor.enabled=true
+{{- end }}

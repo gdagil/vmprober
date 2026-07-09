@@ -142,9 +142,31 @@ go test -v -timeout 10m -count=1 ./tests/e2e/...
 # Skip long-running tests
 go test -v -timeout 5m -short ./tests/e2e/...
 
-# Using make (if configured)
-make e2e-test
+# Using make
+make e2e-test          # build + run the full suite
+make e2e-test-short    # build + run in short mode
 ```
+
+### Testing against specific vminsert versions
+
+The VictoriaMetrics image tags in `docker-compose.yml` are parameterized with the
+`VM_VERSION` env var (default `latest`). Pin a specific **cluster** tag to test
+compatibility:
+
+```bash
+# One version (OSS cluster tags look like vX.Y.Z-cluster)
+make e2e-test VM_VERSION=v1.147.0-cluster
+
+# Skip Grafana to test only the VictoriaMetrics ingest/query path (faster, and
+# what the CI version matrix uses):
+E2E_SKIP_GRAFANA=true VM_VERSION=v1.130.0-cluster go test -count=1 -short ./tests/e2e/...
+```
+
+CI runs this as a matrix (`.github/workflows/e2e.yml`): a reduced set on PRs and
+the full set (`v1.97.0-cluster` … `v1.147.0-cluster`, `latest`) on push to main,
+nightly, and manual `workflow_dispatch`. Note: always pass `-count=1` when varying
+`VM_VERSION` — Go's test cache ignores env vars and would otherwise reuse a stale
+result.
 
 ### Troubleshooting Test Failures
 

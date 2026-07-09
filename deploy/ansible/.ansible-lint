@@ -1,0 +1,4 @@
+# Keep linting lenient: the `min` profile checks that playbooks/roles load and
+# parse (syntax, no broken references) without enforcing opinionated style rules
+# (FQCN, truthy booleans, etc.) on the existing playbooks.
+profile: min
