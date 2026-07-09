@@ -796,8 +796,8 @@ func TestServer_TargetsHandler_StatusBranches(t *testing.T) {
 	}
 
 	// Drive the jobs into distinct states.
-	sched.MarkJobCompleted("job-up")   // LastStatus == "up"
-	sched.MarkJobFailed("job-down")    // LastStatus == "down"
+	sched.MarkJobCompleted("job-up") // LastStatus == "up"
+	sched.MarkJobFailed("job-down")  // LastStatus == "down"
 	// job-unknown left untouched -> LastStatus == "" -> "unknown"
 
 	server.SetScheduler(sched)

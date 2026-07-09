@@ -41,8 +41,8 @@ func (m *mockWALManager) Close(_ context.Context) error {
 	m.closeCalled = true
 	return m.closeErr
 }
-func (m *mockWALManager) GetStats() *wal.WALStats                        { return &wal.WALStats{} }
-func (m *mockWALManager) MarkSent(_ context.Context, _ string) error     { return nil }
+func (m *mockWALManager) GetStats() *wal.WALStats                    { return &wal.WALStats{} }
+func (m *mockWALManager) MarkSent(_ context.Context, _ string) error { return nil }
 func (m *mockWALManager) GetUnsentRecords(_ context.Context) ([]*types.Record, error) {
 	return nil, nil
 }
@@ -58,9 +58,9 @@ type mockVMAdapter struct {
 	stopCalled  bool
 }
 
-func (m *mockVMAdapter) Start(_ context.Context) error            { return nil }
+func (m *mockVMAdapter) Start(_ context.Context) error                  { return nil }
 func (m *mockVMAdapter) Push(_ context.Context, _ []types.Metric) error { return nil }
-func (m *mockVMAdapter) GetStats() *adapter.Stats                 { return &adapter.Stats{} }
+func (m *mockVMAdapter) GetStats() *adapter.Stats                       { return &adapter.Stats{} }
 func (m *mockVMAdapter) Flush(_ context.Context) error {
 	m.flushCalled = true
 	return m.flushErr

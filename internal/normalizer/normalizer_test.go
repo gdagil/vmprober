@@ -350,7 +350,7 @@ func TestDedupCache_Cleanup(t *testing.T) {
 }
 
 // TestDedupCache_CleanupLoop drives cleanupLoop directly: the ticker branch
-// triggers a real Cleanup (removing a stale entry), and cancelling the context
+// triggers a real Cleanup (removing a stale entry), and canceling the context
 // exercises the ctx.Done() return path.
 func TestDedupCache_CleanupLoop(t *testing.T) {
 	ticker := time.NewTicker(5 * time.Millisecond)
