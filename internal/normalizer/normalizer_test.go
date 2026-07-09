@@ -2,6 +2,7 @@ package normalizer
 
 import (
 	"context"
+	"sync"
 	"testing"
 	"time"
 
@@ -284,5 +285,113 @@ func TestNormalizer_SeriesIDGeneration(t *testing.T) {
 	event3, _ := normalizer.Normalize(ctx, result3)
 	if event1.SeriesID == event3.SeriesID {
 		t.Error("Different results should generate different SeriesID")
+	}
+}
+
+// newTestDedupCache builds a DedupCache without starting the background
+// cleanup goroutine, so tests can drive cleanupLoop deterministically with a
+// controllable ticker and context.
+func newTestDedupCache(window time.Duration, ticker *time.Ticker) *DedupCache {
+	return &DedupCache{
+		cache:         make(map[string]time.Time),
+		window:        window,
+		cleanupTicker: ticker,
+	}
+}
+
+func TestDedupCache_CheckAndMark(t *testing.T) {
+	d := NewDedupCache(time.Minute)
+
+	now := time.Now()
+	if d.Check("series-a", now) {
+		t.Error("unmarked series should not be a duplicate")
+	}
+
+	d.Mark("series-a", now)
+	if !d.Check("series-a", now.Add(time.Second)) {
+		t.Error("marked series within window should be a duplicate")
+	}
+
+	// Outside the dedup window it should no longer be considered a duplicate.
+	if d.Check("series-a", now.Add(2*time.Minute)) {
+		t.Error("marked series outside window should not be a duplicate")
+	}
+}
+
+func TestDedupCache_Cleanup(t *testing.T) {
+	d := newTestDedupCache(50*time.Millisecond, time.NewTicker(time.Hour))
+	defer d.cleanupTicker.Stop()
+
+	now := time.Now()
+	// Stale entry (older than the window) and a fresh entry.
+	d.Mark("stale", now.Add(-time.Second))
+	d.Mark("fresh", now)
+
+	d.Cleanup(context.Background())
+
+	d.mu.RLock()
+	_, staleExists := d.cache["stale"]
+	_, freshExists := d.cache["fresh"]
+	d.mu.RUnlock()
+
+	if staleExists {
+		t.Error("stale entry should have been removed by Cleanup")
+	}
+	if !freshExists {
+		t.Error("fresh entry should have been retained by Cleanup")
+	}
+}
+
+// TestDedupCache_CleanupLoop drives cleanupLoop directly: the ticker branch
+// triggers a real Cleanup (removing a stale entry), and cancelling the context
+// exercises the ctx.Done() return path.
+func TestDedupCache_CleanupLoop(t *testing.T) {
+	ticker := time.NewTicker(5 * time.Millisecond)
+	d := newTestDedupCache(10*time.Millisecond, ticker)
+	defer ticker.Stop()
+
+	// Insert a stale entry that the loop's Cleanup should evict.
+	d.Mark("stale", time.Now().Add(-time.Second))
+
+	ctx, cancel := context.WithCancel(context.Background())
+
+	var wg sync.WaitGroup
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		d.cleanupLoop(ctx)
+	}()
+
+	// Wait until the ticker-driven Cleanup removes the stale entry.
+	deadline := time.After(2 * time.Second)
+	for {
+		d.mu.RLock()
+		_, exists := d.cache["stale"]
+		d.mu.RUnlock()
+		if !exists {
+			break
+		}
+		select {
+		case <-deadline:
+			cancel()
+			wg.Wait()
+			t.Fatal("cleanupLoop did not evict stale entry within deadline")
+		case <-time.After(2 * time.Millisecond):
+		}
+	}
+
+	// Cancel to exercise the ctx.Done() branch and ensure the loop returns.
+	cancel()
+
+	done := make(chan struct{})
+	go func() {
+		wg.Wait()
+		close(done)
+	}()
+
+	select {
+	case <-done:
+	case <-time.After(2 * time.Second):
+		t.Fatal("cleanupLoop did not return after context cancellation")
 	}
 }

@@ -2,6 +2,7 @@ package shutdown
 
 import (
 	"context"
+	"errors"
 	"testing"
 	"time"
 
@@ -13,8 +14,61 @@ import (
 	"github.com/gdagil/vmprober/internal/observability"
 	"github.com/gdagil/vmprober/internal/scheduler"
 	"github.com/gdagil/vmprober/internal/server"
+	"github.com/gdagil/vmprober/internal/types"
 	"github.com/gdagil/vmprober/internal/wal"
 )
+
+// mockWALManager is a wal.WALManager stub that lets tests control the errors
+// returned by Flush and Close so the WALComponent.Shutdown error paths can be
+// exercised deterministically.
+type mockWALManager struct {
+	flushErr    error
+	closeErr    error
+	flushCalled bool
+	closeCalled bool
+}
+
+func (m *mockWALManager) Write(_ context.Context, _ *types.Record) error { return nil }
+func (m *mockWALManager) Read(_ context.Context, _ wal.WALFilter) ([]*types.Record, error) {
+	return nil, nil
+}
+func (m *mockWALManager) Flush(_ context.Context) error {
+	m.flushCalled = true
+	return m.flushErr
+}
+func (m *mockWALManager) Rotate(_ context.Context) error { return nil }
+func (m *mockWALManager) Close(_ context.Context) error {
+	m.closeCalled = true
+	return m.closeErr
+}
+func (m *mockWALManager) GetStats() *wal.WALStats                        { return &wal.WALStats{} }
+func (m *mockWALManager) MarkSent(_ context.Context, _ string) error     { return nil }
+func (m *mockWALManager) GetUnsentRecords(_ context.Context) ([]*types.Record, error) {
+	return nil, nil
+}
+func (m *mockWALManager) DeleteSentRecords(_ context.Context, _ time.Duration) error { return nil }
+
+// mockVMAdapter is an adapter.VictoriaMetricsAdapter stub that lets tests
+// control the errors returned by Flush and Stop so the AdapterComponent.Shutdown
+// error paths can be exercised deterministically.
+type mockVMAdapter struct {
+	flushErr    error
+	stopErr     error
+	flushCalled bool
+	stopCalled  bool
+}
+
+func (m *mockVMAdapter) Start(_ context.Context) error            { return nil }
+func (m *mockVMAdapter) Push(_ context.Context, _ []types.Metric) error { return nil }
+func (m *mockVMAdapter) GetStats() *adapter.Stats                 { return &adapter.Stats{} }
+func (m *mockVMAdapter) Flush(_ context.Context) error {
+	m.flushCalled = true
+	return m.flushErr
+}
+func (m *mockVMAdapter) Stop(_ context.Context) error {
+	m.stopCalled = true
+	return m.stopErr
+}
 
 func TestNewServerComponent(t *testing.T) {
 	logger := logrus.New()
@@ -224,5 +278,97 @@ func TestNewObservabilityComponent(t *testing.T) {
 	// Shutdown should work
 	if err := component.Shutdown(ctx); err != nil {
 		t.Fatalf("Shutdown failed: %v", err)
+	}
+}
+
+func TestWALComponent_Shutdown_FlushError(t *testing.T) {
+	flushErr := errors.New("flush boom")
+	mock := &mockWALManager{flushErr: flushErr}
+	component := NewWALComponent(mock)
+
+	err := component.Shutdown(context.Background())
+	if !errors.Is(err, flushErr) {
+		t.Fatalf("Expected flush error to be returned, got %v", err)
+	}
+	if !mock.flushCalled {
+		t.Error("Flush should have been called")
+	}
+	if mock.closeCalled {
+		t.Error("Close should not be called when Flush fails")
+	}
+}
+
+func TestWALComponent_Shutdown_CloseError(t *testing.T) {
+	closeErr := errors.New("close boom")
+	mock := &mockWALManager{closeErr: closeErr}
+	component := NewWALComponent(mock)
+
+	err := component.Shutdown(context.Background())
+	if !errors.Is(err, closeErr) {
+		t.Fatalf("Expected close error to be returned, got %v", err)
+	}
+	if !mock.flushCalled {
+		t.Error("Flush should have been called before Close")
+	}
+	if !mock.closeCalled {
+		t.Error("Close should have been called after a successful Flush")
+	}
+}
+
+func TestWALComponent_Shutdown_Success(t *testing.T) {
+	mock := &mockWALManager{}
+	component := NewWALComponent(mock)
+
+	if err := component.Shutdown(context.Background()); err != nil {
+		t.Fatalf("Shutdown should succeed, got %v", err)
+	}
+	if !mock.flushCalled || !mock.closeCalled {
+		t.Errorf("Both Flush and Close should be called (flush=%v close=%v)", mock.flushCalled, mock.closeCalled)
+	}
+}
+
+func TestAdapterComponent_Shutdown_FlushError(t *testing.T) {
+	flushErr := errors.New("flush boom")
+	mock := &mockVMAdapter{flushErr: flushErr}
+	component := NewAdapterComponent(mock)
+
+	err := component.Shutdown(context.Background())
+	if !errors.Is(err, flushErr) {
+		t.Fatalf("Expected flush error to be returned, got %v", err)
+	}
+	if !mock.flushCalled {
+		t.Error("Flush should have been called")
+	}
+	if mock.stopCalled {
+		t.Error("Stop should not be called when Flush fails")
+	}
+}
+
+func TestAdapterComponent_Shutdown_StopError(t *testing.T) {
+	stopErr := errors.New("stop boom")
+	mock := &mockVMAdapter{stopErr: stopErr}
+	component := NewAdapterComponent(mock)
+
+	err := component.Shutdown(context.Background())
+	if !errors.Is(err, stopErr) {
+		t.Fatalf("Expected stop error to be returned, got %v", err)
+	}
+	if !mock.flushCalled {
+		t.Error("Flush should have been called before Stop")
+	}
+	if !mock.stopCalled {
+		t.Error("Stop should have been called after a successful Flush")
+	}
+}
+
+func TestAdapterComponent_Shutdown_Success(t *testing.T) {
+	mock := &mockVMAdapter{}
+	component := NewAdapterComponent(mock)
+
+	if err := component.Shutdown(context.Background()); err != nil {
+		t.Fatalf("Shutdown should succeed, got %v", err)
+	}
+	if !mock.flushCalled || !mock.stopCalled {
+		t.Errorf("Both Flush and Stop should be called (flush=%v stop=%v)", mock.flushCalled, mock.stopCalled)
 	}
 }

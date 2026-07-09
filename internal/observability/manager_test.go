@@ -304,6 +304,46 @@ func TestManager_GetMetrics_Concurrent(t *testing.T) {
 	}
 }
 
+// TestManager_UpdateMetrics drives updateMetrics directly. In production it is
+// only invoked from metricsCollectionLoop on a 10s ticker, which is far too
+// slow to observe in a unit test, so we call it on the concrete type.
+func TestManager_UpdateMetrics(t *testing.T) {
+	cfg := createTestObservabilityConfig()
+	logger := logrus.New()
+	logger.SetLevel(logrus.ErrorLevel)
+
+	manager := NewManager(cfg, logger)
+	dm, ok := manager.(*DefaultObservabilityManager)
+	if !ok {
+		t.Fatalf("expected *DefaultObservabilityManager, got %T", manager)
+	}
+
+	// Backdate startTime so the computed uptime is deterministically positive,
+	// and clear the timestamp so we can observe updateMetrics writing it.
+	dm.mu.Lock()
+	dm.startTime = time.Now().Add(-2 * time.Second)
+	dm.metrics.Timestamp = time.Time{}
+	dm.metrics.Uptime = 0
+	dm.mu.Unlock()
+
+	dm.updateMetrics()
+
+	dm.mu.RLock()
+	ts := dm.metrics.Timestamp
+	uptime := dm.metrics.Uptime
+	dm.mu.RUnlock()
+
+	if ts.IsZero() {
+		t.Error("updateMetrics should set a non-zero Timestamp")
+	}
+	if uptime <= 0 {
+		t.Errorf("updateMetrics should set a positive Uptime, got %v", uptime)
+	}
+	if uptime < time.Second {
+		t.Errorf("uptime should reflect the backdated startTime, got %v", uptime)
+	}
+}
+
 func TestManager_Stop_WithPprof(t *testing.T) {
 	cfg := createTestObservabilityConfig()
 	cfg.Pprof.Enabled = true

@@ -44,6 +44,13 @@ type WALManager interface {
 	DeleteSentRecords(ctx context.Context, olderThan time.Duration) error
 }
 
+// Background loop tick intervals. Declared as vars (not literals) so tests can
+// shorten them to exercise the rotation/compaction loops without waiting minutes.
+var (
+	rotationLoopInterval   = 1 * time.Minute
+	compactionLoopInterval = 5 * time.Minute
+)
+
 // WALFilter is a filter for reading records
 type WALFilter struct {
 	StartTime time.Time
@@ -380,7 +387,7 @@ func (w *DefaultWALManager) recoverSegments(ctx context.Context) error {
 // rotationLoop is the segment rotation loop
 func (w *DefaultWALManager) rotationLoop() {
 	defer w.wg.Done()
-	ticker := time.NewTicker(1 * time.Minute)
+	ticker := time.NewTicker(rotationLoopInterval)
 	defer ticker.Stop()
 
 	for {
@@ -400,7 +407,7 @@ func (w *DefaultWALManager) rotationLoop() {
 // compactionLoop is the old segment compression loop
 func (w *DefaultWALManager) compactionLoop() {
 	defer w.wg.Done()
-	ticker := time.NewTicker(5 * time.Minute)
+	ticker := time.NewTicker(compactionLoopInterval)
 	defer ticker.Stop()
 
 	for {

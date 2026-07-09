@@ -342,9 +342,14 @@ func TestWALSegment_ValidatePath(t *testing.T) {
 
 	// Valid path
 	validPath := filepath.Join(tmpDir, "valid-segment.wal")
-	_, err := NewWALSegment("valid", validPath, cfg, compressor, logger)
+	seg, err := NewWALSegment("valid", validPath, cfg, compressor, logger)
 	if err != nil {
 		t.Fatalf("Valid path should work: %v", err)
+	}
+	// Close the segment so the file handle is released before t.TempDir cleanup
+	// runs; otherwise Windows fails RemoveAll with a sharing violation.
+	if err := seg.Close(context.Background()); err != nil {
+		t.Fatalf("Failed to close valid segment: %v", err)
 	}
 
 	// Test with path traversal attempt (should fail)

@@ -100,8 +100,10 @@ func TestHTTPProbe_Execute_Success(t *testing.T) {
 	if !result.Success {
 		t.Errorf("Expected successful probe, got error: %s", result.Error)
 	}
-	if result.RTT <= 0 {
-		t.Error("Expected positive RTT")
+	// RTT can be exactly 0 for a localhost round-trip on hosts with a coarse
+	// monotonic clock (notably Windows); only a negative value is a real bug.
+	if result.RTT < 0 {
+		t.Error("Expected non-negative RTT")
 	}
 	if result.Protocol != types.ProbeTypeHTTP {
 		t.Errorf("Expected protocol HTTP, got %s", result.Protocol)
