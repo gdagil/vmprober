@@ -8,10 +8,22 @@ import (
 	"sync"
 	"time"
 
+	"github.com/VictoriaMetrics/metrics"
 	"github.com/sirupsen/logrus"
 
 	"github.com/gdagil/vmprober/internal/config"
 	"github.com/gdagil/vmprober/internal/types"
+)
+
+// WAL metrics documented in README (Metrics section). Package-level and shared
+// across manager instances: GetOrCreate* is idempotent, so tests that build
+// many managers do not panic on re-registration.
+// ponytail: names hardcode the default "vmprober" namespace; thread
+// metrics.namespace through WALConfig if a custom namespace ever needs them.
+var (
+	walSegmentsGauge = metrics.GetOrCreateGauge(`vmprober_wal_segments_total`, nil)
+	walBytesWritten  = metrics.GetOrCreateCounter(`vmprober_wal_bytes_written`)
+	walBytesSent     = metrics.GetOrCreateCounter(`vmprober_wal_bytes_sent`)
 )
 
 // WALManager manages the WAL system
@@ -86,6 +98,12 @@ type DefaultWALManager struct {
 	wg            sync.WaitGroup
 	closed        bool
 
+	// unsentSizes maps record ID -> serialized size for records written but not
+	// yet marked sent, so MarkSent can attribute exact bytes to walBytesSent.
+	// ponytail: entries for never-sent records purged with their segment leak
+	// until process restart; add per-segment ID tracking if that ever matters.
+	unsentSizes map[string]int64
+
 	// Background loop tick intervals, defaulted in NewWALManager. Held per
 	// instance (not as package globals) and read once when each loop starts.
 	rotationInterval   time.Duration
@@ -133,6 +151,7 @@ func newManager(cfg *config.WALConfig, logger *logrus.Logger) (*DefaultWALManage
 		compressor:         NewCompressor(cfg.Compression),
 		ctx:                ctx,
 		cancel:             cancel,
+		unsentSizes:        make(map[string]int64),
 		rotationInterval:   defaultRotationInterval,
 		compactionInterval: defaultCompactionInterval,
 	}
@@ -149,7 +168,19 @@ func newManager(cfg *config.WALConfig, logger *logrus.Logger) (*DefaultWALManage
 		return nil, fmt.Errorf("failed to create active segment: %w", err)
 	}
 
+	manager.updateSegmentsMetric()
+
 	return manager, nil
+}
+
+// updateSegmentsMetric publishes the current segment count (closed + active).
+// Callers must hold w.mu or have exclusive access (construction).
+func (w *DefaultWALManager) updateSegmentsMetric() {
+	count := len(w.segments)
+	if w.activeSegment != nil {
+		count++
+	}
+	walSegmentsGauge.Set(float64(count))
 }
 
 // startBackgroundLoops launches the rotation and compaction goroutines.
@@ -171,9 +202,13 @@ func (w *DefaultWALManager) Write(ctx context.Context, record *types.Record) err
 	}
 
 	// Write to active segment
+	sizeBefore := w.activeSegment.Size()
 	if err := w.activeSegment.Write(ctx, record); err != nil {
 		return fmt.Errorf("failed to write to active segment: %w", err)
 	}
+	written := w.activeSegment.Size() - sizeBefore
+	walBytesWritten.Add(int(written))
+	w.unsentSizes[record.ID] = written
 
 	// Update statistics
 	w.stats.TotalRecords++
@@ -263,6 +298,8 @@ func (w *DefaultWALManager) Rotate(ctx context.Context) error {
 	if err := w.createActiveSegment(ctx); err != nil {
 		return fmt.Errorf("failed to create new active segment: %w", err)
 	}
+
+	w.updateSegmentsMetric()
 
 	return nil
 }
@@ -503,17 +540,28 @@ func (w *DefaultWALManager) MarkSent(ctx context.Context, recordID string) error
 	// For optimization, we use a separate sent records index
 	if w.activeSegment != nil {
 		if err := w.activeSegment.MarkSent(ctx, recordID); err == nil {
+			w.recordSentMetricLocked(recordID)
 			return nil
 		}
 	}
 
 	for _, segment := range w.segments {
 		if err := segment.MarkSent(ctx, recordID); err == nil {
+			w.recordSentMetricLocked(recordID)
 			return nil
 		}
 	}
 
 	return fmt.Errorf("record %s not found", recordID)
+}
+
+// recordSentMetricLocked attributes a sent record's bytes to walBytesSent.
+// Records recovered from a previous run have no known size and are skipped.
+func (w *DefaultWALManager) recordSentMetricLocked(recordID string) {
+	if size, ok := w.unsentSizes[recordID]; ok {
+		walBytesSent.Add(int(size))
+		delete(w.unsentSizes, recordID)
+	}
 }
 
 // GetUnsentRecords returns all unsent records
@@ -591,6 +639,10 @@ func (w *DefaultWALManager) DeleteSentRecords(ctx context.Context, olderThan tim
 		}
 
 		w.logger.WithField("segment_id", segment.ID).Info("Deleted old segment with all records sent")
+	}
+
+	if len(segmentsToRemove) > 0 {
+		w.updateSegmentsMetric()
 	}
 
 	return nil
