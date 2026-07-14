@@ -2,11 +2,249 @@ package probe
 
 import (
 	"context"
+	"net"
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/health"
+	"google.golang.org/grpc/health/grpc_health_v1"
+
 	"github.com/gdagil/vmprober/internal/types"
 )
+
+// startGRPCHealthServer starts a hermetic loopback gRPC server exposing the
+// standard health service. The overall ("") status is set to SERVING and any
+// services passed in statuses are registered with the given status. When
+// replyDelay > 0 a unary interceptor sleeps that long before handling each RPC,
+// giving the measured RTT a deterministic lower bound. It returns the listener
+// address (cleanup is registered via t.Cleanup).
+func startGRPCHealthServer(t *testing.T, statuses map[string]grpc_health_v1.HealthCheckResponse_ServingStatus, replyDelay time.Duration) *net.TCPAddr {
+	t.Helper()
+	lis, err := net.Listen("tcp", "127.0.0.1:0")
+	require.NoError(t, err)
+
+	var srvOpts []grpc.ServerOption
+	if replyDelay > 0 {
+		srvOpts = append(srvOpts, grpc.UnaryInterceptor(
+			func(ctx context.Context, req any, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (any, error) {
+				time.Sleep(replyDelay)
+				return handler(ctx, req)
+			},
+		))
+	}
+
+	srv := grpc.NewServer(srvOpts...)
+	hs := health.NewServer()
+	hs.SetServingStatus("", grpc_health_v1.HealthCheckResponse_SERVING)
+	for name, status := range statuses {
+		hs.SetServingStatus(name, status)
+	}
+	grpc_health_v1.RegisterHealthServer(srv, hs)
+
+	go func() { _ = srv.Serve(lis) }()
+	t.Cleanup(srv.Stop)
+
+	return lis.Addr().(*net.TCPAddr)
+}
+
+// grpcTarget builds a loopback gRPC target for the given address.
+func grpcTarget(addr *net.TCPAddr) types.Target {
+	return types.Target{
+		Host:     addr.IP.String(),
+		Port:     addr.Port,
+		Protocol: types.ProbeTypeGRPC,
+		Timeout:  2 * time.Second,
+	}
+}
+
+// TestGRPCProbe_Execute_HealthyServing drives the happy path against a local
+// health server reporting SERVING. It also sets metadata to cover the
+// outgoing-metadata branch of Execute.
+func TestGRPCProbe_Execute_HealthyServing(t *testing.T) {
+	// The server sleeps healthDelay before answering the health RPC so the
+	// measured RTT has a real, deterministic lower bound even on hosts with a
+	// coarse monotonic clock (notably Windows, where a bare RTT > 0 is flaky).
+	const healthDelay = 20 * time.Millisecond
+	addr := startGRPCHealthServer(t, nil, healthDelay)
+
+	config := &GRPCConfig{
+		Service:        "",
+		ExpectedStatus: "SERVING",
+		Metadata:       map[string]string{"x-request-id": "abc-123"}, // exercises metadata branch
+		Timeout:        2 * time.Second,
+	}
+	probe := NewGRPCProbe(config)
+	defer probe.Close()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	result, err := probe.Execute(ctx, grpcTarget(addr))
+	require.NoError(t, err)
+	require.NotNil(t, result)
+	assert.True(t, result.Success, "expected healthy SERVING probe, error: %s", result.Error)
+	assert.Equal(t, types.ProbeTypeGRPC, result.Protocol)
+	assert.Equal(t, "client", result.Role)
+	assert.Equal(t, addr.Port, result.TargetPort)
+	assert.Equal(t, addr.IP.String(), result.TargetIP)
+	// The server slept healthDelay before replying; 10ms is a safe deterministic
+	// floor below the 20ms delay.
+	assert.GreaterOrEqual(t, result.RTT, 10*time.Millisecond)
+}
+
+// TestGRPCProbe_Execute_StatusMismatch covers the branch where the reported
+// status differs from ExpectedStatus (NOT_SERVING vs SERVING -> failure).
+func TestGRPCProbe_Execute_StatusMismatch(t *testing.T) {
+	addr := startGRPCHealthServer(t, map[string]grpc_health_v1.HealthCheckResponse_ServingStatus{
+		"svc.Down": grpc_health_v1.HealthCheckResponse_NOT_SERVING,
+	}, 0)
+
+	config := &GRPCConfig{
+		Service:        "svc.Down",
+		ExpectedStatus: "SERVING",
+		Timeout:        2 * time.Second,
+	}
+	probe := NewGRPCProbe(config)
+	defer probe.Close()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	result, err := probe.Execute(ctx, grpcTarget(addr))
+	require.Error(t, err)
+	require.NotNil(t, result)
+	assert.False(t, result.Success)
+	assert.Contains(t, result.Error, "unexpected health status")
+	assert.Contains(t, result.Error, "NOT_SERVING")
+}
+
+// TestGRPCProbe_Execute_NotServingExpected covers the success branch where the
+// reported status matches a non-default ExpectedStatus.
+func TestGRPCProbe_Execute_NotServingExpected(t *testing.T) {
+	addr := startGRPCHealthServer(t, map[string]grpc_health_v1.HealthCheckResponse_ServingStatus{
+		"svc.Down": grpc_health_v1.HealthCheckResponse_NOT_SERVING,
+	}, 0)
+
+	config := &GRPCConfig{
+		Service:        "svc.Down",
+		ExpectedStatus: "NOT_SERVING",
+		Timeout:        2 * time.Second,
+	}
+	probe := NewGRPCProbe(config)
+	defer probe.Close()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	result, err := probe.Execute(ctx, grpcTarget(addr))
+	require.NoError(t, err)
+	require.NotNil(t, result)
+	assert.True(t, result.Success, "expected NOT_SERVING to match, error: %s", result.Error)
+}
+
+// TestGRPCProbe_Execute_ServiceUnknown covers the codes.NotFound branches: a
+// request for an unregistered service fails unless ExpectedStatus accepts it.
+func TestGRPCProbe_Execute_ServiceUnknown(t *testing.T) {
+	addr := startGRPCHealthServer(t, nil, 0)
+
+	t.Run("expected serving -> failure", func(t *testing.T) {
+		config := &GRPCConfig{
+			Service:        "does.not.Exist",
+			ExpectedStatus: "SERVING",
+			Timeout:        2 * time.Second,
+		}
+		probe := NewGRPCProbe(config)
+		defer probe.Close()
+
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+
+		result, err := probe.Execute(ctx, grpcTarget(addr))
+		require.Error(t, err)
+		require.NotNil(t, result)
+		assert.False(t, result.Success)
+		assert.Contains(t, result.Error, "service not found")
+	})
+
+	t.Run("expected service_unknown -> success", func(t *testing.T) {
+		config := &GRPCConfig{
+			Service:        "does.not.Exist",
+			ExpectedStatus: "SERVICE_UNKNOWN",
+			Timeout:        2 * time.Second,
+		}
+		probe := NewGRPCProbe(config)
+		defer probe.Close()
+
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+
+		result, err := probe.Execute(ctx, grpcTarget(addr))
+		require.NoError(t, err)
+		require.NotNil(t, result)
+		assert.True(t, result.Success, "SERVICE_UNKNOWN should be accepted, error: %s", result.Error)
+	})
+}
+
+// TestGRPCProbe_Execute_ClosedPort_Unavailable covers the health-check failure
+// path against a loopback port with no listener. grpc.DialContext is lazy, so
+// the dial itself succeeds and the error surfaces from the health Check RPC as
+// codes.Unavailable (the "service unavailable" branch), not the dial-error
+// branch. Hermetic: no external network.
+func TestGRPCProbe_Execute_ClosedPort_Unavailable(t *testing.T) {
+	addr := closedTCPAddr(t)
+
+	config := &GRPCConfig{
+		Service:        "",
+		ExpectedStatus: "SERVING",
+		Timeout:        1 * time.Second,
+	}
+	probe := NewGRPCProbe(config)
+	defer probe.Close()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	result, err := probe.Execute(ctx, grpcTarget(addr))
+	require.Error(t, err)
+	require.NotNil(t, result)
+	assert.False(t, result.Success)
+	assert.Contains(t, result.Error, "unavailable")
+}
+
+// TestGRPCProbe_Execute_DialError covers the grpc.DialContext error branch:
+// a malformed authority makes grpc's target parser fail synchronously, so
+// DialContext returns an error before any RPC and Execute reports it as
+// "failed to connect". Hermetic: no network I/O occurs.
+func TestGRPCProbe_Execute_DialError(t *testing.T) {
+	config := &GRPCConfig{
+		Service:        "",
+		ExpectedStatus: "SERVING",
+		Timeout:        1 * time.Second,
+	}
+	probe := NewGRPCProbe(config)
+	defer probe.Close()
+
+	// "%zz" is an invalid percent-escape, so the passthrough target
+	// "passthrough:///%zz:50051" fails URL parsing inside grpc.DialContext.
+	target := types.Target{
+		Host:     "%zz",
+		Port:     50051,
+		Protocol: types.ProbeTypeGRPC,
+		Timeout:  1 * time.Second,
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	result, err := probe.Execute(ctx, target)
+	require.Error(t, err)
+	require.NotNil(t, result)
+	assert.False(t, result.Success)
+	assert.Contains(t, result.Error, "failed to connect")
+}
 
 func TestNewGRPCProbe(t *testing.T) {
 	config := &GRPCConfig{

@@ -2,11 +2,34 @@ package probe
 
 import (
 	"context"
+	"net"
 	"testing"
 	"time"
 
+	"github.com/miekg/dns"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
 	"github.com/gdagil/vmprober/internal/types"
 )
+
+// startDNSServer starts a hermetic loopback UDP DNS server using the given
+// handler and returns its address and a cleanup function. It blocks until the
+// server is ready to serve, so tests are race-free.
+func startDNSServer(t *testing.T, handler dns.HandlerFunc) (*net.UDPAddr, func()) {
+	t.Helper()
+	pc, err := net.ListenPacket("udp", "127.0.0.1:0")
+	require.NoError(t, err)
+
+	server := &dns.Server{PacketConn: pc, Handler: handler}
+	started := make(chan struct{})
+	server.NotifyStartedFunc = func() { close(started) }
+
+	go func() { _ = server.ActivateAndServe() }()
+	<-started
+
+	return pc.LocalAddr().(*net.UDPAddr), func() { _ = server.Shutdown() }
+}
 
 func TestNewDNSProbe(t *testing.T) {
 	config := &DNSConfig{
@@ -274,29 +297,182 @@ func TestDNSProbe_Execute_ExpectedRecords_NotFound(t *testing.T) {
 }
 
 func TestDNSProbe_Execute_InvalidServer(t *testing.T) {
+	// Hermetic + deterministic: point at a live-but-silent loopback UDP server
+	// that reads and discards every datagram and never replies. The DNS client's
+	// read deadline therefore expires and Execute returns an i/o timeout. A
+	// reserved-then-released port is unreliable here - the ephemeral port can be
+	// re-bound (even by our own client), producing a flake or false pass.
+	serverAddr, cleanup := startUDPServer(t, false, 0)
+	defer cleanup()
+
 	config := &DNSConfig{
-		QueryName: "google.com",
+		QueryName: "example.com",
 		QueryType: "A",
 		Protocol:  "udp",
-		Timeout:   1 * time.Second,
+		Timeout:   500 * time.Millisecond,
 	}
 	probe := NewDNSProbe(config)
 	defer probe.Close()
 
 	target := types.Target{
-		Host:     "192.0.2.1", // Test IP from RFC 5737
-		Port:     53,
+		Host:     serverAddr.IP.String(),
+		Port:     serverAddr.Port,
 		Protocol: types.ProbeTypeDNS,
-		Timeout:  1 * time.Second,
+		Timeout:  500 * time.Millisecond,
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
 
 	result, err := probe.Execute(ctx, target)
-	if err == nil && result != nil && result.Success {
-		t.Error("Expected error for invalid DNS server")
+	require.Error(t, err)
+	require.NotNil(t, result)
+	assert.False(t, result.Success)
+	assert.Contains(t, result.Error, "timeout")
+}
+
+func TestDNSProbe_Execute_LocalServer_Success(t *testing.T) {
+	// Hermetic DNS server that answers A queries with a fixed record.
+	addr, cleanup := startDNSServer(t, func(w dns.ResponseWriter, r *dns.Msg) {
+		m := new(dns.Msg)
+		m.SetReply(r)
+		m.Authoritative = true
+		for _, q := range r.Question {
+			if q.Qtype == dns.TypeA {
+				rr, err := dns.NewRR(q.Name + " 3600 IN A 93.184.216.34")
+				if err == nil {
+					m.Answer = append(m.Answer, rr)
+				}
+			}
+		}
+		_ = w.WriteMsg(m)
+	})
+	defer cleanup()
+
+	config := &DNSConfig{
+		QueryName:      "example.com",
+		QueryType:      "A",
+		Protocol:       "udp",
+		ValidateAnswer: true,
+		Timeout:        2 * time.Second,
 	}
+	probe := NewDNSProbe(config)
+	defer probe.Close()
+
+	target := types.Target{
+		Host:     addr.IP.String(),
+		Port:     addr.Port,
+		Protocol: types.ProbeTypeDNS,
+		Timeout:  2 * time.Second,
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	result, err := probe.Execute(ctx, target)
+	require.NoError(t, err)
+	require.NotNil(t, result)
+	assert.True(t, result.Success, "expected successful probe, error: %s", result.Error)
+	require.NotNil(t, result.DNSResult)
+	assert.Contains(t, result.DNSResult.ResolvedIPs, "93.184.216.34")
+	assert.Equal(t, addr.IP.String(), result.TargetIP)
+	assert.Equal(t, "client", result.Role)
+}
+
+func TestDNSProbe_Execute_LocalServer_ServfailValidated(t *testing.T) {
+	// Server returns SERVFAIL; with ValidateAnswer the probe must fail on RCODE.
+	addr, cleanup := startDNSServer(t, func(w dns.ResponseWriter, r *dns.Msg) {
+		m := new(dns.Msg)
+		m.SetReply(r)
+		m.Rcode = dns.RcodeServerFailure
+		_ = w.WriteMsg(m)
+	})
+	defer cleanup()
+
+	config := &DNSConfig{
+		QueryName:      "example.com",
+		QueryType:      "A",
+		Protocol:       "udp",
+		ValidateAnswer: true,
+		Timeout:        2 * time.Second,
+	}
+	probe := NewDNSProbe(config)
+	defer probe.Close()
+
+	target := types.Target{
+		Host:     addr.IP.String(),
+		Port:     addr.Port,
+		Protocol: types.ProbeTypeDNS,
+		Timeout:  2 * time.Second,
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	result, err := probe.Execute(ctx, target)
+	require.Error(t, err)
+	require.NotNil(t, result)
+	assert.False(t, result.Success)
+	assert.Contains(t, result.Error, "RCODE")
+}
+
+func TestDNSProbe_Execute_LocalServer_ExpectedRecords(t *testing.T) {
+	handler := func(w dns.ResponseWriter, r *dns.Msg) {
+		m := new(dns.Msg)
+		m.SetReply(r)
+		rr, _ := dns.NewRR(r.Question[0].Name + " 3600 IN A 203.0.113.7")
+		m.Answer = append(m.Answer, rr)
+		_ = w.WriteMsg(m)
+	}
+	addr, cleanup := startDNSServer(t, handler)
+	defer cleanup()
+
+	target := types.Target{
+		Host:     addr.IP.String(),
+		Port:     addr.Port,
+		Protocol: types.ProbeTypeDNS,
+		Timeout:  2 * time.Second,
+	}
+
+	t.Run("found", func(t *testing.T) {
+		// Each subtest owns its context so one subtest's deadline or cancellation
+		// cannot bleed into the other.
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+
+		probe := NewDNSProbe(&DNSConfig{
+			QueryName:       "example.com",
+			QueryType:       "A",
+			Protocol:        "udp",
+			ExpectedRecords: []string{"203.0.113.7"},
+			Timeout:         2 * time.Second,
+		})
+		defer probe.Close()
+
+		result, err := probe.Execute(ctx, target)
+		require.NoError(t, err)
+		assert.True(t, result.Success, "expected successful probe, error: %s", result.Error)
+	})
+
+	t.Run("not found", func(t *testing.T) {
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+
+		probe := NewDNSProbe(&DNSConfig{
+			QueryName:       "example.com",
+			QueryType:       "A",
+			Protocol:        "udp",
+			ExpectedRecords: []string{"198.51.100.42"},
+			Timeout:         2 * time.Second,
+		})
+		defer probe.Close()
+
+		result, err := probe.Execute(ctx, target)
+		require.Error(t, err)
+		require.NotNil(t, result)
+		assert.False(t, result.Success)
+		assert.Contains(t, result.Error, "expected records not found")
+	})
 }
 
 func TestDNSProbe_Execute_NXDomain(t *testing.T) {

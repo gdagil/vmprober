@@ -223,11 +223,15 @@ func (c *Collector) UpdateJobMetrics(totalJobs, runningJobs int, failedJobs int6
 	c.jobsFailedValue = float64(failedJobs)
 }
 
-// ExportMetrics exports all metrics from collector to types.Metric format
+// ExportMetrics exports all metrics from collector to types.Metric format.
+//
+// MUST NOT hold c.mu here: WritePrometheus invokes the job gauge callbacks,
+// which take c.mu.RLock() themselves. Re-acquiring the read lock on the same
+// goroutine deadlocks as soon as a writer (Record, UpdateJobMetrics) is queued
+// in between — Go's RWMutex blocks new readers once a writer is waiting.
+// Everything read below (namespace, customLabels) is immutable after
+// NewCollector, so no lock is needed.
 func (c *Collector) ExportMetrics() []types.Metric {
-	c.mu.RLock()
-	defer c.mu.RUnlock()
-
 	// Use WritePrometheus to get all metrics in Prometheus format
 	var buf bytes.Buffer
 	metrics.WritePrometheus(&buf, true)

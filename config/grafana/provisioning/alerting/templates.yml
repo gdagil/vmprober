@@ -73,7 +73,7 @@ templates:
               {"type": "mrkdwn", "text": "*Alert:*\n{{ .Labels.alertname }}"},
               {"type": "mrkdwn", "text": "*Severity:*\n{{ .Labels.severity }}"},
               {"type": "mrkdwn", "text": "*Instance:*\n{{ .Labels.instance }}"},
-              {"type": "mrkdwn", "text": "*Protocol:*\n{{ .Labels.protocol | default "N/A" }}"}
+              {"type": "mrkdwn", "text": "*Protocol:*\n{{ if .Labels.protocol }}{{ .Labels.protocol }}{{ else }}N/A{{ end }}"}
             ]
           },
           {

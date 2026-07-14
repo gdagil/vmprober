@@ -6,6 +6,9 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
 	"github.com/gdagil/vmprober/internal/types"
 )
 
@@ -27,29 +30,14 @@ func TestNewUDPProbe(t *testing.T) {
 }
 
 func TestUDPProbe_Execute_Success(t *testing.T) {
-	// Start test UDP server
-	addr, err := net.ResolveUDPAddr("udp", "127.0.0.1:0")
-	if err != nil {
-		t.Fatalf("Failed to resolve UDP address: %v", err)
-	}
-
-	conn, err := net.ListenUDP("udp", addr)
-	if err != nil {
-		t.Fatalf("Failed to start UDP server: %v", err)
-	}
-	defer conn.Close()
-
-	// Echo server
-	go func() {
-		buffer := make([]byte, 1024)
-		for {
-			n, clientAddr, err := conn.ReadFromUDP(buffer)
-			if err != nil {
-				return
-			}
-			conn.WriteToUDP(buffer[:n], clientAddr)
-		}
-	}()
+	// Hermetic loopback echo server guarantees a response, so the success path
+	// is exercised deterministically (loopback UDP does not drop packets). The
+	// server waits echoDelay before replying so the measured RTT has a real,
+	// deterministic lower bound even on hosts with a coarse monotonic clock
+	// (notably Windows, where a bare RTT > 0 check is flaky).
+	const echoDelay = 20 * time.Millisecond
+	serverAddr, cleanup := startUDPServer(t, true, echoDelay)
+	defer cleanup()
 
 	config := &UDPConfig{
 		PayloadSize:     64,
@@ -61,7 +49,7 @@ func TestUDPProbe_Execute_Success(t *testing.T) {
 
 	target := types.Target{
 		Host:     "127.0.0.1",
-		Port:     conn.LocalAddr().(*net.UDPAddr).Port,
+		Port:     serverAddr.Port,
 		Protocol: types.ProbeTypeUDP,
 		Timeout:  2 * time.Second,
 	}
@@ -70,25 +58,77 @@ func TestUDPProbe_Execute_Success(t *testing.T) {
 	defer cancel()
 
 	result, err := probe.Execute(ctx, target)
-	if err != nil {
-		t.Fatalf("Execute failed: %v", err)
+	require.NoError(t, err)
+	require.NotNil(t, result)
+	assert.True(t, result.Success, "expected successful probe, error: %s", result.Error)
+	// The server slept echoDelay before echoing, so RTT must reflect at least
+	// most of that wait. 10ms is a safe deterministic floor below the 20ms delay.
+	assert.GreaterOrEqual(t, result.RTT, 10*time.Millisecond)
+	assert.Equal(t, types.ProbeTypeUDP, result.Protocol)
+	assert.Len(t, result.Payload, 64)
+	assert.Equal(t, "client", result.Role)
+	assert.Equal(t, serverAddr.Port, result.TargetPort)
+}
+
+func TestUDPProbe_Execute_ResponseTimeout(t *testing.T) {
+	// A live-but-silent server keeps the socket open (no ICMP port-unreachable),
+	// so ReadFromUDP hits the read deadline and the "UDP response timeout" branch
+	// is covered deterministically. Timeouts are reported as non-errors for UDP.
+	serverAddr, cleanup := startUDPServer(t, false, 0)
+	defer cleanup()
+
+	config := &UDPConfig{
+		PayloadSize:     32,
+		ResponseTimeout: 150 * time.Millisecond,
+		MaxPacketSize:   1024,
+	}
+	probe := NewUDPProbe(config)
+	defer probe.Close()
+
+	target := types.Target{
+		Host:     "127.0.0.1",
+		Port:     serverAddr.Port,
+		Protocol: types.ProbeTypeUDP,
+		Timeout:  150 * time.Millisecond,
 	}
 
-	if result == nil {
-		t.Fatal("Result is nil")
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+
+	result, err := probe.Execute(ctx, target)
+	require.NoError(t, err) // UDP timeout is not treated as an error
+	require.NotNil(t, result)
+	assert.False(t, result.Success)
+	assert.Equal(t, "UDP response timeout", result.Error)
+}
+
+func TestUDPProbe_Execute_DefaultMaxPacketSize(t *testing.T) {
+	// MaxPacketSize 0 exercises the default (1500-byte) receive-buffer branch.
+	serverAddr, cleanup := startUDPServer(t, true, 0)
+	defer cleanup()
+
+	config := &UDPConfig{
+		PayloadSize:     16,
+		ResponseTimeout: 2 * time.Second,
+		MaxPacketSize:   0, // use default buffer
 	}
-	if !result.Success {
-		t.Logf("UDP probe may timeout if server doesn't respond, result: %+v", result)
+	probe := NewUDPProbe(config)
+	defer probe.Close()
+
+	target := types.Target{
+		Host:     "127.0.0.1",
+		Port:     serverAddr.Port,
+		Protocol: types.ProbeTypeUDP,
+		Timeout:  2 * time.Second,
 	}
-	if result.RTT <= 0 {
-		t.Error("Expected positive RTT")
-	}
-	if result.Protocol != types.ProbeTypeUDP {
-		t.Errorf("Expected protocol UDP, got %s", result.Protocol)
-	}
-	if len(result.Payload) == 0 {
-		t.Error("Expected payload to be set")
-	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	result, err := probe.Execute(ctx, target)
+	require.NoError(t, err)
+	require.NotNil(t, result)
+	assert.True(t, result.Success, "expected successful probe, error: %s", result.Error)
 }
 
 func TestUDPProbe_Execute_NoResponse(t *testing.T) {

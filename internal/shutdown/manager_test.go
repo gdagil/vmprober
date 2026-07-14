@@ -359,6 +359,12 @@ func TestShutdownManager_GetStatus_AfterShutdown(t *testing.T) {
 		name:     "test-component",
 		priority: 1,
 		shutdown: func(ctx context.Context) error {
+			// Sleep a measurable amount so the recorded Duration is
+			// deterministically non-zero even on fast machines / coarse
+			// clocks. Without this the whole shutdown can complete inside a
+			// single clock tick, making time.Since return 0 and the Duration
+			// assertion below flaky.
+			time.Sleep(5 * time.Millisecond)
 			return nil
 		},
 	}
@@ -387,8 +393,14 @@ func TestShutdownManager_GetStatus_AfterShutdown(t *testing.T) {
 		t.Error("EndTime should be set")
 	}
 
-	if status.Duration == 0 {
-		t.Error("Duration should be set")
+	// EndTime must not precede StartTime, and the recorded Duration must be
+	// positive given the component slept for a measurable interval.
+	if status.EndTime.Before(status.StartTime) {
+		t.Errorf("EndTime %v should not be before StartTime %v", status.EndTime, status.StartTime)
+	}
+
+	if status.Duration <= 0 {
+		t.Errorf("Duration should be positive, got %v", status.Duration)
 	}
 }
 

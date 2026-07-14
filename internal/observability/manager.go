@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"net/http/pprof"
 	"sync"
 	"time"
 
@@ -154,11 +155,11 @@ func (o *DefaultObservabilityManager) startPprof(_ context.Context) error {
 	addr := fmt.Sprintf("%s:%d", o.config.Pprof.Host, o.config.Pprof.Port)
 
 	mux := http.NewServeMux()
-	mux.HandleFunc("/debug/pprof/", func(w http.ResponseWriter, _ *http.Request) {
-		// In a real implementation, net/http/pprof would be imported here
-		w.WriteHeader(http.StatusNotImplemented)
-		_, _ = w.Write([]byte("pprof endpoint (requires net/http/pprof import)"))
-	})
+	mux.HandleFunc("/debug/pprof/", pprof.Index)
+	mux.HandleFunc("/debug/pprof/cmdline", pprof.Cmdline)
+	mux.HandleFunc("/debug/pprof/profile", pprof.Profile)
+	mux.HandleFunc("/debug/pprof/symbol", pprof.Symbol)
+	mux.HandleFunc("/debug/pprof/trace", pprof.Trace)
 
 	o.pprofServer = &http.Server{
 		Addr:              addr,

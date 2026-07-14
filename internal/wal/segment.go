@@ -30,6 +30,7 @@ type WALSegment struct {
 	size        int64
 	compressed  bool
 	sentIndex   map[string]bool // Index of sent records
+	idIndex     map[string]bool // Lazy index of record IDs in this segment (built on first containment check; segments are append-only)
 }
 
 // NewWALSegment creates a new WAL segment
@@ -145,6 +146,12 @@ func (s *WALSegment) Write(ctx context.Context, record *types.Record) error {
 
 	s.recordCount++
 	s.size += int64(len(data) + 8)
+
+	// Keep the lazy ID index current so MarkSent containment checks stay O(1)
+	// after the index has been built once.
+	if s.idIndex != nil {
+		s.idIndex[record.ID] = true
+	}
 
 	return nil
 }
@@ -292,15 +299,96 @@ func (s *WALSegment) IsCompressed() bool {
 	return s.compressed
 }
 
-// MarkSent marks a record as sent
+// MarkSent marks a record as sent. It only succeeds for records this segment
+// actually contains; marking an unknown ID returns an error so callers (and the
+// manager) do not record the wrong segment as owning a record, which would leave
+// the real record perpetually unsent and re-delivered.
 func (s *WALSegment) MarkSent(ctx context.Context, recordID string) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
+
+	contains, err := s.containsRecordLocked(recordID)
+	if err != nil {
+		return err
+	}
+	if !contains {
+		return fmt.Errorf("record %s not found in segment %s", recordID, s.ID)
+	}
 
 	s.sentIndex[recordID] = true
 
 	// Save index to disk for persistence
 	return s.saveSentIndex()
+}
+
+// containsRecordLocked reports whether the segment holds a record with the
+// given ID. The caller must hold s.mu. The first call scans the segment's data
+// file once to build an in-memory ID index (segments are append-only; Write
+// keeps the index current afterwards), so repeated MarkSent calls — e.g. WAL
+// replay marking every record of a segment — stay O(1) instead of re-reading
+// the file per record.
+func (s *WALSegment) containsRecordLocked(recordID string) (bool, error) {
+	if s.idIndex == nil {
+		idx, err := s.buildIDIndexLocked()
+		if err != nil {
+			return false, err
+		}
+		s.idIndex = idx
+	}
+	return s.idIndex[recordID], nil
+}
+
+// buildIDIndexLocked scans the segment's data file and collects all record IDs.
+// The caller must hold s.mu. It opens a fresh read handle so it does not
+// disturb the append handle used for writes, mirroring Read and
+// GetUnsentRecords.
+func (s *WALSegment) buildIDIndexLocked() (map[string]bool, error) {
+	file, err := os.Open(s.path)
+	if err != nil {
+		return nil, fmt.Errorf("failed to open segment for reading: %w", err)
+	}
+	defer file.Close()
+
+	idx := make(map[string]bool, s.recordCount)
+	sizeBytes := make([]byte, 8)
+
+	for {
+		// Read size
+		if _, err := file.Read(sizeBytes); err != nil {
+			if err.Error() == "EOF" {
+				break
+			}
+			return nil, fmt.Errorf("failed to read size: %w", err)
+		}
+
+		size := int64(sizeBytes[0])<<56 | int64(sizeBytes[1])<<48 | int64(sizeBytes[2])<<40 | int64(sizeBytes[3])<<32 |
+			int64(sizeBytes[4])<<24 | int64(sizeBytes[5])<<16 | int64(sizeBytes[6])<<8 | int64(sizeBytes[7])
+
+		// Read data
+		data := make([]byte, size)
+		if _, err := file.Read(data); err != nil {
+			return nil, fmt.Errorf("failed to read data: %w", err)
+		}
+
+		// Decompress if needed
+		if s.compressor != nil && s.config.Compression != "" {
+			data, err = s.compressor.Decompress(data)
+			if err != nil {
+				return nil, fmt.Errorf("failed to decompress record: %w", err)
+			}
+		}
+
+		// Deserialize record
+		var record types.Record
+		if err := json.Unmarshal(data, &record); err != nil {
+			s.logger.WithError(err).Warn("Failed to unmarshal record")
+			continue
+		}
+
+		idx[record.ID] = true
+	}
+
+	return idx, nil
 }
 
 // GetUnsentRecords returns all unsent records from the segment

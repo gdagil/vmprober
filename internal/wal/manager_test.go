@@ -150,9 +150,14 @@ func TestWALManager_Write_CreatesActiveSegment(t *testing.T) {
 
 	ctx := context.Background()
 
-	// Manually set activeSegment to nil to test creation
+	// Manually set activeSegment to nil to test creation. Close the existing
+	// segment first so its file handle is released; otherwise the orphaned
+	// handle blocks t.TempDir cleanup on Windows.
 	defaultManager := manager.(*DefaultWALManager)
 	defaultManager.mu.Lock()
+	if defaultManager.activeSegment != nil {
+		_ = defaultManager.activeSegment.Close(ctx)
+	}
 	defaultManager.activeSegment = nil
 	defaultManager.mu.Unlock()
 
