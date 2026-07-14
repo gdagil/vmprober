@@ -215,6 +215,11 @@ func TestBatchWorker_TickerFlush(t *testing.T) {
 	a.batchQueue <- []types.Metric{sampleMetric("tick")}
 
 	waitForCount(t, count, 1, 2*time.Second)
+	// The server has counted the request, but the client may still be reading
+	// the response; canceling now can abort the in-flight request and record
+	// it as failed. Wait until the push is accounted before stopping.
+	require.Eventually(t, func() bool { return a.GetStats().TotalPushed == 1 },
+		2*time.Second, 5*time.Millisecond)
 	cancel()
 	a.wg.Wait()
 
