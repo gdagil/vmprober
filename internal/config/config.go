@@ -161,6 +161,22 @@ func (m *Manager) applyDefaults(cfg *Config) {
 		cfg.Metrics.Namespace = "vmprober"
 	}
 
+	// Every instance must carry a unique identity label: without it several
+	// vmprobers push into the same time series and rate()/gauges turn into
+	// garbage. Override via metrics.custom_labels.prober.
+	// ponytail: hostname is not unique for two processes on one host — set
+	// custom_labels.prober explicitly in that case.
+	if _, ok := cfg.Metrics.CustomLabels["prober"]; !ok {
+		hostname, err := os.Hostname()
+		if err != nil || hostname == "" {
+			hostname = "unknown"
+		}
+		if cfg.Metrics.CustomLabels == nil {
+			cfg.Metrics.CustomLabels = make(map[string]string)
+		}
+		cfg.Metrics.CustomLabels["prober"] = hostname
+	}
+
 	// Job metrics are enabled by default
 	if cfg.Metrics.EnableJobMetrics == nil {
 		enabled := true

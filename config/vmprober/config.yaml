@@ -426,6 +426,9 @@ metrics:
     - "proto"
   custom_labels:
     job: "blackbox/vmprober"
+    # prober: "dc1-a"  # identity of this instance; defaults to the hostname.
+    #                  # Must be unique per instance, otherwise several vmprobers
+    #                  # push into the same time series and rates become garbage.
   buckets: [0.001, 0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1.0, 2.5, 5.0, 10.0]
   enable_process_metrics: true
   enable_go_metrics: true

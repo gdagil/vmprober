@@ -201,6 +201,42 @@ scheduler:
 	}
 }
 
+func TestLoad_DefaultProberLabel(t *testing.T) {
+	tmpDir := t.TempDir()
+	logger := logrus.New()
+	logger.SetLevel(logrus.ErrorLevel)
+
+	write := func(name, content string) string {
+		p := filepath.Join(tmpDir, name)
+		if err := os.WriteFile(p, []byte(content), 0644); err != nil {
+			t.Fatalf("Failed to write config file: %v", err)
+		}
+		return p
+	}
+
+	// Without custom_labels the prober label defaults to the hostname,
+	// so several instances don't collide into the same time series.
+	base := "listen:\n  port: 8429\nscheduler:\n  concurrent: 10\n  rps_limit: 100\n"
+	cfg, err := NewManager(write("default.yaml", base), logger).Load(context.Background())
+	if err != nil {
+		t.Fatalf("Load failed: %v", err)
+	}
+	hostname, _ := os.Hostname()
+	if cfg.Metrics.CustomLabels["prober"] != hostname {
+		t.Errorf("Expected default prober label %q, got %q", hostname, cfg.Metrics.CustomLabels["prober"])
+	}
+
+	// An explicit prober label must be preserved.
+	explicit := base + "metrics:\n  custom_labels:\n    prober: dc1-a\n"
+	cfg, err = NewManager(write("explicit.yaml", explicit), logger).Load(context.Background())
+	if err != nil {
+		t.Fatalf("Load failed: %v", err)
+	}
+	if cfg.Metrics.CustomLabels["prober"] != "dc1-a" {
+		t.Errorf("Expected explicit prober label to be preserved, got %q", cfg.Metrics.CustomLabels["prober"])
+	}
+}
+
 func TestGet(t *testing.T) {
 	tmpDir := t.TempDir()
 	configPath := filepath.Join(tmpDir, "config.yaml")

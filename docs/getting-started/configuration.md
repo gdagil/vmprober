@@ -250,10 +250,16 @@ metrics:
     - "probe"
   custom_labels:
     environment: "production"
+    prober: "dc1-a"  # identity of this instance, defaults to the hostname
   buckets: [0.001, 0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1.0, 2.5, 5.0, 10.0]
   enable_process_metrics: true
   enable_go_metrics: true
 ```
+
+Every instance automatically gets a `prober` label (hostname by default) so
+that several vmprobers can push to the same VictoriaMetrics without their
+series colliding. Override it via `custom_labels.prober` when running more
+than one instance on the same host.
 
 ### Push Mode (`push`)
 
