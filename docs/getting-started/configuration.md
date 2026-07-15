@@ -268,6 +268,7 @@ VictoriaMetrics push configuration.
 ```yaml
 push:
   enabled: true
+  interval: 30s  # how often collector metrics are exported to the push queue
   endpoints:
     - url: "http://victoria-metrics:8428/api/v1/import/prometheus"
       auth:

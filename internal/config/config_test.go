@@ -199,6 +199,9 @@ scheduler:
 	if cfg.Scheduler.QueueSize == 0 {
 		t.Error("Expected default queue size to be set")
 	}
+	if cfg.Push.Interval != 30*time.Second {
+		t.Errorf("Expected default push interval 30s, got %v", cfg.Push.Interval)
+	}
 }
 
 func TestLoad_DefaultProberLabel(t *testing.T) {

@@ -337,7 +337,7 @@ func main() {
 	// Periodic metrics push from collector to vminsert
 	if vmAdapter != nil {
 		go func() {
-			ticker := time.NewTicker(30 * time.Second) // Push every 30 seconds
+			ticker := time.NewTicker(cfg.Push.Interval)
 			defer ticker.Stop()
 
 			for {

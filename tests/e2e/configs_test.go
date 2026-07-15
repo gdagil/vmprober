@@ -13,6 +13,10 @@ pull:
 
 push:
   enabled: true
+  # Short export/batch cadence so metrics land in VM within a few seconds;
+  # with the production 30s+10s defaults the fixed WaitForProbes sleeps race
+  # the first collector export.
+  interval: 2s
   endpoints:
     - url: "http://localhost:8480/insert/0/prometheus/api/v1/import"
       headers: {}
@@ -28,7 +32,7 @@ push:
     enabled: false
   batch:
     size: 100
-    timeout: 10s
+    timeout: 1s
   remote_write:
     enabled: false
 

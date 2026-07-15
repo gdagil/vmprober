@@ -16,6 +16,7 @@ pull:
 # Push mode (VictoriaMetrics)
 push:
   enabled: true
+  interval: 30s  # collector export cadence
   endpoints:
     - url: "http://localhost:8480/insert/0/prometheus/api/v1/import"
       headers: {}

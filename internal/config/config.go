@@ -187,6 +187,10 @@ func (m *Manager) applyDefaults(cfg *Config) {
 		cfg.Scheduler.QueueSize = 10000
 	}
 
+	if cfg.Push.Interval <= 0 {
+		cfg.Push.Interval = 30 * time.Second
+	}
+
 	if cfg.WAL.Dir == "" {
 		cfg.WAL.Dir = "/var/lib/vmprober/wal"
 	}

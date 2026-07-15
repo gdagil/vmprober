@@ -52,6 +52,7 @@ type PullConfig struct {
 // PushConfig is the push mode configuration
 type PushConfig struct {
 	Enabled     bool              `yaml:"enabled" json:"enabled"`
+	Interval    time.Duration     `yaml:"interval" json:"interval"` // Collector export cadence (default: 30s)
 	Endpoints   []EndpointConfig  `yaml:"endpoints" json:"endpoints"`
 	Retry       RetryConfig       `yaml:"retry" json:"retry"`
 	Dedup       DedupConfig       `yaml:"dedup" json:"dedup"`
