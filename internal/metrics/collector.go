@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"regexp"
+	"sort"
 	"strconv"
 	"strings"
 	"sync"
@@ -103,9 +104,16 @@ func (c *Collector) getMetricKey(name string, instance, targetIP, port, protocol
 	labels := fmt.Sprintf(`instance="%s",target_ip="%s",port="%s",protocol="%s"`,
 		instance, targetIP, port, protocol)
 
-	// Add custom labels (e.g., job)
-	for k, v := range c.customLabels {
-		labels += fmt.Sprintf(`,%s="%s"`, k, v)
+	// Add custom labels (e.g., job) in sorted order: map iteration order is
+	// random, and an unstable key would register several counter objects for
+	// one logical series — VictoriaMetrics then merges them into a sawtooth.
+	keys := make([]string, 0, len(c.customLabels))
+	for k := range c.customLabels {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+	for _, k := range keys {
+		labels += fmt.Sprintf(`,%s="%s"`, k, c.customLabels[k])
 	}
 
 	return fmt.Sprintf(`%s_%s{%s}`, c.namespace, name, labels)

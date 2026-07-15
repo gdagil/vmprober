@@ -324,6 +324,23 @@ func TestCollector_ExportMetrics_WithCustomLabels(t *testing.T) {
 	t.Log("Custom labels may not be immediately visible in exported metrics")
 }
 
+// TestGetMetricKey_StableWithMultipleCustomLabels: map iteration order is
+// random in Go, so the key must not depend on it — otherwise one logical
+// target gets several counter objects that VictoriaMetrics merges into a
+// single sawtooth series.
+func TestGetMetricKey_StableWithMultipleCustomLabels(t *testing.T) {
+	collector := NewCollector("test_stable_key", false, map[string]string{
+		"job": "blackbox", "prober": "dc1-a", "env": "prod", "region": "eu", "team": "net",
+	})
+	first := collector.getMetricKey("probe_attempts_total", "google.com:443", "1.2.3.4", "443", "tcp")
+	for i := 0; i < 50; i++ {
+		key := collector.getMetricKey("probe_attempts_total", "google.com:443", "1.2.3.4", "443", "tcp")
+		if key != first {
+			t.Fatalf("metric key is not stable across calls:\n%s\n%s", first, key)
+		}
+	}
+}
+
 func TestCollector_Record_WithHostname(t *testing.T) {
 	collector := NewCollector("test_hostname", false, nil)
 
