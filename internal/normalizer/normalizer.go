@@ -187,8 +187,11 @@ func (n *DefaultNormalizer) standardize(result *types.ProbeResult) *types.Normal
 	// Probe duration (total execution time)
 	event.Metrics["vmprober_probe_duration_seconds"] = result.RTT.Seconds()
 
-	// Attempts counter
-	event.Metrics["vmprober_probe_attempts_total"] = float64(result.Attempt)
+	// NB: the attempt number is deliberately NOT a metric — the name
+	// vmprober_probe_attempts_total belongs to the collector's cumulative
+	// counter, while result.Attempt (retry number) is not monotonic; pushing
+	// it would poison rate() over the real counter's name. It is available in
+	// event.Metadata["attempt"].
 
 	// Set tags
 	event.Tags = append(event.Tags, string(result.Protocol))

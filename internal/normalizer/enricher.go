@@ -32,11 +32,8 @@ func (e *DataEnricher) Enrich(event *types.NormalizedEvent) {
 	event.Metadata["go_version"] = runtime.Version()
 	event.Metadata["num_goroutines"] = runtime.NumGoroutine()
 
-	// Add additional labels
-	if event.Labels == nil {
-		event.Labels = make(map[string]string)
-	}
-
-	// Add timestamps
-	event.Labels["timestamp"] = event.Timestamp.Format(time.RFC3339)
+	// NB: no per-event labels here. A label with per-event value (such as the
+	// former "timestamp") turns every probe into a brand-new time series —
+	// unbounded cardinality in VictoriaMetrics. The event time already travels
+	// in event.Timestamp.
 }

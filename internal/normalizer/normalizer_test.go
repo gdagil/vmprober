@@ -75,8 +75,18 @@ func TestNormalizer_Normalize(t *testing.T) {
 	if _, ok := event.Metrics["vmprober_probe_duration_seconds"]; !ok {
 		t.Error("vmprober_probe_duration_seconds metric not found")
 	}
-	if _, ok := event.Metrics["vmprober_probe_attempts_total"]; !ok {
-		t.Error("vmprober_probe_attempts_total metric not found")
+	// The attempt number must NOT be exported as a metric: its name collides
+	// with the collector's cumulative vmprober_probe_attempts_total, while the
+	// value (retry number) is not monotonic — rate() over such a series is
+	// garbage. It lives in event.Metadata["attempt"] instead.
+	if _, ok := event.Metrics["vmprober_probe_attempts_total"]; ok {
+		t.Error("vmprober_probe_attempts_total must not be exported per event")
+	}
+
+	// A per-event timestamp label would create a new time series for every
+	// probe (unbounded cardinality in VictoriaMetrics).
+	if _, ok := event.Labels["timestamp"]; ok {
+		t.Error("timestamp label must not be set on events")
 	}
 
 	// Check presence of status label
