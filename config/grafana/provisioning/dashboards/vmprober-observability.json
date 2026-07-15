@@ -94,7 +94,7 @@
             "type": "prometheus",
             "uid": "victoriametrics"
           },
-          "expr": "count(avg_over_time(((rate(vmprober_probe_success_total{job=~\"$vmprober_job\",instance=~\"$target_instance\",target_ip=~\"$target_ip\",protocol=~\"$protocol\"}[5m]) / rate(vmprober_probe_attempts_total{job=~\"$vmprober_job\",instance=~\"$target_instance\",target_ip=~\"$target_ip\",protocol=~\"$protocol\"}[5m])) or ((rate(vmprober_probe_attempts_total{job=~\"$vmprober_job\",instance=~\"$target_instance\",target_ip=~\"$target_ip\",protocol=~\"$protocol\"}[5m]) > 0) * 0))[5m:1m]) > 0.5) or vector(0)",
+          "expr": "count(min by (instance, port, protocol) (avg_over_time(((rate(vmprober_probe_success_total{prober=~\"$prober\",job=~\"$vmprober_job\",instance=~\"$target_instance\",target_ip=~\"$target_ip\",protocol=~\"$protocol\"}[5m]) / rate(vmprober_probe_attempts_total{prober=~\"$prober\",job=~\"$vmprober_job\",instance=~\"$target_instance\",target_ip=~\"$target_ip\",protocol=~\"$protocol\"}[5m])) or ((rate(vmprober_probe_attempts_total{prober=~\"$prober\",job=~\"$vmprober_job\",instance=~\"$target_instance\",target_ip=~\"$target_ip\",protocol=~\"$protocol\"}[5m]) > 0) * 0))[5m:1m])) > 0.5) or vector(0)",
           "legendFormat": "Up",
           "refId": "A"
         }
@@ -161,7 +161,7 @@
             "type": "prometheus",
             "uid": "victoriametrics"
           },
-          "expr": "count(avg_over_time(((rate(vmprober_probe_success_total{job=~\"$vmprober_job\",instance=~\"$target_instance\",target_ip=~\"$target_ip\",protocol=~\"$protocol\"}[5m]) / rate(vmprober_probe_attempts_total{job=~\"$vmprober_job\",instance=~\"$target_instance\",target_ip=~\"$target_ip\",protocol=~\"$protocol\"}[5m])) or ((rate(vmprober_probe_attempts_total{job=~\"$vmprober_job\",instance=~\"$target_instance\",target_ip=~\"$target_ip\",protocol=~\"$protocol\"}[5m]) > 0) * 0))[5m:1m]) <= 0.5) or vector(0)",
+          "expr": "count(min by (instance, port, protocol) (avg_over_time(((rate(vmprober_probe_success_total{prober=~\"$prober\",job=~\"$vmprober_job\",instance=~\"$target_instance\",target_ip=~\"$target_ip\",protocol=~\"$protocol\"}[5m]) / rate(vmprober_probe_attempts_total{prober=~\"$prober\",job=~\"$vmprober_job\",instance=~\"$target_instance\",target_ip=~\"$target_ip\",protocol=~\"$protocol\"}[5m])) or ((rate(vmprober_probe_attempts_total{prober=~\"$prober\",job=~\"$vmprober_job\",instance=~\"$target_instance\",target_ip=~\"$target_ip\",protocol=~\"$protocol\"}[5m]) > 0) * 0))[5m:1m])) <= 0.5) or vector(0)",
           "legendFormat": "Down",
           "refId": "A"
         }
@@ -235,7 +235,7 @@
             "type": "prometheus",
             "uid": "victoriametrics"
           },
-          "expr": "avg(((rate(vmprober_probe_success_total{job=~\"$vmprober_job\",instance=~\"$target_instance\",target_ip=~\"$target_ip\",protocol=~\"$protocol\"}[5m]) / rate(vmprober_probe_attempts_total{job=~\"$vmprober_job\",instance=~\"$target_instance\",target_ip=~\"$target_ip\",protocol=~\"$protocol\"}[5m])) or ((rate(vmprober_probe_attempts_total{job=~\"$vmprober_job\",instance=~\"$target_instance\",target_ip=~\"$target_ip\",protocol=~\"$protocol\"}[5m]) > 0) * 0))) * 100",
+          "expr": "avg(clamp_max(((rate(vmprober_probe_success_total{prober=~\"$prober\",job=~\"$vmprober_job\",instance=~\"$target_instance\",target_ip=~\"$target_ip\",protocol=~\"$protocol\"}[5m]) / rate(vmprober_probe_attempts_total{prober=~\"$prober\",job=~\"$vmprober_job\",instance=~\"$target_instance\",target_ip=~\"$target_ip\",protocol=~\"$protocol\"}[5m])) or ((rate(vmprober_probe_attempts_total{prober=~\"$prober\",job=~\"$vmprober_job\",instance=~\"$target_instance\",target_ip=~\"$target_ip\",protocol=~\"$protocol\"}[5m]) > 0) * 0)), 1)) * 100",
           "legendFormat": "Availability",
           "refId": "A"
         }
@@ -307,7 +307,7 @@
             "type": "prometheus",
             "uid": "victoriametrics"
           },
-          "expr": "avg(histogram_quantile(0.50, rate(vmprober_probe_rtt_seconds_bucket{job=~\"$vmprober_job\",instance=~\"$target_instance\",target_ip=~\"$target_ip\",protocol=~\"$protocol\"}[5m])))",
+          "expr": "avg(histogram_quantile(0.50, rate(vmprober_probe_rtt_seconds_bucket{prober=~\"$prober\",job=~\"$vmprober_job\",instance=~\"$target_instance\",target_ip=~\"$target_ip\",protocol=~\"$protocol\"}[5m])))",
           "legendFormat": "p50",
           "refId": "A"
         }
@@ -379,7 +379,7 @@
             "type": "prometheus",
             "uid": "victoriametrics"
           },
-          "expr": "avg(histogram_quantile(0.99, rate(vmprober_probe_rtt_seconds_bucket{job=~\"$vmprober_job\",instance=~\"$target_instance\",target_ip=~\"$target_ip\",protocol=~\"$protocol\"}[5m])))",
+          "expr": "avg(histogram_quantile(0.99, rate(vmprober_probe_rtt_seconds_bucket{prober=~\"$prober\",job=~\"$vmprober_job\",instance=~\"$target_instance\",target_ip=~\"$target_ip\",protocol=~\"$protocol\"}[5m])))",
           "legendFormat": "p99",
           "refId": "A"
         }
@@ -451,7 +451,7 @@
             "type": "prometheus",
             "uid": "victoriametrics"
           },
-          "expr": "sum(changes(((rate(vmprober_probe_success_total{job=~\"$vmprober_job\",instance=~\"$target_instance\",target_ip=~\"$target_ip\",protocol=~\"$protocol\"}[5m]) / rate(vmprober_probe_attempts_total{job=~\"$vmprober_job\",instance=~\"$target_instance\",target_ip=~\"$target_ip\",protocol=~\"$protocol\"}[5m])) or ((rate(vmprober_probe_attempts_total{job=~\"$vmprober_job\",instance=~\"$target_instance\",target_ip=~\"$target_ip\",protocol=~\"$protocol\"}[5m]) > 0) * 0)) > bool 0.5[$__range:1m])) or vector(0)",
+          "expr": "sum(changes(((rate(vmprober_probe_success_total{prober=~\"$prober\",job=~\"$vmprober_job\",instance=~\"$target_instance\",target_ip=~\"$target_ip\",protocol=~\"$protocol\"}[5m]) / rate(vmprober_probe_attempts_total{prober=~\"$prober\",job=~\"$vmprober_job\",instance=~\"$target_instance\",target_ip=~\"$target_ip\",protocol=~\"$protocol\"}[5m])) or ((rate(vmprober_probe_attempts_total{prober=~\"$prober\",job=~\"$vmprober_job\",instance=~\"$target_instance\",target_ip=~\"$target_ip\",protocol=~\"$protocol\"}[5m]) > 0) * 0)) > bool 0.5[$__range:1m])) or vector(0)",
           "legendFormat": "Flaps",
           "refId": "A"
         }
@@ -580,7 +580,7 @@
             "type": "prometheus",
             "uid": "victoriametrics"
           },
-          "expr": "clamp_max(((rate(vmprober_probe_success_total{job=~\"$vmprober_job\",instance=~\"$target_instance\",target_ip=~\"$target_ip\",protocol=~\"$protocol\"}[5m]) / rate(vmprober_probe_attempts_total{job=~\"$vmprober_job\",instance=~\"$target_instance\",target_ip=~\"$target_ip\",protocol=~\"$protocol\"}[5m])) or ((rate(vmprober_probe_attempts_total{job=~\"$vmprober_job\",instance=~\"$target_instance\",target_ip=~\"$target_ip\",protocol=~\"$protocol\"}[5m]) > 0) * 0)), 1)",
+          "expr": "min by (instance, target_ip, port, protocol) (clamp_max(((rate(vmprober_probe_success_total{prober=~\"$prober\",job=~\"$vmprober_job\",instance=~\"$target_instance\",target_ip=~\"$target_ip\",protocol=~\"$protocol\"}[5m]) / rate(vmprober_probe_attempts_total{prober=~\"$prober\",job=~\"$vmprober_job\",instance=~\"$target_instance\",target_ip=~\"$target_ip\",protocol=~\"$protocol\"}[5m])) or ((rate(vmprober_probe_attempts_total{prober=~\"$prober\",job=~\"$vmprober_job\",instance=~\"$target_instance\",target_ip=~\"$target_ip\",protocol=~\"$protocol\"}[5m]) > 0) * 0)), 1))",
           "legendFormat": "{{instance}} ({{protocol}})",
           "refId": "A"
         }
@@ -740,7 +740,7 @@
             "type": "prometheus",
             "uid": "victoriametrics"
           },
-          "expr": "avg(histogram_quantile(0.99, rate(vmprober_probe_rtt_seconds_bucket{job=~\"$vmprober_job\",instance=~\"$target_instance\",target_ip=~\"$target_ip\",protocol=~\"$protocol\"}[5m])))",
+          "expr": "avg(histogram_quantile(0.99, rate(vmprober_probe_rtt_seconds_bucket{prober=~\"$prober\",job=~\"$vmprober_job\",instance=~\"$target_instance\",target_ip=~\"$target_ip\",protocol=~\"$protocol\"}[5m])))",
           "legendFormat": "p99",
           "refId": "A"
         },
@@ -749,7 +749,7 @@
             "type": "prometheus",
             "uid": "victoriametrics"
           },
-          "expr": "avg(histogram_quantile(0.95, rate(vmprober_probe_rtt_seconds_bucket{job=~\"$vmprober_job\",instance=~\"$target_instance\",target_ip=~\"$target_ip\",protocol=~\"$protocol\"}[5m])))",
+          "expr": "avg(histogram_quantile(0.95, rate(vmprober_probe_rtt_seconds_bucket{prober=~\"$prober\",job=~\"$vmprober_job\",instance=~\"$target_instance\",target_ip=~\"$target_ip\",protocol=~\"$protocol\"}[5m])))",
           "legendFormat": "p95",
           "refId": "B"
         },
@@ -758,7 +758,7 @@
             "type": "prometheus",
             "uid": "victoriametrics"
           },
-          "expr": "avg(histogram_quantile(0.50, rate(vmprober_probe_rtt_seconds_bucket{job=~\"$vmprober_job\",instance=~\"$target_instance\",target_ip=~\"$target_ip\",protocol=~\"$protocol\"}[5m])))",
+          "expr": "avg(histogram_quantile(0.50, rate(vmprober_probe_rtt_seconds_bucket{prober=~\"$prober\",job=~\"$vmprober_job\",instance=~\"$target_instance\",target_ip=~\"$target_ip\",protocol=~\"$protocol\"}[5m])))",
           "legendFormat": "p50",
           "refId": "C"
         }
@@ -833,7 +833,7 @@
             "type": "prometheus",
             "uid": "victoriametrics"
           },
-          "expr": "(sum by (protocol) (rate(vmprober_probe_failure_total{job=~\"$vmprober_job\",instance=~\"$target_instance\",target_ip=~\"$target_ip\",protocol=~\"$protocol\"}[$__range])) or (sum by (protocol) (rate(vmprober_probe_attempts_total{job=~\"$vmprober_job\",instance=~\"$target_instance\",target_ip=~\"$target_ip\",protocol=~\"$protocol\"}[$__range])) * 0)) / sum by (protocol) (rate(vmprober_probe_attempts_total{job=~\"$vmprober_job\",instance=~\"$target_instance\",target_ip=~\"$target_ip\",protocol=~\"$protocol\"}[$__range])) * 100",
+          "expr": "(sum by (protocol) (rate(vmprober_probe_failure_total{prober=~\"$prober\",job=~\"$vmprober_job\",instance=~\"$target_instance\",target_ip=~\"$target_ip\",protocol=~\"$protocol\"}[$__range])) or (sum by (protocol) (rate(vmprober_probe_attempts_total{prober=~\"$prober\",job=~\"$vmprober_job\",instance=~\"$target_instance\",target_ip=~\"$target_ip\",protocol=~\"$protocol\"}[$__range])) * 0)) / sum by (protocol) (rate(vmprober_probe_attempts_total{prober=~\"$prober\",job=~\"$vmprober_job\",instance=~\"$target_instance\",target_ip=~\"$target_ip\",protocol=~\"$protocol\"}[$__range])) * 100",
           "legendFormat": "{{protocol}}",
           "refId": "A"
         }
@@ -909,7 +909,7 @@
             "type": "prometheus",
             "uid": "victoriametrics"
           },
-          "expr": "vmprober_jobs_running{job=~\"$vmprober_job\"}",
+          "expr": "sum(vmprober_jobs_running{prober=~\"$prober\",job=~\"$vmprober_job\"})",
           "legendFormat": "Running",
           "refId": "A"
         }
@@ -976,7 +976,7 @@
             "type": "prometheus",
             "uid": "victoriametrics"
           },
-          "expr": "vmprober_jobs_failed{job=~\"$vmprober_job\"}",
+          "expr": "sum(vmprober_jobs_failed{prober=~\"$prober\",job=~\"$vmprober_job\"})",
           "legendFormat": "Failed",
           "refId": "A"
         }
@@ -1047,7 +1047,7 @@
             "type": "prometheus",
             "uid": "victoriametrics"
           },
-          "expr": "vmprober_wal_segments_total{job=~\"$vmprober_job\"}",
+          "expr": "sum(vmprober_wal_segments_total{prober=~\"$prober\",job=~\"$vmprober_job\"})",
           "legendFormat": "Segments",
           "refId": "A"
         }
@@ -1118,7 +1118,7 @@
             "type": "prometheus",
             "uid": "victoriametrics"
           },
-          "expr": "vmprober_wal_bytes_written{job=~\"$vmprober_job\"} - vmprober_wal_bytes_sent{job=~\"$vmprober_job\"}",
+          "expr": "sum(vmprober_wal_bytes_written{prober=~\"$prober\",job=~\"$vmprober_job\"}) - sum(vmprober_wal_bytes_sent{prober=~\"$prober\",job=~\"$vmprober_job\"})",
           "legendFormat": "Backlog",
           "refId": "A"
         }
@@ -1260,7 +1260,7 @@
             "type": "prometheus",
             "uid": "victoriametrics"
           },
-          "expr": "vmprober_jobs_total{job=~\"$vmprober_job\"}",
+          "expr": "sum(vmprober_jobs_total{prober=~\"$prober\",job=~\"$vmprober_job\"})",
           "legendFormat": "Total",
           "refId": "A"
         },
@@ -1269,7 +1269,7 @@
             "type": "prometheus",
             "uid": "victoriametrics"
           },
-          "expr": "vmprober_jobs_running{job=~\"$vmprober_job\"}",
+          "expr": "sum(vmprober_jobs_running{prober=~\"$prober\",job=~\"$vmprober_job\"})",
           "legendFormat": "Running",
           "refId": "B"
         },
@@ -1278,7 +1278,7 @@
             "type": "prometheus",
             "uid": "victoriametrics"
           },
-          "expr": "vmprober_jobs_failed{job=~\"$vmprober_job\"}",
+          "expr": "sum(vmprober_jobs_failed{prober=~\"$prober\",job=~\"$vmprober_job\"})",
           "legendFormat": "Failed",
           "refId": "C"
         }
@@ -1405,7 +1405,7 @@
             "type": "prometheus",
             "uid": "victoriametrics"
           },
-          "expr": "rate(vmprober_wal_bytes_written{job=~\"$vmprober_job\"}[5m])",
+          "expr": "sum(rate(vmprober_wal_bytes_written{prober=~\"$prober\",job=~\"$vmprober_job\"}[5m]))",
           "legendFormat": "Written",
           "refId": "A"
         },
@@ -1414,7 +1414,7 @@
             "type": "prometheus",
             "uid": "victoriametrics"
           },
-          "expr": "rate(vmprober_wal_bytes_sent{job=~\"$vmprober_job\"}[5m])",
+          "expr": "sum(rate(vmprober_wal_bytes_sent{prober=~\"$prober\",job=~\"$vmprober_job\"}[5m]))",
           "legendFormat": "Sent",
           "refId": "B"
         }
@@ -1615,7 +1615,7 @@
             "type": "prometheus",
             "uid": "victoriametrics"
           },
-          "expr": "sum by (instance, target_ip, protocol, port, job) (((rate(vmprober_probe_success_total{job=~\"$vmprober_job\",instance=~\"$target_instance\",target_ip=~\"$target_ip\",protocol=~\"$protocol\"}[5m]) / rate(vmprober_probe_attempts_total{job=~\"$vmprober_job\",instance=~\"$target_instance\",target_ip=~\"$target_ip\",protocol=~\"$protocol\"}[5m])) or ((rate(vmprober_probe_attempts_total{job=~\"$vmprober_job\",instance=~\"$target_instance\",target_ip=~\"$target_ip\",protocol=~\"$protocol\"}[5m]) > 0) * 0))) * 100",
+          "expr": "min by (instance, target_ip, protocol, port, job) (clamp_max(((rate(vmprober_probe_success_total{prober=~\"$prober\",job=~\"$vmprober_job\",instance=~\"$target_instance\",target_ip=~\"$target_ip\",protocol=~\"$protocol\"}[5m]) / rate(vmprober_probe_attempts_total{prober=~\"$prober\",job=~\"$vmprober_job\",instance=~\"$target_instance\",target_ip=~\"$target_ip\",protocol=~\"$protocol\"}[5m])) or ((rate(vmprober_probe_attempts_total{prober=~\"$prober\",job=~\"$vmprober_job\",instance=~\"$target_instance\",target_ip=~\"$target_ip\",protocol=~\"$protocol\"}[5m]) > 0) * 0)), 1)) * 100",
           "format": "table",
           "instant": true,
           "refId": "A"
@@ -1625,7 +1625,7 @@
             "type": "prometheus",
             "uid": "victoriametrics"
           },
-          "expr": "sum by (instance, target_ip, protocol, port) (rate(vmprober_probe_rtt_seconds_sum{job=~\"$vmprober_job\",instance=~\"$target_instance\",target_ip=~\"$target_ip\",protocol=~\"$protocol\"}[5m]) / rate(vmprober_probe_rtt_seconds_count{job=~\"$vmprober_job\",instance=~\"$target_instance\",target_ip=~\"$target_ip\",protocol=~\"$protocol\"}[5m]))",
+          "expr": "sum by (instance, target_ip, protocol, port) (rate(vmprober_probe_rtt_seconds_sum{prober=~\"$prober\",job=~\"$vmprober_job\",instance=~\"$target_instance\",target_ip=~\"$target_ip\",protocol=~\"$protocol\"}[5m])) / sum by (instance, target_ip, protocol, port) (rate(vmprober_probe_rtt_seconds_count{prober=~\"$prober\",job=~\"$vmprober_job\",instance=~\"$target_instance\",target_ip=~\"$target_ip\",protocol=~\"$protocol\"}[5m]))",
           "format": "table",
           "hide": false,
           "instant": true,
@@ -1689,6 +1689,29 @@
   "templating": {
     "list": [
       {
+        "allValue": ".*",
+        "current": {
+          "text": "All",
+          "value": "$__all"
+        },
+        "datasource": {
+          "type": "prometheus",
+          "uid": "victoriametrics"
+        },
+        "includeAll": true,
+        "label": "Prober",
+        "name": "prober",
+        "options": [],
+        "query": {
+          "query": "label_values(vmprober_probe_attempts_total, prober)",
+          "refId": "StandardVariableQuery"
+        },
+        "refresh": 1,
+        "regex": "",
+        "sort": 1,
+        "type": "query"
+      },
+      {
         "current": {
           "text": "All",
           "value": "$__all"
@@ -1702,7 +1725,7 @@
         "name": "vmprober_job",
         "options": [],
         "query": {
-          "query": "label_values(vmprober_probe_attempts_total, job)",
+          "query": "label_values(vmprober_probe_attempts_total{prober=~\"$prober\"}, job)",
           "refId": "StandardVariableQuery"
         },
         "refresh": 1,
@@ -1726,7 +1749,7 @@
         "name": "target_instance",
         "options": [],
         "query": {
-          "query": "label_values(vmprober_probe_attempts_total{job=~\"$vmprober_job\"}, instance)",
+          "query": "label_values(vmprober_probe_attempts_total{prober=~\"$prober\",job=~\"$vmprober_job\"}, instance)",
           "refId": "StandardVariableQuery"
         },
         "refresh": 1,
@@ -1750,7 +1773,7 @@
         "name": "target_ip",
         "options": [],
         "query": {
-          "query": "label_values(vmprober_probe_attempts_total{job=~\"$vmprober_job\",instance=~\"$target_instance\"}, target_ip)",
+          "query": "label_values(vmprober_probe_attempts_total{prober=~\"$prober\",job=~\"$vmprober_job\",instance=~\"$target_instance\"}, target_ip)",
           "refId": "StandardVariableQuery"
         },
         "refresh": 1,
@@ -1774,7 +1797,7 @@
         "name": "protocol",
         "options": [],
         "query": {
-          "query": "label_values(vmprober_probe_attempts_total{job=~\"$vmprober_job\",instance=~\"$target_instance\"}, protocol)",
+          "query": "label_values(vmprober_probe_attempts_total{prober=~\"$prober\",job=~\"$vmprober_job\",instance=~\"$target_instance\"}, protocol)",
           "refId": "StandardVariableQuery"
         },
         "refresh": 1,
