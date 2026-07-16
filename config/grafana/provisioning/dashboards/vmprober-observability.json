@@ -38,7 +38,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "victoriametrics"
+        "uid": "${DS_PROMETHEUS}"
       },
       "description": "Targets whose probe success ratio over the last 5 minutes is above 50%.",
       "fieldConfig": {
@@ -92,7 +92,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "victoriametrics"
+            "uid": "${DS_PROMETHEUS}"
           },
           "expr": "count(min by (instance, port, protocol) (avg_over_time(((rate(vmprober_probe_success_total{prober=~\"$prober\",job=~\"$vmprober_job\",instance=~\"$target_instance\",target_ip=~\"$target_ip\",protocol=~\"$protocol\"}[5m]) / rate(vmprober_probe_attempts_total{prober=~\"$prober\",job=~\"$vmprober_job\",instance=~\"$target_instance\",target_ip=~\"$target_ip\",protocol=~\"$protocol\"}[5m])) or ((rate(vmprober_probe_attempts_total{prober=~\"$prober\",job=~\"$vmprober_job\",instance=~\"$target_instance\",target_ip=~\"$target_ip\",protocol=~\"$protocol\"}[5m]) > 0) * 0))[5m:1m])) > 0.5) or vector(0)",
           "legendFormat": "Up",
@@ -105,7 +105,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "victoriametrics"
+        "uid": "${DS_PROMETHEUS}"
       },
       "description": "Targets whose probe success ratio over the last 5 minutes is at or below 50%.",
       "fieldConfig": {
@@ -159,7 +159,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "victoriametrics"
+            "uid": "${DS_PROMETHEUS}"
           },
           "expr": "count(min by (instance, port, protocol) (avg_over_time(((rate(vmprober_probe_success_total{prober=~\"$prober\",job=~\"$vmprober_job\",instance=~\"$target_instance\",target_ip=~\"$target_ip\",protocol=~\"$protocol\"}[5m]) / rate(vmprober_probe_attempts_total{prober=~\"$prober\",job=~\"$vmprober_job\",instance=~\"$target_instance\",target_ip=~\"$target_ip\",protocol=~\"$protocol\"}[5m])) or ((rate(vmprober_probe_attempts_total{prober=~\"$prober\",job=~\"$vmprober_job\",instance=~\"$target_instance\",target_ip=~\"$target_ip\",protocol=~\"$protocol\"}[5m]) > 0) * 0))[5m:1m])) <= 0.5) or vector(0)",
           "legendFormat": "Down",
@@ -172,7 +172,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "victoriametrics"
+        "uid": "${DS_PROMETHEUS}"
       },
       "description": "Mean probe success ratio across the selected targets.",
       "fieldConfig": {
@@ -233,7 +233,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "victoriametrics"
+            "uid": "${DS_PROMETHEUS}"
           },
           "expr": "avg(clamp_max(((rate(vmprober_probe_success_total{prober=~\"$prober\",job=~\"$vmprober_job\",instance=~\"$target_instance\",target_ip=~\"$target_ip\",protocol=~\"$protocol\"}[5m]) / rate(vmprober_probe_attempts_total{prober=~\"$prober\",job=~\"$vmprober_job\",instance=~\"$target_instance\",target_ip=~\"$target_ip\",protocol=~\"$protocol\"}[5m])) or ((rate(vmprober_probe_attempts_total{prober=~\"$prober\",job=~\"$vmprober_job\",instance=~\"$target_instance\",target_ip=~\"$target_ip\",protocol=~\"$protocol\"}[5m]) > 0) * 0)), 1)) * 100",
           "legendFormat": "Availability",
@@ -246,7 +246,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "victoriametrics"
+        "uid": "${DS_PROMETHEUS}"
       },
       "description": "Median round-trip time across the selected targets.",
       "fieldConfig": {
@@ -305,7 +305,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "victoriametrics"
+            "uid": "${DS_PROMETHEUS}"
           },
           "expr": "avg(histogram_quantile(0.50, rate(vmprober_probe_rtt_seconds_bucket{prober=~\"$prober\",job=~\"$vmprober_job\",instance=~\"$target_instance\",target_ip=~\"$target_ip\",protocol=~\"$protocol\"}[5m])))",
           "legendFormat": "p50",
@@ -318,7 +318,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "victoriametrics"
+        "uid": "${DS_PROMETHEUS}"
       },
       "description": "99th percentile round-trip time across the selected targets.",
       "fieldConfig": {
@@ -377,7 +377,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "victoriametrics"
+            "uid": "${DS_PROMETHEUS}"
           },
           "expr": "avg(histogram_quantile(0.99, rate(vmprober_probe_rtt_seconds_bucket{prober=~\"$prober\",job=~\"$vmprober_job\",instance=~\"$target_instance\",target_ip=~\"$target_ip\",protocol=~\"$protocol\"}[5m])))",
           "legendFormat": "p99",
@@ -390,7 +390,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "victoriametrics"
+        "uid": "${DS_PROMETHEUS}"
       },
       "description": "Up/down state transitions across the selected targets within the dashboard time range.",
       "fieldConfig": {
@@ -449,7 +449,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "victoriametrics"
+            "uid": "${DS_PROMETHEUS}"
           },
           "expr": "sum(changes(((rate(vmprober_probe_success_total{prober=~\"$prober\",job=~\"$vmprober_job\",instance=~\"$target_instance\",target_ip=~\"$target_ip\",protocol=~\"$protocol\"}[5m]) / rate(vmprober_probe_attempts_total{prober=~\"$prober\",job=~\"$vmprober_job\",instance=~\"$target_instance\",target_ip=~\"$target_ip\",protocol=~\"$protocol\"}[5m])) or ((rate(vmprober_probe_attempts_total{prober=~\"$prober\",job=~\"$vmprober_job\",instance=~\"$target_instance\",target_ip=~\"$target_ip\",protocol=~\"$protocol\"}[5m]) > 0) * 0)) > bool 0.5[$__range:1m])) or vector(0)",
           "legendFormat": "Flaps",
@@ -475,7 +475,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "victoriametrics"
+        "uid": "${DS_PROMETHEUS}"
       },
       "description": "Per-target probe success ratio over 5 minutes: UP above 99.5%, DEGRADED between 50% and 99.5%, DOWN at or below 50%. The 5m window matters: probe intervals up to 5m plus 30s push batching leave fewer than two samples in shorter windows, making rate() return nothing.",
       "fieldConfig": {
@@ -578,7 +578,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "victoriametrics"
+            "uid": "${DS_PROMETHEUS}"
           },
           "expr": "min by (instance, target_ip, port, protocol) (clamp_max(((rate(vmprober_probe_success_total{prober=~\"$prober\",job=~\"$vmprober_job\",instance=~\"$target_instance\",target_ip=~\"$target_ip\",protocol=~\"$protocol\"}[5m]) / rate(vmprober_probe_attempts_total{prober=~\"$prober\",job=~\"$vmprober_job\",instance=~\"$target_instance\",target_ip=~\"$target_ip\",protocol=~\"$protocol\"}[5m])) or ((rate(vmprober_probe_attempts_total{prober=~\"$prober\",job=~\"$vmprober_job\",instance=~\"$target_instance\",target_ip=~\"$target_ip\",protocol=~\"$protocol\"}[5m]) > 0) * 0)), 1))",
           "legendFormat": "{{instance}} ({{protocol}})",
@@ -604,7 +604,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "victoriametrics"
+        "uid": "${DS_PROMETHEUS}"
       },
       "description": "RTT quantiles averaged across the selected targets. One blue ramp: darker means a higher quantile.",
       "fieldConfig": {
@@ -738,7 +738,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "victoriametrics"
+            "uid": "${DS_PROMETHEUS}"
           },
           "expr": "avg(histogram_quantile(0.99, rate(vmprober_probe_rtt_seconds_bucket{prober=~\"$prober\",job=~\"$vmprober_job\",instance=~\"$target_instance\",target_ip=~\"$target_ip\",protocol=~\"$protocol\"}[5m])))",
           "legendFormat": "p99",
@@ -747,7 +747,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "victoriametrics"
+            "uid": "${DS_PROMETHEUS}"
           },
           "expr": "avg(histogram_quantile(0.95, rate(vmprober_probe_rtt_seconds_bucket{prober=~\"$prober\",job=~\"$vmprober_job\",instance=~\"$target_instance\",target_ip=~\"$target_ip\",protocol=~\"$protocol\"}[5m])))",
           "legendFormat": "p95",
@@ -756,7 +756,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "victoriametrics"
+            "uid": "${DS_PROMETHEUS}"
           },
           "expr": "avg(histogram_quantile(0.50, rate(vmprober_probe_rtt_seconds_bucket{prober=~\"$prober\",job=~\"$vmprober_job\",instance=~\"$target_instance\",target_ip=~\"$target_ip\",protocol=~\"$protocol\"}[5m])))",
           "legendFormat": "p50",
@@ -769,7 +769,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "victoriametrics"
+        "uid": "${DS_PROMETHEUS}"
       },
       "description": "Share of failed probes per protocol in the selected time range. Protocols with zero failures are shown at 0%.",
       "fieldConfig": {
@@ -831,7 +831,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "victoriametrics"
+            "uid": "${DS_PROMETHEUS}"
           },
           "expr": "(sum by (protocol) (rate(vmprober_probe_failure_total{prober=~\"$prober\",job=~\"$vmprober_job\",instance=~\"$target_instance\",target_ip=~\"$target_ip\",protocol=~\"$protocol\"}[$__range])) or (sum by (protocol) (rate(vmprober_probe_attempts_total{prober=~\"$prober\",job=~\"$vmprober_job\",instance=~\"$target_instance\",target_ip=~\"$target_ip\",protocol=~\"$protocol\"}[$__range])) * 0)) / sum by (protocol) (rate(vmprober_probe_attempts_total{prober=~\"$prober\",job=~\"$vmprober_job\",instance=~\"$target_instance\",target_ip=~\"$target_ip\",protocol=~\"$protocol\"}[$__range])) * 100",
           "legendFormat": "{{protocol}}",
@@ -857,7 +857,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "victoriametrics"
+        "uid": "${DS_PROMETHEUS}"
       },
       "description": "Probe jobs currently being executed by the scheduler.",
       "fieldConfig": {
@@ -907,7 +907,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "victoriametrics"
+            "uid": "${DS_PROMETHEUS}"
           },
           "expr": "sum(vmprober_jobs_running{prober=~\"$prober\",job=~\"$vmprober_job\"})",
           "legendFormat": "Running",
@@ -920,7 +920,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "victoriametrics"
+        "uid": "${DS_PROMETHEUS}"
       },
       "description": "Probe jobs that failed to execute.",
       "fieldConfig": {
@@ -974,7 +974,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "victoriametrics"
+            "uid": "${DS_PROMETHEUS}"
           },
           "expr": "sum(vmprober_jobs_failed{prober=~\"$prober\",job=~\"$vmprober_job\"})",
           "legendFormat": "Failed",
@@ -987,7 +987,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "victoriametrics"
+        "uid": "${DS_PROMETHEUS}"
       },
       "description": "WAL segments on disk, closed plus active. Source: vmprober_wal_segments_total.",
       "fieldConfig": {
@@ -1045,7 +1045,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "victoriametrics"
+            "uid": "${DS_PROMETHEUS}"
           },
           "expr": "sum(vmprober_wal_segments_total{prober=~\"$prober\",job=~\"$vmprober_job\"})",
           "legendFormat": "Segments",
@@ -1058,7 +1058,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "victoriametrics"
+        "uid": "${DS_PROMETHEUS}"
       },
       "description": "Bytes written to the WAL but not yet delivered to VictoriaMetrics. Sustained growth means delivery is falling behind.",
       "fieldConfig": {
@@ -1116,7 +1116,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "victoriametrics"
+            "uid": "${DS_PROMETHEUS}"
           },
           "expr": "sum(vmprober_wal_bytes_written{prober=~\"$prober\",job=~\"$vmprober_job\"}) - sum(vmprober_wal_bytes_sent{prober=~\"$prober\",job=~\"$vmprober_job\"})",
           "legendFormat": "Backlog",
@@ -1129,7 +1129,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "victoriametrics"
+        "uid": "${DS_PROMETHEUS}"
       },
       "description": "Scheduler job gauges over time.",
       "fieldConfig": {
@@ -1258,7 +1258,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "victoriametrics"
+            "uid": "${DS_PROMETHEUS}"
           },
           "expr": "sum(vmprober_jobs_total{prober=~\"$prober\",job=~\"$vmprober_job\"})",
           "legendFormat": "Total",
@@ -1267,7 +1267,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "victoriametrics"
+            "uid": "${DS_PROMETHEUS}"
           },
           "expr": "sum(vmprober_jobs_running{prober=~\"$prober\",job=~\"$vmprober_job\"})",
           "legendFormat": "Running",
@@ -1276,7 +1276,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "victoriametrics"
+            "uid": "${DS_PROMETHEUS}"
           },
           "expr": "sum(vmprober_jobs_failed{prober=~\"$prober\",job=~\"$vmprober_job\"})",
           "legendFormat": "Failed",
@@ -1289,7 +1289,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "victoriametrics"
+        "uid": "${DS_PROMETHEUS}"
       },
       "description": "WAL write vs send throughput. The two lines track each other when delivery is healthy.",
       "fieldConfig": {
@@ -1403,7 +1403,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "victoriametrics"
+            "uid": "${DS_PROMETHEUS}"
           },
           "expr": "sum(rate(vmprober_wal_bytes_written{prober=~\"$prober\",job=~\"$vmprober_job\"}[5m]))",
           "legendFormat": "Written",
@@ -1412,7 +1412,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "victoriametrics"
+            "uid": "${DS_PROMETHEUS}"
           },
           "expr": "sum(rate(vmprober_wal_bytes_sent{prober=~\"$prober\",job=~\"$vmprober_job\"}[5m]))",
           "legendFormat": "Sent",
@@ -1438,7 +1438,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "victoriametrics"
+        "uid": "${DS_PROMETHEUS}"
       },
       "fieldConfig": {
         "defaults": {
@@ -1613,7 +1613,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "victoriametrics"
+            "uid": "${DS_PROMETHEUS}"
           },
           "expr": "min by (instance, target_ip, protocol, port, job) (clamp_max(((rate(vmprober_probe_success_total{prober=~\"$prober\",job=~\"$vmprober_job\",instance=~\"$target_instance\",target_ip=~\"$target_ip\",protocol=~\"$protocol\"}[5m]) / rate(vmprober_probe_attempts_total{prober=~\"$prober\",job=~\"$vmprober_job\",instance=~\"$target_instance\",target_ip=~\"$target_ip\",protocol=~\"$protocol\"}[5m])) or ((rate(vmprober_probe_attempts_total{prober=~\"$prober\",job=~\"$vmprober_job\",instance=~\"$target_instance\",target_ip=~\"$target_ip\",protocol=~\"$protocol\"}[5m]) > 0) * 0)), 1)) * 100",
           "format": "table",
@@ -1623,7 +1623,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "victoriametrics"
+            "uid": "${DS_PROMETHEUS}"
           },
           "expr": "sum by (instance, target_ip, protocol, port) (rate(vmprober_probe_rtt_seconds_sum{prober=~\"$prober\",job=~\"$vmprober_job\",instance=~\"$target_instance\",target_ip=~\"$target_ip\",protocol=~\"$protocol\"}[5m])) / sum by (instance, target_ip, protocol, port) (rate(vmprober_probe_rtt_seconds_count{prober=~\"$prober\",job=~\"$vmprober_job\",instance=~\"$target_instance\",target_ip=~\"$target_ip\",protocol=~\"$protocol\"}[5m]))",
           "format": "table",
@@ -1689,6 +1689,19 @@
   "templating": {
     "list": [
       {
+        "current": {
+          "text": "VictoriaMetrics",
+          "value": "victoriametrics"
+        },
+        "label": "Datasource",
+        "name": "DS_PROMETHEUS",
+        "options": [],
+        "query": "prometheus",
+        "refresh": 1,
+        "regex": "",
+        "type": "datasource"
+      },
+      {
         "allValue": ".*",
         "current": {
           "text": "All",
@@ -1696,7 +1709,7 @@
         },
         "datasource": {
           "type": "prometheus",
-          "uid": "victoriametrics"
+          "uid": "${DS_PROMETHEUS}"
         },
         "includeAll": true,
         "label": "Prober",
@@ -1718,7 +1731,7 @@
         },
         "datasource": {
           "type": "prometheus",
-          "uid": "victoriametrics"
+          "uid": "${DS_PROMETHEUS}"
         },
         "includeAll": true,
         "label": "VMProber Instance",
@@ -1741,7 +1754,7 @@
         },
         "datasource": {
           "type": "prometheus",
-          "uid": "victoriametrics"
+          "uid": "${DS_PROMETHEUS}"
         },
         "includeAll": true,
         "label": "Target",
@@ -1765,7 +1778,7 @@
         },
         "datasource": {
           "type": "prometheus",
-          "uid": "victoriametrics"
+          "uid": "${DS_PROMETHEUS}"
         },
         "includeAll": true,
         "label": "Target IP",
@@ -1789,7 +1802,7 @@
         },
         "datasource": {
           "type": "prometheus",
-          "uid": "victoriametrics"
+          "uid": "${DS_PROMETHEUS}"
         },
         "includeAll": true,
         "label": "Protocol",

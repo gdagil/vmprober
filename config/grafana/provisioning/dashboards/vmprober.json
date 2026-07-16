@@ -37,7 +37,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "victoriametrics"
+        "uid": "${DS_PROMETHEUS}"
       },
       "fieldConfig": {
         "defaults": {
@@ -105,7 +105,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "victoriametrics"
+            "uid": "${DS_PROMETHEUS}"
           },
           "expr": "count(avg_over_time((rate(vmprober_probe_success_total{job=~\"$vmprober_job\"}[5m]) / rate(vmprober_probe_attempts_total{job=~\"$vmprober_job\"}[5m]))[5m:1m]) > 0.5)",
           "legendFormat": "UP",
@@ -118,7 +118,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "victoriametrics"
+        "uid": "${DS_PROMETHEUS}"
       },
       "fieldConfig": {
         "defaults": {
@@ -170,7 +170,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "victoriametrics"
+            "uid": "${DS_PROMETHEUS}"
           },
           "expr": "count(avg_over_time((rate(vmprober_probe_success_total{job=~\"$vmprober_job\"}[5m]) / rate(vmprober_probe_attempts_total{job=~\"$vmprober_job\"}[5m]))[5m:1m]) <= 0.5) or vector(0)",
           "legendFormat": "DOWN",
@@ -183,7 +183,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "victoriametrics"
+        "uid": "${DS_PROMETHEUS}"
       },
       "fieldConfig": {
         "defaults": {
@@ -242,7 +242,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "victoriametrics"
+            "uid": "${DS_PROMETHEUS}"
           },
           "expr": "avg(rate(vmprober_probe_success_total{job=~\"$vmprober_job\",instance=~\"$target_instance\",target_ip=~\"$target_ip\",protocol=~\"$protocol\"}[5m]) / rate(vmprober_probe_attempts_total{job=~\"$vmprober_job\",instance=~\"$target_instance\",target_ip=~\"$target_ip\",protocol=~\"$protocol\"}[5m])) * 100",
           "legendFormat": "Success Rate",
@@ -255,7 +255,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "victoriametrics"
+        "uid": "${DS_PROMETHEUS}"
       },
       "fieldConfig": {
         "defaults": {
@@ -312,7 +312,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "victoriametrics"
+            "uid": "${DS_PROMETHEUS}"
           },
           "expr": "sum(changes((rate(vmprober_probe_success_total{job=~\"$vmprober_job\",instance=~\"$target_instance\",target_ip=~\"$target_ip\",protocol=~\"$protocol\"}[5m]) / rate(vmprober_probe_attempts_total{job=~\"$vmprober_job\",instance=~\"$target_instance\",target_ip=~\"$target_ip\",protocol=~\"$protocol\"}[5m])) > bool 0.5[$__range:1m]))",
           "legendFormat": "Flaps",
@@ -325,7 +325,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "victoriametrics"
+        "uid": "${DS_PROMETHEUS}"
       },
       "fieldConfig": {
         "defaults": {
@@ -382,7 +382,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "victoriametrics"
+            "uid": "${DS_PROMETHEUS}"
           },
           "expr": "avg(histogram_quantile(0.50, rate(vmprober_probe_rtt_seconds_bucket{job=~\"$vmprober_job\",instance=~\"$target_instance\",target_ip=~\"$target_ip\",protocol=~\"$protocol\"}[5m])))",
           "legendFormat": "p50 RTT",
@@ -395,7 +395,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "victoriametrics"
+        "uid": "${DS_PROMETHEUS}"
       },
       "fieldConfig": {
         "defaults": {
@@ -452,7 +452,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "victoriametrics"
+            "uid": "${DS_PROMETHEUS}"
           },
           "expr": "avg(histogram_quantile(0.99, rate(vmprober_probe_rtt_seconds_bucket{job=~\"$vmprober_job\",instance=~\"$target_instance\",target_ip=~\"$target_ip\",protocol=~\"$protocol\"}[5m])))",
           "legendFormat": "p99 RTT",
@@ -465,7 +465,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "victoriametrics"
+        "uid": "${DS_PROMETHEUS}"
       },
       "fieldConfig": {
         "defaults": {
@@ -621,7 +621,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "victoriametrics"
+            "uid": "${DS_PROMETHEUS}"
           },
           "expr": "count by (protocol) (vmprober_probe_attempts_total{job=~\"$vmprober_job\"})",
           "legendFormat": "{{protocol}}",
@@ -647,7 +647,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "victoriametrics"
+        "uid": "${DS_PROMETHEUS}"
       },
       "fieldConfig": {
         "defaults": {
@@ -727,7 +727,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "victoriametrics"
+            "uid": "${DS_PROMETHEUS}"
           },
           "expr": "(rate(vmprober_probe_success_total{job=~\"$vmprober_job\",instance=~\"$target_instance\",target_ip=~\"$target_ip\",protocol=~\"$protocol\"}[1m]) / rate(vmprober_probe_attempts_total{job=~\"$vmprober_job\",instance=~\"$target_instance\",target_ip=~\"$target_ip\",protocol=~\"$protocol\"}[1m])) > bool 0.5",
           "legendFormat": "{{instance}} ({{target_ip}})",
@@ -740,7 +740,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "victoriametrics"
+        "uid": "${DS_PROMETHEUS}"
       },
       "fieldConfig": {
         "defaults": {
@@ -831,7 +831,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "victoriametrics"
+            "uid": "${DS_PROMETHEUS}"
           },
           "expr": "(rate(vmprober_probe_success_total{job=~\"$vmprober_job\",instance=~\"$target_instance\",target_ip=~\"$target_ip\",protocol=~\"$protocol\"}[5m]) / rate(vmprober_probe_attempts_total{job=~\"$vmprober_job\",instance=~\"$target_instance\",target_ip=~\"$target_ip\",protocol=~\"$protocol\"}[5m])) * 100",
           "legendFormat": "{{instance}} ({{protocol}})",
@@ -844,7 +844,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "victoriametrics"
+        "uid": "${DS_PROMETHEUS}"
       },
       "fieldConfig": {
         "defaults": {
@@ -932,7 +932,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "victoriametrics"
+            "uid": "${DS_PROMETHEUS}"
           },
           "expr": "changes((rate(vmprober_probe_success_total{job=~\"$vmprober_job\",instance=~\"$target_instance\",target_ip=~\"$target_ip\",protocol=~\"$protocol\"}[5m]) / rate(vmprober_probe_attempts_total{job=~\"$vmprober_job\",instance=~\"$target_instance\",target_ip=~\"$target_ip\",protocol=~\"$protocol\"}[5m])) > bool 0.5[5m:1m])",
           "legendFormat": "{{instance}} ({{target_ip}})",
@@ -958,7 +958,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "victoriametrics"
+        "uid": "${DS_PROMETHEUS}"
       },
       "fieldConfig": {
         "defaults": {
@@ -1042,7 +1042,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "victoriametrics"
+            "uid": "${DS_PROMETHEUS}"
           },
           "expr": "histogram_quantile(0.99, rate(vmprober_probe_rtt_seconds_bucket{job=~\"$vmprober_job\",instance=~\"$target_instance\",target_ip=~\"$target_ip\",protocol=~\"$protocol\"}[5m]))",
           "legendFormat": "{{instance}} - p99",
@@ -1051,7 +1051,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "victoriametrics"
+            "uid": "${DS_PROMETHEUS}"
           },
           "expr": "histogram_quantile(0.95, rate(vmprober_probe_rtt_seconds_bucket{job=~\"$vmprober_job\",instance=~\"$target_instance\",target_ip=~\"$target_ip\",protocol=~\"$protocol\"}[5m]))",
           "legendFormat": "{{instance}} - p95",
@@ -1060,7 +1060,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "victoriametrics"
+            "uid": "${DS_PROMETHEUS}"
           },
           "expr": "histogram_quantile(0.50, rate(vmprober_probe_rtt_seconds_bucket{job=~\"$vmprober_job\",instance=~\"$target_instance\",target_ip=~\"$target_ip\",protocol=~\"$protocol\"}[5m]))",
           "legendFormat": "{{instance}} - p50",
@@ -1073,7 +1073,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "victoriametrics"
+        "uid": "${DS_PROMETHEUS}"
       },
       "fieldConfig": {
         "defaults": {
@@ -1157,7 +1157,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "victoriametrics"
+            "uid": "${DS_PROMETHEUS}"
           },
           "expr": "rate(vmprober_probe_rtt_seconds_sum{job=~\"$vmprober_job\",instance=~\"$target_instance\",target_ip=~\"$target_ip\",protocol=~\"$protocol\"}[5m]) / rate(vmprober_probe_rtt_seconds_count{job=~\"$vmprober_job\",instance=~\"$target_instance\",target_ip=~\"$target_ip\",protocol=~\"$protocol\"}[5m])",
           "legendFormat": "{{instance}} ({{target_ip}})",
@@ -1170,7 +1170,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "victoriametrics"
+        "uid": "${DS_PROMETHEUS}"
       },
       "fieldConfig": {
         "defaults": {
@@ -1261,7 +1261,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "victoriametrics"
+            "uid": "${DS_PROMETHEUS}"
           },
           "expr": "histogram_quantile(0.99, rate(vmprober_probe_rtt_seconds_bucket{job=~\"$vmprober_job\",instance=~\"$target_instance\",target_ip=~\"$target_ip\",protocol=~\"$protocol\"}[5m])) - histogram_quantile(0.50, rate(vmprober_probe_rtt_seconds_bucket{job=~\"$vmprober_job\",instance=~\"$target_instance\",target_ip=~\"$target_ip\",protocol=~\"$protocol\"}[5m]))",
           "legendFormat": "{{instance}} - Jitter (p99-p50)",
@@ -1287,7 +1287,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "victoriametrics"
+        "uid": "${DS_PROMETHEUS}"
       },
       "fieldConfig": {
         "defaults": {
@@ -1402,7 +1402,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "victoriametrics"
+            "uid": "${DS_PROMETHEUS}"
           },
           "expr": "rate(vmprober_probe_success_total{job=~\"$vmprober_job\",instance=~\"$target_instance\",target_ip=~\"$target_ip\",protocol=~\"$protocol\"}[5m])",
           "legendFormat": "{{instance}} - Success",
@@ -1411,7 +1411,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "victoriametrics"
+            "uid": "${DS_PROMETHEUS}"
           },
           "expr": "rate(vmprober_probe_failure_total{job=~\"$vmprober_job\",instance=~\"$target_instance\",target_ip=~\"$target_ip\",protocol=~\"$protocol\"}[5m])",
           "legendFormat": "{{instance}} - Failure",
@@ -1424,7 +1424,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "victoriametrics"
+        "uid": "${DS_PROMETHEUS}"
       },
       "fieldConfig": {
         "defaults": {
@@ -1508,7 +1508,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "victoriametrics"
+            "uid": "${DS_PROMETHEUS}"
           },
           "expr": "rate(vmprober_probe_attempts_total{job=~\"$vmprober_job\",instance=~\"$target_instance\",target_ip=~\"$target_ip\",protocol=~\"$protocol\"}[5m])",
           "legendFormat": "{{instance}} ({{protocol}})",
@@ -1521,7 +1521,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "victoriametrics"
+        "uid": "${DS_PROMETHEUS}"
       },
       "fieldConfig": {
         "defaults": {
@@ -1692,7 +1692,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "victoriametrics"
+            "uid": "${DS_PROMETHEUS}"
           },
           "expr": "sum by (instance, target_ip, protocol, port, job) (rate(vmprober_probe_success_total{job=~\"$vmprober_job\",instance=~\"$target_instance\",target_ip=~\"$target_ip\",protocol=~\"$protocol\"}[5m]) / rate(vmprober_probe_attempts_total{job=~\"$vmprober_job\",instance=~\"$target_instance\",target_ip=~\"$target_ip\",protocol=~\"$protocol\"}[5m])) * 100",
           "format": "table",
@@ -1702,7 +1702,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "victoriametrics"
+            "uid": "${DS_PROMETHEUS}"
           },
           "expr": "sum by (instance, target_ip, protocol, port) (rate(vmprober_probe_rtt_seconds_sum{job=~\"$vmprober_job\",instance=~\"$target_instance\",target_ip=~\"$target_ip\",protocol=~\"$protocol\"}[5m]) / rate(vmprober_probe_rtt_seconds_count{job=~\"$vmprober_job\",instance=~\"$target_instance\",target_ip=~\"$target_ip\",protocol=~\"$protocol\"}[5m]))",
           "format": "table",
@@ -1767,7 +1767,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "victoriametrics"
+            "uid": "${DS_PROMETHEUS}"
           },
           "fieldConfig": {
             "defaults": {
@@ -1815,7 +1815,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "victoriametrics"
+                "uid": "${DS_PROMETHEUS}"
               },
               "expr": "vmprober_jobs_total{job=~\"$vmprober_job\"}",
               "legendFormat": "Total Jobs",
@@ -1828,7 +1828,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "victoriametrics"
+            "uid": "${DS_PROMETHEUS}"
           },
           "fieldConfig": {
             "defaults": {
@@ -1876,7 +1876,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "victoriametrics"
+                "uid": "${DS_PROMETHEUS}"
               },
               "expr": "vmprober_jobs_running{job=~\"$vmprober_job\"}",
               "legendFormat": "Running Jobs",
@@ -1889,7 +1889,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "victoriametrics"
+            "uid": "${DS_PROMETHEUS}"
           },
           "fieldConfig": {
             "defaults": {
@@ -1941,7 +1941,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "victoriametrics"
+                "uid": "${DS_PROMETHEUS}"
               },
               "expr": "vmprober_jobs_failed{job=~\"$vmprober_job\"}",
               "legendFormat": "Failed Jobs",
@@ -1954,7 +1954,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "victoriametrics"
+            "uid": "${DS_PROMETHEUS}"
           },
           "fieldConfig": {
             "defaults": {
@@ -2009,7 +2009,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "victoriametrics"
+                "uid": "${DS_PROMETHEUS}"
               },
               "expr": "(1 - (vmprober_jobs_failed{job=~\"$vmprober_job\"} / vmprober_jobs_total{job=~\"$vmprober_job\"})) * 100",
               "legendFormat": "Job Success Rate",
@@ -2022,7 +2022,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "victoriametrics"
+            "uid": "${DS_PROMETHEUS}"
           },
           "fieldConfig": {
             "defaults": {
@@ -2148,7 +2148,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "victoriametrics"
+                "uid": "${DS_PROMETHEUS}"
               },
               "expr": "vmprober_jobs_total{job=~\"$vmprober_job\"}",
               "legendFormat": "Total",
@@ -2157,7 +2157,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "victoriametrics"
+                "uid": "${DS_PROMETHEUS}"
               },
               "expr": "vmprober_jobs_running{job=~\"$vmprober_job\"}",
               "legendFormat": "Running",
@@ -2166,7 +2166,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "victoriametrics"
+                "uid": "${DS_PROMETHEUS}"
               },
               "expr": "vmprober_jobs_failed{job=~\"$vmprober_job\"}",
               "legendFormat": "Failed",
@@ -2193,7 +2193,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "victoriametrics"
+            "uid": "${DS_PROMETHEUS}"
           },
           "fieldConfig": {
             "defaults": {
@@ -2273,7 +2273,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "victoriametrics"
+                "uid": "${DS_PROMETHEUS}"
               },
               "expr": "(rate(vmprober_probe_success_total{job=~\"$vmprober_job\",protocol=\"icmp\"}[1m]) / rate(vmprober_probe_attempts_total{job=~\"$vmprober_job\",protocol=\"icmp\"}[1m])) > bool 0.5",
               "legendFormat": "{{instance}} ({{target_ip}})",
@@ -2286,7 +2286,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "victoriametrics"
+            "uid": "${DS_PROMETHEUS}"
           },
           "fieldConfig": {
             "defaults": {
@@ -2366,7 +2366,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "victoriametrics"
+                "uid": "${DS_PROMETHEUS}"
               },
               "expr": "(rate(vmprober_probe_success_total{job=~\"$vmprober_job\",protocol=\"tcp\"}[1m]) / rate(vmprober_probe_attempts_total{job=~\"$vmprober_job\",protocol=\"tcp\"}[1m])) > bool 0.5",
               "legendFormat": "{{instance}} ({{target_ip}}:{{port}})",
@@ -2379,7 +2379,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "victoriametrics"
+            "uid": "${DS_PROMETHEUS}"
           },
           "fieldConfig": {
             "defaults": {
@@ -2459,7 +2459,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "victoriametrics"
+                "uid": "${DS_PROMETHEUS}"
               },
               "expr": "(rate(vmprober_probe_success_total{job=~\"$vmprober_job\",protocol=\"udp\"}[1m]) / rate(vmprober_probe_attempts_total{job=~\"$vmprober_job\",protocol=\"udp\"}[1m])) > bool 0.5",
               "legendFormat": "{{instance}} ({{target_ip}}:{{port}})",
@@ -2472,7 +2472,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "victoriametrics"
+            "uid": "${DS_PROMETHEUS}"
           },
           "fieldConfig": {
             "defaults": {
@@ -2552,7 +2552,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "victoriametrics"
+                "uid": "${DS_PROMETHEUS}"
               },
               "expr": "(rate(vmprober_probe_success_total{job=~\"$vmprober_job\",protocol=~\"http|https\"}[1m]) / rate(vmprober_probe_attempts_total{job=~\"$vmprober_job\",protocol=~\"http|https\"}[1m])) > bool 0.5",
               "legendFormat": "{{instance}} ({{protocol}}:{{port}})",
@@ -2565,7 +2565,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "victoriametrics"
+            "uid": "${DS_PROMETHEUS}"
           },
           "fieldConfig": {
             "defaults": {
@@ -2645,7 +2645,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "victoriametrics"
+                "uid": "${DS_PROMETHEUS}"
               },
               "expr": "(rate(vmprober_probe_success_total{job=~\"$vmprober_job\",protocol=\"dns\"}[1m]) / rate(vmprober_probe_attempts_total{job=~\"$vmprober_job\",protocol=\"dns\"}[1m])) > bool 0.5",
               "legendFormat": "{{instance}} ({{target_ip}}:{{port}})",
@@ -2658,7 +2658,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "victoriametrics"
+            "uid": "${DS_PROMETHEUS}"
           },
           "fieldConfig": {
             "defaults": {
@@ -2738,7 +2738,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "victoriametrics"
+                "uid": "${DS_PROMETHEUS}"
               },
               "expr": "(rate(vmprober_probe_success_total{job=~\"$vmprober_job\",protocol=\"grpc\"}[1m]) / rate(vmprober_probe_attempts_total{job=~\"$vmprober_job\",protocol=\"grpc\"}[1m])) > bool 0.5",
               "legendFormat": "{{instance}} ({{target_ip}}:{{port}})",
@@ -2770,12 +2770,25 @@
     "list": [
       {
         "current": {
+          "text": "VictoriaMetrics",
+          "value": "victoriametrics"
+        },
+        "label": "Datasource",
+        "name": "DS_PROMETHEUS",
+        "options": [],
+        "query": "prometheus",
+        "refresh": 1,
+        "regex": "",
+        "type": "datasource"
+      },
+      {
+        "current": {
           "text": "All",
           "value": "$__all"
         },
         "datasource": {
           "type": "prometheus",
-          "uid": "victoriametrics"
+          "uid": "${DS_PROMETHEUS}"
         },
         "includeAll": true,
         "label": "VMProber Instance",
@@ -2798,7 +2811,7 @@
         },
         "datasource": {
           "type": "prometheus",
-          "uid": "victoriametrics"
+          "uid": "${DS_PROMETHEUS}"
         },
         "includeAll": true,
         "label": "Target",
@@ -2822,7 +2835,7 @@
         },
         "datasource": {
           "type": "prometheus",
-          "uid": "victoriametrics"
+          "uid": "${DS_PROMETHEUS}"
         },
         "includeAll": true,
         "label": "Target IP",
@@ -2846,7 +2859,7 @@
         },
         "datasource": {
           "type": "prometheus",
-          "uid": "victoriametrics"
+          "uid": "${DS_PROMETHEUS}"
         },
         "includeAll": true,
         "label": "Protocol",
@@ -2870,7 +2883,7 @@
         },
         "datasource": {
           "type": "prometheus",
-          "uid": "victoriametrics"
+          "uid": "${DS_PROMETHEUS}"
         },
         "includeAll": true,
         "label": "Port",
